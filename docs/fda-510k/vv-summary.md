@@ -6,7 +6,7 @@ Planned as Enhanced documentation / IEC 62304 Class C because incorrect identifi
 
 ## Automated verification
 
-`dotnet test AntibodyPanels.slnx` (or the test project) covers:
+`dotnet test AntigramIQ.slnx` (or the test project) covers:
 
 - Identification engine golden cases (`AntibodyAnalysisTests`, `AcsEvaluationTests`, scenario tests)
 - Input validation and injection (`ValidationStressTests`, `HipaaSecurityTests`)

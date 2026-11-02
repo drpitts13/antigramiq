@@ -1,0 +1,600 @@
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Windows;
+using System.Windows.Input;
+using Microsoft.Win32;
+using AntigramIQ.Data;
+using AntigramIQ.Models;
+using AntigramIQ.Services;
+
+namespace AntigramIQ.ViewModels
+{
+    public class PanelsViewModel : BaseViewModel
+    {
+        private readonly DatabaseService _db;
+        private readonly MainViewModel _main;
+
+        public ObservableCollection<Panel> Panels { get; } = new();
+        public ObservableCollection<PanelCellRow> CellRows { get; } = new();
+        public ObservableCollection<string> ExtraAntigens { get; } = new();
+        public ObservableCollection<string> AntigenDisplayOrder { get; } = new();
+
+        private int _antigenColumnsRevision;
+        public int AntigenColumnsRevision
+        {
+            get => _antigenColumnsRevision;
+            private set => SetField(ref _antigenColumnsRevision, value);
+        }
+
+        private Panel? _selectedPanel;
+        public Panel? SelectedPanel
+        {
+            get => _selectedPanel;
+            set
+            {
+                if (IsEditingAntigens && !ReferenceEquals(_selectedPanel, value))
+                {
+                    _main.SetStatus("Save or Cancel antigen edits before selecting another panel.");
+                    OnPropertyChanged(nameof(SelectedPanel));
+                    return;
+                }
+                if (SetField(ref _selectedPanel, value))
+                    LoadCells();
+            }
+        }
+
+        private bool _showInactive = false;
+        public bool ShowInactive
+        {
+            get => _showInactive;
+            set
+            {
+                if (IsEditingAntigens) { OnPropertyChanged(nameof(ShowInactive)); return; }
+                if (SetField(ref _showInactive, value)) ApplyFilter();
+            }
+        }
+
+        private string _listFilter = string.Empty;
+        public string ListFilter
+        {
+            get => _listFilter;
+            set
+            {
+                if (IsEditingAntigens) { OnPropertyChanged(nameof(ListFilter)); return; }
+                if (SetField(ref _listFilter, value)) ApplyFilter();
+            }
+        }
+
+        private bool _isEditingAntigens;
+        public bool IsEditingAntigens
+        {
+            get => _isEditingAntigens;
+            private set
+            {
+                if (SetField(ref _isEditingAntigens, value))
+                    CommandManager.InvalidateRequerySuggested();
+            }
+        }
+
+        public ICommand AddCommand { get; }
+        public ICommand EditCommand { get; }
+        public ICommand EditDetailsCommand { get; }
+        public ICommand DeleteCommand { get; }
+        public ICommand CopyCommand { get; }
+        public ICommand ImportCsvCommand { get; }
+        public ICommand DownloadVendorCommand { get; }
+        public ICommand ExportCsvCommand { get; }
+        public ICommand PrintAntigramCommand { get; }
+        public ICommand AddExtraAntigenCommand { get; }
+        public ICommand RemoveExtraAntigenCommand { get; }
+        public ICommand SaveCellsCommand { get; }
+        public ICommand CancelEditCommand { get; }
+        public ICommand RefreshCommand { get; }
+        public ICommand ActivateCommand { get; }
+        public ICommand ViewArtifactCommand { get; }
+        public ICommand CompareCommand { get; }
+
+        public PanelsViewModel(DatabaseService db, MainViewModel main)
+        {
+            _db = db;
+            _main = main;
+            AddCommand = new RelayCommand(AddPanel, () => !IsEditingAntigens);
+            EditCommand = new RelayCommand(BeginEditAntigens, () => SelectedPanel != null && !IsEditingAntigens);
+            EditDetailsCommand = new RelayCommand(EditPanel, () => SelectedPanel != null && !IsEditingAntigens);
+            DeleteCommand = new RelayCommand(DeletePanel, () => SelectedPanel != null && !IsEditingAntigens);
+            CopyCommand = new RelayCommand(CopyPanel, () => SelectedPanel != null && !IsEditingAntigens);
+            ImportCsvCommand = new RelayCommand(ImportCsv, () => !IsEditingAntigens);
+            DownloadVendorCommand = new RelayCommand(DownloadFromVendor, () => !IsEditingAntigens);
+            ExportCsvCommand = new RelayCommand(ExportCsv, () => SelectedPanel != null && !IsEditingAntigens);
+            PrintAntigramCommand = new RelayCommand(PrintAntigram, () => SelectedPanel != null && !IsEditingAntigens);
+            AddExtraAntigenCommand = new RelayCommand(AddExtraAntigen, () => SelectedPanel != null && !IsEditingAntigens);
+            RemoveExtraAntigenCommand = new RelayCommand(RemoveExtraAntigen, () => SelectedPanel != null && !IsEditingAntigens && ExtraAntigens.Count > 0);
+            SaveCellsCommand = new RelayCommand(SaveAllCells, () => IsEditingAntigens);
+            CancelEditCommand = new RelayCommand(CancelEdit, () => IsEditingAntigens);
+            RefreshCommand = new RelayCommand(Refresh);
+            ActivateCommand = new RelayCommand(ActivatePanel,
+                () => SelectedPanel != null && !SelectedPanel.IsActive && !IsEditingAntigens);
+            ViewArtifactCommand = new RelayCommand(ViewArtifact,
+                () => SelectedPanel != null && SelectedPanel.HasImportArtifact && !IsEditingAntigens);
+            CompareCommand = new RelayCommand(ComparePanels,
+                () => SelectedPanel != null && !IsEditingAntigens);
+            Refresh();
+        }
+
+        private List<Panel> _allPanels = new();
+
+        public void Refresh()
+        {
+            var sid = SelectedPanel?.PanelId;
+            _allPanels = _db.GetAllPanels();
+            ApplyFilter(sid);
+        }
+
+        public void SelectPanel(int panelId)
+        {
+            var match = _allPanels.FirstOrDefault(p => p.PanelId == panelId);
+            if (match != null && !IsEditingAntigens)
+            {
+                if (!_showInactive && !match.IsActive)
+                {
+                    _showInactive = true;
+                    OnPropertyChanged(nameof(ShowInactive));
+                }
+                if (!match.MatchesFilter(_listFilter))
+                {
+                    _listFilter = string.Empty;
+                    OnPropertyChanged(nameof(ListFilter));
+                }
+                ApplyFilter(panelId);
+            }
+            SelectedPanel = Panels.FirstOrDefault(p => p.PanelId == panelId) ?? SelectedPanel;
+        }
+
+        private void ApplyFilter(int? preferredId = null)
+        {
+            if (IsEditingAntigens) return;
+            preferredId ??= SelectedPanel?.PanelId;
+            Panels.Clear();
+            foreach (var p in _allPanels)
+            {
+                if (!_showInactive && !p.IsActive) continue;
+                if (!p.MatchesFilter(_listFilter)) continue;
+                Panels.Add(p);
+            }
+            SelectedPanel = Panels.FirstOrDefault(p => p.PanelId == preferredId)
+                ?? Panels.FirstOrDefault();
+        }
+
+        private void LoadCells()
+        {
+            CellRows.Clear();
+            ExtraAntigens.Clear();
+            AntigenDisplayOrder.Clear();
+            if (_selectedPanel == null)
+            {
+                AntigenColumnsRevision++;
+                return;
+            }
+            foreach (var ag in _db.GetPanelExtraAntigens(_selectedPanel.PanelId))
+                ExtraAntigens.Add(ag);
+            foreach (var ag in _db.GetPanelDisplayAntigens(_selectedPanel.PanelId))
+                AntigenDisplayOrder.Add(ag);
+            foreach (var c in _db.GetPanelCells(_selectedPanel.PanelId))
+                CellRows.Add(new PanelCellRow(c));
+            AntigenColumnsRevision++;
+            CommandManager.InvalidateRequerySuggested();
+        }
+
+        /// <summary>
+        /// Updates the in-memory column order from a header drag. Does not persist
+        /// until Save, and does not rebuild the grid.
+        /// </summary>
+        public void ReplaceAntigenDisplayOrder(IReadOnlyList<string> order)
+        {
+            if (!IsEditingAntigens) return;
+            AntigenDisplayOrder.Clear();
+            foreach (var ag in order)
+            {
+                if (AntigenConstants.IsKnown(ag))
+                    AntigenDisplayOrder.Add(ag);
+            }
+        }
+
+        /// <summary>
+        /// After any panel CRUD, refresh this tab and all other tabs that hold a panel list.
+        /// </summary>
+        private void NotifyPanelsChanged()
+        {
+            Refresh();
+            _main.ReactionsVM.RefreshSpecimens();
+            _main.ReportsVM.Refresh();
+            _main.WorklistVM.Refresh();
+        }
+
+        private void AddPanel()
+        {
+            var dlg = new Views.Dialogs.PanelDialog();
+            if (dlg.ShowDialog() != true) return;
+            var id = _db.AddPanel(dlg.PanelName, dlg.LotNumber, dlg.Vendor,
+                dlg.NumCells, dlg.ExpirationDate, dlg.IncludeAc, dlg.StartCell, dlg.ItemIsActive,
+                dlg.CatalogNumber, dlg.ProductLine, dlg.EnzymeTreated);
+            _main.SetStatus($"Panel '{dlg.PanelName}' created (cells {dlg.StartCell}–{dlg.StartCell + dlg.NumCells - 1}).");
+            NotifyPanelsChanged();
+            SelectedPanel = Panels.FirstOrDefault(p => p.PanelId == id);
+        }
+
+        private void EditPanel()
+        {
+            if (SelectedPanel == null) return;
+            var dlg = new Views.Dialogs.PanelDialog(SelectedPanel);
+            if (dlg.ShowDialog() != true) return;
+            _db.UpdatePanel(SelectedPanel.PanelId, dlg.PanelName, dlg.LotNumber,
+                dlg.Vendor, dlg.NumCells, dlg.ExpirationDate, dlg.IncludeAc, dlg.StartCell, dlg.ItemIsActive,
+                dlg.CatalogNumber, dlg.ProductLine, dlg.EnzymeTreated);
+            _main.SetStatus($"Panel '{dlg.PanelName}' updated.");
+            NotifyPanelsChanged();
+        }
+
+        private void DeletePanel()
+        {
+            if (SelectedPanel == null) return;
+            if (MessageBox.Show($"Delete panel '{SelectedPanel.Name}'?",
+                "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+            _db.DeletePanel(SelectedPanel.PanelId);
+            _main.SetStatus("Panel deleted.");
+            NotifyPanelsChanged();
+        }
+
+        private void ActivatePanel()
+        {
+            if (SelectedPanel == null || SelectedPanel.IsActive) return;
+            var hash = string.IsNullOrWhiteSpace(SelectedPanel.SourceSha256)
+                ? "no source hash"
+                : SelectedPanel.SourceSha256;
+            if (MessageBox.Show(
+                    $"Activate '{SelectedPanel.Name}' (lot {SelectedPanel.LotNumber ?? "—"}) for analysis?\n\n" +
+                    $"Source SHA-256: {hash}\n\n" +
+                    "Activate only after reviewing the antigram. This is decision support, not a diagnosis.",
+                    "Activate imported panel",
+                    MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+            _db.SetPanelActive(SelectedPanel.PanelId, true);
+            _main.SetStatus($"Activated panel '{SelectedPanel.Name}'.");
+            NotifyPanelsChanged();
+        }
+
+        private void ComparePanels()
+        {
+            if (SelectedPanel == null) return;
+            var others = _db.GetAllPanels()
+                .Where(p => p.PanelId != SelectedPanel.PanelId)
+                .OrderBy(p => p.Name)
+                .ThenBy(p => p.LotNumber)
+                .ToList();
+            if (others.Count == 0)
+            {
+                MessageBox.Show("Store another panel to compare antigen typings.",
+                    "Compare panels", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            var prior = _db.FindPriorVendorPanel(SelectedPanel.Vendor, SelectedPanel.ProductLine,
+                SelectedPanel.LotNumber);
+            var dlg = new Views.Dialogs.PanelCompareDialog(_db, SelectedPanel, others, prior?.PanelId)
+            {
+                Owner = Application.Current?.MainWindow
+            };
+            dlg.ShowDialog();
+            _main.SetStatus($"Compared '{SelectedPanel.Name}' with another stored panel.");
+        }
+
+        private void ViewArtifact()
+        {
+            if (SelectedPanel == null) return;
+            var inspection = ImportArtifactInspector.Inspect(SelectedPanel);
+            var dlg = new Views.Dialogs.ArtifactViewerDialog(inspection)
+            {
+                Owner = Application.Current?.MainWindow
+            };
+            dlg.ShowDialog();
+            _main.SetStatus(inspection.Explanation);
+        }
+
+        private void CopyPanel()
+        {
+            if (SelectedPanel == null) return;
+            // Pre-populate from source so the user sees the original settings
+            var dlg = new Views.Dialogs.PanelDialog(new Panel
+            {
+                Name = SelectedPanel.Name + " (copy)",
+                LotNumber = SelectedPanel.LotNumber,
+                Vendor = SelectedPanel.Vendor,
+                NumCells = SelectedPanel.NumCells,
+                StartCell = SelectedPanel.StartCell,
+                IncludeAc = SelectedPanel.IncludeAc,
+                CatalogNumber = SelectedPanel.CatalogNumber,
+                ProductLine = SelectedPanel.ProductLine,
+                EnzymeTreated = SelectedPanel.EnzymeTreated,
+            });
+            dlg.Title = "Copy Panel — Edit Details";
+            if (dlg.ShowDialog() != true) return;
+            // AddPanel creates placeholder cells; CopyPanelCells then replaces them with the real data.
+            var newId = _db.AddPanel(dlg.PanelName, dlg.LotNumber, dlg.Vendor,
+                dlg.NumCells, dlg.ExpirationDate, dlg.IncludeAc, dlg.StartCell, dlg.ItemIsActive,
+                dlg.CatalogNumber, dlg.ProductLine, dlg.EnzymeTreated);
+            _db.CopyPanelCells(SelectedPanel.PanelId, newId);
+            _main.SetStatus($"Panel copied as '{dlg.PanelName}'.");
+            NotifyPanelsChanged();
+            SelectedPanel = Panels.FirstOrDefault(p => p.PanelId == newId);
+        }
+
+        private void DownloadFromVendor()
+        {
+            var dlg = new Views.Dialogs.DownloadFromVendorDialog(_db)
+            {
+                Owner = Application.Current?.MainWindow
+            };
+            if (dlg.ShowDialog() != true || dlg.ImportedPanelId is not int id) return;
+            ShowInactive = true;
+            NotifyPanelsChanged();
+            SelectedPanel = Panels.FirstOrDefault(p => p.PanelId == id)
+                            ?? _allPanels.FirstOrDefault(p => p.PanelId == id);
+            var stored = _db.GetPanel(id);
+            _main.SetStatus(stored is { IsActive: true }
+                ? $"Imported and activated vendor panel '{dlg.ImportedPanelName}'."
+                : $"Imported vendor panel '{dlg.ImportedPanelName}' (inactive — review before use).");
+        }
+
+        private void ImportCsv()
+        {
+            var open = new OpenFileDialog
+            {
+                Filter = "Panel files|*.csv;*.json;*.xml;*.xlsx|CSV|*.csv|JSON|*.json|XML|*.xml|Excel|*.xlsx|All Files|*.*",
+                Title = "Import panel"
+            };
+            if (open.ShowDialog() != true) return;
+
+            var imported = PanelCsvService.Import(open.FileName);
+            if (!imported.Success)
+            {
+                MessageBox.Show(
+                    "Could not import panel:\n" + string.Join("\n", imported.Errors.Take(12)),
+                    "Import", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var includeAc = imported.Cells.Any(c =>
+                string.Equals(c.CellNumber, "AC", System.StringComparison.OrdinalIgnoreCase));
+            var numCells = imported.Cells.Count(c =>
+                !string.Equals(c.CellNumber, "AC", System.StringComparison.OrdinalIgnoreCase));
+            int startCell = 1;
+            foreach (var c in imported.Cells)
+            {
+                if (int.TryParse(c.CellNumber, out var n)) { startCell = n; break; }
+            }
+
+            var dlg = new Views.Dialogs.PanelDialog(new Panel
+            {
+                Name = System.IO.Path.GetFileNameWithoutExtension(open.FileName),
+                NumCells = numCells,
+                StartCell = startCell,
+                IncludeAc = includeAc,
+                IsActive = false,
+            });
+            dlg.Title = "Import Panel — Details";
+            if (dlg.ShowDialog() != true) return;
+
+            PanelImportOutcome outcome;
+            try
+            {
+                outcome = new LabPanelImportService(_db).Import(imported, new LabPanelImportRequest
+                {
+                    Name = dlg.PanelName,
+                    LotNumber = dlg.LotNumber,
+                    Vendor = dlg.Vendor,
+                    ExpirationDate = dlg.ExpirationDate,
+                    CatalogNumber = dlg.CatalogNumber,
+                    ProductLine = dlg.ProductLine,
+                    EnzymeTreated = dlg.EnzymeTreated,
+                    IncludeAc = dlg.IncludeAc,
+                    NumCells = dlg.NumCells,
+                    StartCell = dlg.StartCell,
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                MessageBox.Show(ex.Message, "Import", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var reviewDlg = new Views.Dialogs.ImportReviewDialog(outcome.Review)
+            {
+                Owner = Application.Current?.MainWindow
+            };
+            if (reviewDlg.ShowDialog() == true && reviewDlg.ActivateRequested)
+                _db.SetPanelActive(outcome.PanelId, true);
+
+            ShowInactive = true;
+            NotifyPanelsChanged();
+            SelectedPanel = Panels.FirstOrDefault(p => p.PanelId == outcome.PanelId)
+                            ?? _allPanels.FirstOrDefault(p => p.PanelId == outcome.PanelId);
+            var stored = _db.GetPanel(outcome.PanelId);
+            _main.SetStatus(stored is { IsActive: true }
+                ? $"Imported and activated panel '{dlg.PanelName}'."
+                : $"Imported panel '{dlg.PanelName}' (inactive — review before use).");
+        }
+
+        private void ExportCsv()
+        {
+            if (SelectedPanel == null) return;
+            var save = new SaveFileDialog
+            {
+                Filter = "CSV Files|*.csv",
+                DefaultExt = "csv",
+                FileName = $"{SelectedPanel.Name}.csv"
+            };
+            if (save.ShowDialog() != true) return;
+            PanelCsvService.Export(
+                _db.GetPanelCells(SelectedPanel.PanelId),
+                save.FileName,
+                _db.GetPanelAntigenOrder(SelectedPanel.PanelId));
+            _main.SetStatus($"Panel CSV exported: {save.FileName}");
+            MessageBox.Show("Panel CSV exported.", "Export", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void PrintAntigram()
+        {
+            if (SelectedPanel == null) return;
+            var save = new SaveFileDialog
+            {
+                Filter = "PDF Files|*.pdf",
+                DefaultExt = "pdf",
+                FileName = $"{SelectedPanel.Name} antigram.pdf"
+            };
+            if (save.ShowDialog() != true) return;
+            try
+            {
+                new ReportService(_db).ExportToPdf(ReportType.PanelAntigram, save.FileName,
+                    panelId: SelectedPanel.PanelId);
+                _main.SetStatus($"Antigram PDF saved: {save.FileName}");
+                MessageBox.Show("Antigram PDF saved.", "Print antigram",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (System.Exception ex)
+            {
+                MessageBox.Show($"Could not save antigram:\n{ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void AddExtraAntigen()
+        {
+            if (SelectedPanel == null) return;
+            var already = new HashSet<string>(ExtraAntigens);
+            var available = AntigenConstants.WarehouseCatalog
+                .Where(d => !already.Contains(d.Name))
+                .ToList();
+            if (available.Count == 0)
+            {
+                MessageBox.Show("All warehouse antigens are already on this panel.", "Add antigen",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var dlg = new Views.Dialogs.SelectWarehouseAntigenDialog(
+                available,
+                "Add antigen",
+                "Select non-standard antigens to add to this panel. Type +/− on each cell after adding.");
+            if (dlg.ShowDialog() != true) return;
+
+            foreach (var ag in dlg.SelectedAntigens)
+                _db.AddPanelExtraAntigen(SelectedPanel.PanelId, ag);
+            LoadCells();
+            _main.SetStatus($"Added {string.Join(", ", dlg.SelectedAntigens)} to '{SelectedPanel.Name}'.");
+        }
+
+        private void RemoveExtraAntigen()
+        {
+            if (SelectedPanel == null || ExtraAntigens.Count == 0) return;
+            var assigned = AntigenConstants.WarehouseCatalog
+                .Where(d => ExtraAntigens.Contains(d.Name))
+                .ToList();
+            var dlg = new Views.Dialogs.SelectWarehouseAntigenDialog(
+                assigned,
+                "Remove antigen",
+                "Remove extra antigens from this panel. Typed values for those columns will be deleted.");
+            if (dlg.ShowDialog() != true) return;
+            if (MessageBox.Show(
+                    $"Remove {string.Join(", ", dlg.SelectedAntigens)} from '{SelectedPanel.Name}'?",
+                    "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                return;
+
+            foreach (var ag in dlg.SelectedAntigens)
+                _db.RemovePanelExtraAntigen(SelectedPanel.PanelId, ag);
+            LoadCells();
+            _main.SetStatus($"Removed extra antigen(s) from '{SelectedPanel.Name}'.");
+        }
+
+        private void BeginEditAntigens()
+        {
+            if (SelectedPanel == null) return;
+            IsEditingAntigens = true;
+            _main.SetStatus($"Editing antigens for '{SelectedPanel.Name}'. Save or Cancel when done.");
+        }
+
+        public void SaveAllCells()
+        {
+            if (SelectedPanel == null || !IsEditingAntigens) return;
+            foreach (var row in CellRows)
+                _db.UpdatePanelCell(row.Cell);
+            _db.SetPanelAntigenOrder(SelectedPanel.PanelId, AntigenDisplayOrder.ToList());
+            IsEditingAntigens = false;
+            _main.SetStatus($"Panel '{SelectedPanel.Name}' cells saved.");
+        }
+
+        private void CancelEdit()
+        {
+            IsEditingAntigens = false;
+            LoadCells();
+            _main.SetStatus("Antigen edits cancelled.");
+        }
+    }
+
+    /// <summary>
+    /// Wraps a PanelCell for DataGrid editing; exposes each antigen as a named property.
+    /// </summary>
+    public class PanelCellRow : BaseViewModel
+    {
+        public PanelCell Cell { get; }
+        public string CellNumber => Cell.CellNumber;
+
+        public PanelCellRow(PanelCell cell) => Cell = cell;
+
+        public IReadOnlyDictionary<string, string> AntigenValues => Cell.Antigens;
+
+        public string GetAntigen(string ag) => GetEditorValue(ag);
+
+        public string GetEditorValue(string ag) =>
+            Cell.GetTypedValue(ag) ?? AntigenConstants.AntigenNotTested;
+
+        public void SetAntigen(string ag, string val)
+        {
+            Cell.SetAntigen(ag, val);
+            OnPropertyChanged(ag);
+            OnPropertyChanged($"AntigenValues[{ag}]");
+        }
+
+        public void ToggleAntigen(string ag) =>
+            SetAntigen(ag, AntigenConstants.NextEditorAntigenValue(GetEditorValue(ag), ag));
+
+        // Individual antigen properties for DataGrid column bindings
+        public string D { get => GetEditorValue("D"); set { SetAntigen("D", value); } }
+        public string C { get => GetEditorValue("C"); set { SetAntigen("C", value); } }
+        public string c { get => GetEditorValue("c"); set { SetAntigen("c", value); } }
+        public string E { get => GetEditorValue("E"); set { SetAntigen("E", value); } }
+        public string e { get => GetEditorValue("e"); set { SetAntigen("e", value); } }
+        public string f { get => GetEditorValue("f"); set { SetAntigen("f", value); } }
+        public string Cw { get => GetEditorValue("Cw"); set { SetAntigen("Cw", value); } }
+        public string V { get => GetEditorValue("V"); set { SetAntigen("V", value); } }
+        public string K { get => GetEditorValue("K"); set { SetAntigen("K", value); } }
+        public string k { get => GetEditorValue("k"); set { SetAntigen("k", value); } }
+        public string Kpa { get => GetEditorValue("Kpa"); set { SetAntigen("Kpa", value); } }
+        public string Kpb { get => GetEditorValue("Kpb"); set { SetAntigen("Kpb", value); } }
+        public string Jsa { get => GetEditorValue("Jsa"); set { SetAntigen("Jsa", value); } }
+        public string Jsb { get => GetEditorValue("Jsb"); set { SetAntigen("Jsb", value); } }
+        public string Jka { get => GetEditorValue("Jka"); set { SetAntigen("Jka", value); } }
+        public string Jkb { get => GetEditorValue("Jkb"); set { SetAntigen("Jkb", value); } }
+        public string Fya { get => GetEditorValue("Fya"); set { SetAntigen("Fya", value); } }
+        public string Fyb { get => GetEditorValue("Fyb"); set { SetAntigen("Fyb", value); } }
+        public string Lea { get => GetEditorValue("Lea"); set { SetAntigen("Lea", value); } }
+        public string Leb { get => GetEditorValue("Leb"); set { SetAntigen("Leb", value); } }
+        public string M { get => GetEditorValue("M"); set { SetAntigen("M", value); } }
+        public string N { get => GetEditorValue("N"); set { SetAntigen("N", value); } }
+        public string S { get => GetEditorValue("S"); set { SetAntigen("S", value); } }
+        public string s { get => GetEditorValue("s"); set { SetAntigen("s", value); } }
+        public string Lua { get => GetEditorValue("Lua"); set { SetAntigen("Lua", value); } }
+        public string Lub { get => GetEditorValue("Lub"); set { SetAntigen("Lub", value); } }
+        public string Xga { get => GetEditorValue("Xga"); set { SetAntigen("Xga", value); } }
+        public string P1 { get => GetEditorValue("P1"); set { SetAntigen("P1", value); } }
+    }
+}

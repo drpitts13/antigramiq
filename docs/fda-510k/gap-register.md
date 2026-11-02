@@ -13,7 +13,7 @@ In-scope items are product controls and starter DHF artifacts that can be comple
 | G-03 | Append-only audit trail | CLOSED | `audit_events` + Audit Log dialog/export |
 | G-04 | Confirmed-record lock | CLOSED | `RecordLockedException`; clear requires reason |
 | G-05 | Analysis traceability snapshot | CLOSED | `analysis_snapshots` + report trace line |
-| G-06 | Structured logging | CLOSED | `AppLog` under `%AppData%\AntibodyPanels\logs` |
+| G-06 | Structured logging | CLOSED | `AppLog` under `%AppData%\AntigramIQ\logs` |
 | G-07 | Cybersecurity / SOUP evidence | CLOSED | [soup.md](soup.md); Windows identity on audit; existing HIPAA ACL/URL tests |
 | G-08 | Starter DHF | CLOSED | This folder (intended use, SRS, risk, architecture, trace, SOUP, V&V, anomalies) |
 | G-09 | Control tests | CLOSED | `Fda510kControlTests.cs` |
