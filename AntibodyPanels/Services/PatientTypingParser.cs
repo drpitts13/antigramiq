@@ -57,7 +57,7 @@ namespace AntibodyPanels.Services
         };
 
         public static PatientTyping Parse(string? phenotype, string? previousAntibodies, string? notes,
-            string? genotype = null)
+            string? genotype = null, TransfusionAssessment? transfusion = null)
         {
             var typing = new PatientTyping();
             ApplyWeiner(phenotype, typing.Antigens);
@@ -66,7 +66,13 @@ namespace AntibodyPanels.Services
             ApplyGenotype(genotype, typing.PredictedAntigens);
             typing.VariantNotes.AddRange(AlleleVariantCatalog.Match(genotype));
             typing.HistoricalAntibodies.AddRange(ParseHistorical(previousAntibodies));
-            if (LooksRecentlyTransfused(phenotype) || LooksRecentlyTransfused(notes))
+            if (transfusion != null)
+            {
+                typing.PhenotypeUnreliable = transfusion.PhenotypeUnreliable;
+                if (transfusion.PhenotypeUnreliable)
+                    typing.UnreliableReason = transfusion.Explanation;
+            }
+            else if (LooksRecentlyTransfused(phenotype) || LooksRecentlyTransfused(notes))
             {
                 typing.PhenotypeUnreliable = true;
                 typing.UnreliableReason =

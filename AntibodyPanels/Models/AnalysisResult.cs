@@ -21,6 +21,8 @@ namespace AntibodyPanels.Models
         public List<SelectedCellRecommendation> SelectedCellRecommendations { get; set; } = new();
         public List<PatientTypingConsideration> PatientTypingConsiderations { get; set; } = new();
         public bool PatientPhenotypeUnreliable { get; set; }
+        /// <summary>Why patient typing was or was not usable, from the specimen transfusion record.</summary>
+        public string TransfusionContextNote { get; set; } = string.Empty;
         public List<CandidateExplanation> CandidateExplanations { get; set; } = new();
         public List<string> SpecialReactionNotes { get; set; } = new();
         public List<ReactionPatternNote> ReactionPatterns { get; set; } = new();

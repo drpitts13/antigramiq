@@ -17,6 +17,14 @@ namespace AntibodyPanels.Views.Dialogs
         public string? Genotype => string.IsNullOrWhiteSpace(GenotypeBox.Text) ? null : GenotypeBox.Text.Trim();
         public string? PreviousAntibodies => string.IsNullOrWhiteSpace(PreviousAbsBox.Text) ? null : PreviousAbsBox.Text.Trim();
         public string? DatResult => DatBox.SelectedItem?.ToString();
+        public string TransfusionStatusCode =>
+            (TransfusionBox.SelectedItem as TransfusionOption)?.Code ?? Models.TransfusionStatus.Unknown;
+        public string? LastTransfusionDate =>
+            TransfusionStatusCode == Models.TransfusionStatus.Transfused
+                ? LastTransfusionPicker.SelectedDate?.ToString("yyyy-MM-dd")
+                : null;
+
+        private sealed record TransfusionOption(string Code, string Label);
 
         public SpecimenDialog(Specimen? existing = null)
         {
@@ -24,6 +32,12 @@ namespace AntibodyPanels.Views.Dialogs
 
             TypeBox.ItemsSource = AntigenConstants.SpecimenTypes;
             DatBox.ItemsSource = AntigenConstants.DatResults;
+            var transfusionOptions = new System.Collections.Generic.List<TransfusionOption>();
+            foreach (var (code, label) in Models.TransfusionStatus.Options)
+                transfusionOptions.Add(new TransfusionOption(code, label));
+            TransfusionBox.ItemsSource = transfusionOptions;
+            TransfusionBox.SelectedIndex = 0;
+            LastTransfusionPicker.DisplayDateEnd = DateTime.Today;
 
             if (existing == null)
             {
@@ -64,7 +78,24 @@ namespace AntibodyPanels.Views.Dialogs
                 for (int i = 0; i < AntigenConstants.DatResults.Count; i++)
                     if (AntigenConstants.DatResults[i] == existing.DatResult) { datIdx = i; break; }
                 DatBox.SelectedIndex = datIdx;
+
+                var status = Models.TransfusionStatus.Normalize(existing.TransfusionStatus);
+                for (int i = 0; i < transfusionOptions.Count; i++)
+                    if (transfusionOptions[i].Code == status) { TransfusionBox.SelectedIndex = i; break; }
+                if (existing.LastTransfusionDate != null &&
+                    DateTime.TryParse(existing.LastTransfusionDate, out var td))
+                    LastTransfusionPicker.SelectedDate = td;
             }
+            SyncTransfusionDate();
+        }
+
+        private void TransfusionBox_SelectionChanged(object sender, SelectionChangedEventArgs e) =>
+            SyncTransfusionDate();
+
+        private void SyncTransfusionDate()
+        {
+            if (LastTransfusionPicker == null) return;
+            LastTransfusionPicker.IsEnabled = TransfusionStatusCode == Models.TransfusionStatus.Transfused;
         }
 
         private void ExpirationPicker_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
@@ -83,6 +114,14 @@ namespace AntibodyPanels.Views.Dialogs
                 MessageBox.Show("Accession number is required.", "Validation",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 AccessionBox.Focus();
+                return;
+            }
+            if (TransfusionStatusCode == Models.TransfusionStatus.Transfused &&
+                LastTransfusionPicker.SelectedDate?.Date > DateTime.Today)
+            {
+                MessageBox.Show("Last transfusion date cannot be in the future.", "Validation",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                LastTransfusionPicker.Focus();
                 return;
             }
             DialogResult = true;

@@ -18,6 +18,13 @@ namespace AntibodyPanels.Models
         public string? Genotype { get; set; }
         public string? PreviousAntibodies { get; set; }
         public string? DatResult { get; set; }
+        /// <summary>Normalized <see cref="Models.TransfusionStatus"/> code.</summary>
+        public string TransfusionStatus { get; set; } = Models.TransfusionStatus.Unknown;
+        public string? LastTransfusionDate { get; set; }
+        public string TransfusionDisplay =>
+            Models.TransfusionStatus.Normalize(TransfusionStatus) == Models.TransfusionStatus.Transfused
+                ? $"Transfused (last {LastTransfusionDate ?? "date not recorded"})"
+                : Models.TransfusionStatus.Label(TransfusionStatus);
 
         public string? FinalAntibodies { get; set; }
         public string? FinalComment { get; set; }

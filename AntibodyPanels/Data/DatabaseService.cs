@@ -217,6 +217,11 @@ namespace AntibodyPanels.Data
                 ExecNonQuery("ALTER TABLE specimens ADD COLUMN dat_result TEXT");
             if (!cols.Contains("genotype"))
                 ExecNonQuery("ALTER TABLE specimens ADD COLUMN genotype TEXT");
+            if (!cols.Contains("transfusion_status"))
+                ExecNonQuery("ALTER TABLE specimens ADD COLUMN transfusion_status TEXT NOT NULL DEFAULT 'unknown' " +
+                    "CHECK (transfusion_status IN ('unknown','none','transfused'))");
+            if (!cols.Contains("last_transfusion_date"))
+                ExecNonQuery("ALTER TABLE specimens ADD COLUMN last_transfusion_date TEXT");
         }
 
         private void MigrateSpecimenFinalCall()
@@ -521,6 +526,42 @@ namespace AntibodyPanels.Data
             cmd.Parameters.AddWithValue("$geno", (object?)genotype ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$acc", accessionNumber);
             cmd.ExecuteNonQuery();
+        }
+
+        /// <summary>
+        /// Records structured transfusion history. Audited with before and
+        /// after values because it changes how patient typing is interpreted.
+        /// </summary>
+        public void UpdateSpecimenTransfusion(string accessionNumber, string? status, string? lastTransfusionDate)
+        {
+            var code = TransfusionStatus.Normalize(status);
+            string? date = null;
+            if (code == TransfusionStatus.Transfused && !string.IsNullOrWhiteSpace(lastTransfusionDate))
+            {
+                if (!DateTime.TryParse(lastTransfusionDate.Trim(), System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.None, out var d))
+                    throw new ArgumentException($"Last transfusion date '{lastTransfusionDate}' is not a valid date.");
+                if (d.Date > DateTime.Today)
+                    throw new ArgumentException("Last transfusion date cannot be in the future.");
+                date = d.ToString("yyyy-MM-dd");
+            }
+
+            var before = GetSpecimen(accessionNumber)
+                         ?? throw new ArgumentException($"Specimen {accessionNumber} not found.");
+            if (before.TransfusionStatus == code && before.LastTransfusionDate == date) return;
+            EnsureSpecimenUnlocked(accessionNumber);
+
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"
+                UPDATE specimens SET transfusion_status = $status, last_transfusion_date = $date
+                WHERE accession_number = $acc";
+            cmd.Parameters.AddWithValue("$status", code);
+            cmd.Parameters.AddWithValue("$date", (object?)date ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$acc", accessionNumber);
+            cmd.ExecuteNonQuery();
+            AppendAudit("update_transfusion", "specimen", accessionNumber, null,
+                JsonSerializer.Serialize(new { status = before.TransfusionStatus, lastTransfusionDate = before.LastTransfusionDate }),
+                JsonSerializer.Serialize(new { status = code, lastTransfusionDate = date }));
         }
 
         public void SetSpecimenActive(string accessionNumber, bool active)
@@ -2057,6 +2098,8 @@ namespace AntibodyPanels.Data
             Genotype = SafeGetString(r, "genotype"),
             PreviousAntibodies = SafeGetString(r, "previous_antibodies"),
             DatResult = SafeGetString(r, "dat_result"),
+            TransfusionStatus = TransfusionStatus.Normalize(SafeGetString(r, "transfusion_status")),
+            LastTransfusionDate = SafeGetString(r, "last_transfusion_date"),
             FinalAntibodies = SafeGetString(r, "final_antibodies"),
             FinalComment = SafeGetString(r, "final_comment"),
             IdentifiedBy = SafeGetString(r, "identified_by"),

@@ -21,6 +21,8 @@
                 <RowDefinition Height="36"/>
                 <RowDefinition Height="36"/>
                 <RowDefinition Height="36"/>
+                <RowDefinition Height="36"/>
+                <RowDefinition Height="36"/>
                 <RowDefinition Height="80"/>
             </Grid.RowDefinitions>
 
@@ -41,26 +43,37 @@
             <ComboBox x:Name="DatBox" Grid.Row="3" Grid.Column="1"
                       VerticalAlignment="Center" Margin="0,2"/>
 
-            <Label Content="Phenotype:" Grid.Row="4" VerticalAlignment="Center"/>
-            <TextBox x:Name="PhenotypeBox" Grid.Row="4" Grid.Column="1"
-                     VerticalAlignment="Center" Margin="0,2"
-                     ToolTip="e.g. R1r, K−, Fy(a−b+). Note recent transfusion in Notes so analysis will not use typing to exclude alloantibodies."/>
+            <Label Content="Transfusion status:" Grid.Row="4" VerticalAlignment="Center"/>
+            <ComboBox x:Name="TransfusionBox" Grid.Row="4" Grid.Column="1"
+                      VerticalAlignment="Center" Margin="0,2" DisplayMemberPath="Label"
+                      SelectionChanged="TransfusionBox_SelectionChanged"
+                      ToolTip="Transfused within the configured Preferences window makes serologic phenotype uninterpretable for analysis. Unknown falls back to wording in Notes."/>
 
-            <Label Content="Genotype:" Grid.Row="5" VerticalAlignment="Center"/>
-            <TextBox x:Name="GenotypeBox" Grid.Row="5" Grid.Column="1"
+            <Label Content="Last transfusion:" Grid.Row="5" VerticalAlignment="Center"/>
+            <DatePicker x:Name="LastTransfusionPicker" Grid.Row="5" Grid.Column="1"
+                        VerticalAlignment="Center" Margin="0,2"
+                        ToolTip="Date of the most recent red-cell transfusion. Leave blank if unknown; the phenotype is then treated as uninterpretable."/>
+
+            <Label Content="Phenotype:" Grid.Row="6" VerticalAlignment="Center"/>
+            <TextBox x:Name="PhenotypeBox" Grid.Row="6" Grid.Column="1"
+                     VerticalAlignment="Center" Margin="0,2"
+                     ToolTip="e.g. R1r, K−, Fy(a−b+). Record recent transfusion in Transfusion status so analysis will not use typing to exclude alloantibodies."/>
+
+            <Label Content="Genotype:" Grid.Row="7" VerticalAlignment="Center"/>
+            <TextBox x:Name="GenotypeBox" Grid.Row="7" Grid.Column="1"
                      VerticalAlignment="Center" Margin="0,2"
                      ToolTip="Predicted type from molecular results, e.g. RHCE*ce/ce; FY*02/FY*02. Remains reviewable after transfusion. Not a diagnosis."/>
 
-            <Label Content="Previous antibodies:" Grid.Row="6" VerticalAlignment="Center"/>
-            <TextBox x:Name="PreviousAbsBox" Grid.Row="6" Grid.Column="1"
+            <Label Content="Previous antibodies:" Grid.Row="8" VerticalAlignment="Center"/>
+            <TextBox x:Name="PreviousAbsBox" Grid.Row="8" Grid.Column="1"
                      VerticalAlignment="Center" Margin="0,2"/>
 
-            <Label Content="Active:" Grid.Row="7" VerticalAlignment="Center"/>
-            <CheckBox x:Name="ActiveCheck" Grid.Row="7" Grid.Column="1"
+            <Label Content="Active:" Grid.Row="9" VerticalAlignment="Center"/>
+            <CheckBox x:Name="ActiveCheck" Grid.Row="9" Grid.Column="1"
                       VerticalAlignment="Center" Margin="0,2" IsChecked="True"/>
 
-            <Label Content="Notes:" Grid.Row="8" VerticalAlignment="Top" Margin="0,4,0,0"/>
-            <TextBox x:Name="NotesBox" Grid.Row="8" Grid.Column="1"
+            <Label Content="Notes:" Grid.Row="10" VerticalAlignment="Top" Margin="0,4,0,0"/>
+            <TextBox x:Name="NotesBox" Grid.Row="10" Grid.Column="1"
                      AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
                      Height="70" Margin="0,2"/>
         </Grid>

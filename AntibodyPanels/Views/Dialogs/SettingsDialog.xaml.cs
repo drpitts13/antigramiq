@@ -30,6 +30,7 @@ namespace AntibodyPanels.Views.Dialogs
             if (DefaultTypeBox.SelectedItem == null) DefaultTypeBox.SelectedIndex = 0;
             DatingDaysBox.Text = s.DefaultSpecimenDatingDays.ToString();
             ExpiryDaysBox.Text = s.ExpirationWarningDays.ToString();
+            TransfusionWindowBox.Text = s.RecentTransfusionWindowDays.ToString();
             MaxDbSizeBox.Text = s.MaxDatabaseSizeMb.ToString();
             InitialsBox.Text = s.DefaultIdentifiedBy;
             ShowInactiveCheck.IsChecked = s.ShowInactiveByDefault;
@@ -112,6 +113,14 @@ namespace AntibodyPanels.Views.Dialogs
                 ExpiryDaysBox.Focus();
                 return;
             }
+            if (!int.TryParse(TransfusionWindowBox.Text.Trim(), out var transfusionDays) ||
+                transfusionDays < 1 || transfusionDays > 365)
+            {
+                MessageBox.Show("Recent transfusion window must be between 1 and 365 days.",
+                    "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                TransfusionWindowBox.Focus();
+                return;
+            }
             if (!int.TryParse(MaxDbSizeBox.Text.Trim(), out var maxMb) || maxMb < 50 || maxMb > 10240)
             {
                 MessageBox.Show("Maximum database size must be between 50 and 10240 MB.",
@@ -132,6 +141,7 @@ namespace AntibodyPanels.Views.Dialogs
             AppSettings.Current.DefaultSpecimenType = DefaultTypeBox.SelectedItem?.ToString() ?? "serum";
             AppSettings.Current.DefaultSpecimenDatingDays = datingDays;
             AppSettings.Current.ExpirationWarningDays = days;
+            AppSettings.Current.RecentTransfusionWindowDays = transfusionDays;
             AppSettings.Current.MaxDatabaseSizeMb = maxMb;
             AppSettings.Current.DefaultIdentifiedBy = LabSettings.NormalizeInitials(InitialsBox.Text);
             AppSettings.Current.ShowInactiveByDefault = ShowInactiveCheck.IsChecked == true;

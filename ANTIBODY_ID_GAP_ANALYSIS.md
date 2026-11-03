@@ -7,7 +7,7 @@ rule-outs are analytical evidence, not a diagnosis.
 Status: **Present** (usable), **Partial** (exists but incomplete or silent),
 **Missing**.
 
-Last updated: 2026-10-18 (iteration 49 — enzyme and DTT comparisons that fit no pattern are named).
+Last updated: 2026-11-03 (iteration 50 — structured transfusion status and date decide phenotype reliability).
 
 ## Capability matrix
 
@@ -32,7 +32,8 @@ Last updated: 2026-10-18 (iteration 49 — enzyme and DTT comparisons that fit n
 | Analysis | Single / multiple / dosage scoring | Partial | Fisher + pattern; pairwise combinations; dosage averages | Label as evidence, not diagnosis |
 | Analysis | Panreactive / cold / warm / HTLA / auto / HFA / LFA models | Partial | DAT scores; named LFA/pan cells; enzyme lost/gained/resistant; DTT lost/resistant vs untreated. Unpaired runs, comparisons with fewer than 3 paired cells, and comparisons that meet no threshold are each named | Cells tested on only one of the paired runs stay unnamed |
 | Analysis | Selected-cell recommendations with “why” | Partial | Unused in-date vials preferred; P1−/Ch−/Sd(a−) selected cells ranked when neutralization favors soluble substance | More ISBT alleles later |
-| Analysis | Patient phenotype / genotype / transfusion limits | Partial | GYPA null/Mk En(a); RHCE*Ce vs ce case-sensitive; CeRN variant-C; RHD DAR/DVI/DNB partial D does not rule out anti-D; GATA still does not support anti-Fya | More ISBT alleles later |
+| Specimen | Structured transfusion context | Partial | Status (Unknown / Not transfused / Transfused) + last-transfusion date on the specimen; DB CHECK constraint; audited; locked after final call; Preferences window (default 90 days) in analysis snapshot | Product counts/types, pregnancy, HSCT/BMT, mixed-field concern |
+| Analysis | Patient phenotype / genotype / transfusion limits | Partial | Structured transfusion date vs configurable window decides phenotype reliability and is explained; note keywords only when status is Unknown; GYPA null/Mk En(a); RHCE*Ce vs ce case-sensitive; CeRN variant-C; RHD DAR/DVI/DNB partial D does not rule out anti-D; GATA still does not support anti-Fya | More ISBT alleles later |
 | UI | Antigram freeze / slashes / run compare | Partial | Frozen cell; slashes; compare extras; Show dosage; filter/sort; panel lot compare | — |
 | UI | Explain Analysis panel | Present | Explain tab + Summary + clinical report assemble rule-out, support, conflict, phenotype, additional testing | Keep wording as evidence, not diagnosis |
 | Audit | Panel, reactions, rules, settings, final ID | Partial | Snapshots store rule-engine version, rules JSON, operator, and the adsorption comparison (conclusions plus ordinary-score exclusions) | Cross-panel enzyme/DTT pairing later |
@@ -809,10 +810,42 @@ show the note. Nothing is identified.
 two runs. Authenticated vendor portals stay later and must not bypass
 auth, CAPTCHA, licensing, or terms.
 
+## Iteration 50 (this change)
+
+Product review: iterations 44–49 all refined enzyme and DTT comparisons.
+This tick moves to specimen and patient context, which the workflow
+starts from.
+
+**Deficiency:** Recent transfusion was detected only by keywords in the
+specimen notes or phenotype. "Received 2 PRBC" was missed, so a likely
+donor-cell E+ phenotype argued against anti-E. "No transfusion history"
+was flagged as transfused. No last-transfusion date was recorded, and
+the window was not configurable.
+
+**Bounded improvement:** Specimens now store a transfusion status and a
+last-transfusion date. The status column has a database CHECK
+constraint, and changes are audited and blocked after a final call.
+Preferences has a recent-transfusion window (1–365 days, default 90),
+which is saved with each analysis snapshot. Analysis uses the structured
+status first. Transfused within the window, with no date, or with a date
+after the specimen makes the phenotype uninterpretable. A date outside
+the window leaves the phenotype usable. The note keywords decide only
+when the status is Unknown. Under Not transfused, transfusion wording in
+the notes is named for review. Each explanation states the date, the day
+count, and the window. Summary, suggestions, the specimen detail, and
+both specimen reports show it. Nothing is identified.
+
+**Not in this tick:** Product counts and types, pregnancy history,
+HSCT/BMT, mixed-field concern, and connecting transfusion context to
+mixed-field reaction notes. The legacy keyword check remains as the
+fallback for Unknown.
+
 ## Likely next tick
 
-When a ficin, papain, or DTT comparison pairs some cells on the same
-panel, name the cells that were tested on only one of the two runs and
-were left out of the pair count. Authenticated vendor portals stay later
+Connect the structured transfusion record to mixed-field reactions.
+When cells grade MF and the specimen is Transfused within the window,
+name possible donor cells in the pattern note rather than treating MF as
+ordinary reactivity. Naming enzyme or DTT cells tested on only one run
+stays queued. Authenticated vendor portals stay later
 and must not bypass auth, CAPTCHA, licensing, or terms.
 

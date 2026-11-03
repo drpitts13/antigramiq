@@ -26,6 +26,7 @@
                 <RowDefinition Height="36"/>
                 <RowDefinition Height="36"/>
                 <RowDefinition Height="36"/>
+                <RowDefinition Height="36"/>
                 <RowDefinition Height="32"/>
                 <RowDefinition Height="32"/>
             </Grid.RowDefinitions>
@@ -62,30 +63,34 @@
             <Label Content="Expiration warning (days):" Grid.Row="8" VerticalAlignment="Center"/>
             <TextBox x:Name="ExpiryDaysBox" Grid.Row="8" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
 
-            <Label Content="Max database size (MB):" Grid.Row="9" VerticalAlignment="Center"
-                   ToolTip="Warn when the database file reaches 80% of this size. Allowed range: 50–10240 MB."/>
-            <TextBox x:Name="MaxDbSizeBox" Grid.Row="9" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
+            <Label Content="Recent transfusion (days):" Grid.Row="9" VerticalAlignment="Center"
+                   ToolTip="A specimen recorded as Transfused with a last transfusion this many days or fewer before the specimen date has its serologic phenotype treated as uninterpretable (possible donor cells). Allowed range: 1–365."/>
+            <TextBox x:Name="TransfusionWindowBox" Grid.Row="9" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
 
-            <Label Content="Default initials:" Grid.Row="10" VerticalAlignment="Center"
+            <Label Content="Max database size (MB):" Grid.Row="10" VerticalAlignment="Center"
+                   ToolTip="Warn when the database file reaches 80% of this size. Allowed range: 50–10240 MB."/>
+            <TextBox x:Name="MaxDbSizeBox" Grid.Row="10" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
+
+            <Label Content="Default initials:" Grid.Row="11" VerticalAlignment="Center"
                    ToolTip="Pre-filled on Confirm ID. Updated automatically when you confirm an identification."/>
-            <TextBox x:Name="InitialsBox" Grid.Row="10" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"
+            <TextBox x:Name="InitialsBox" Grid.Row="11" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"
                      MaxLength="12"/>
 
-            <CheckBox x:Name="ShowInactiveCheck" Grid.Row="11" Grid.Column="0" Grid.ColumnSpan="2"
+            <CheckBox x:Name="ShowInactiveCheck" Grid.Row="12" Grid.Column="0" Grid.ColumnSpan="2"
                       Content="Show inactive specimens and panels by default"
                       VerticalAlignment="Center" Margin="4,0,0,0"/>
 
-            <CheckBox x:Name="HideRuledOutCheck" Grid.Row="12" Grid.Column="0" Grid.ColumnSpan="2"
+            <CheckBox x:Name="HideRuledOutCheck" Grid.Row="13" Grid.Column="0" Grid.ColumnSpan="2"
                       Content="Hide ruled-out antigen columns on the Reactions tab"
                       VerticalAlignment="Center" Margin="4,0,0,0"/>
 
-            <Label Content="Extra phases:" Grid.Row="13" VerticalAlignment="Center"
+            <Label Content="Extra phases:" Grid.Row="14" VerticalAlignment="Center"
                    ToolTip="Optional extra reaction columns. Leave blank for the classic IS / 37°C / AHG / CC grid. Gel, Solid, and PEG count as IAT-like evidence. Dil1–Dil128 are serial-dilution titer columns, not identification phases."/>
-            <TextBox x:Name="ExtraPhasesBox" Grid.Row="13" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"
+            <TextBox x:Name="ExtraPhasesBox" Grid.Row="14" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"
                      ToolTip="Suggested: RT, PEG, Gel, Solid, and optional Dil1–Dil128. Custom names are kept. Dilution columns are not IAT."
                      TextChanged="ExtraPhasesBox_TextChanged"/>
 
-            <StackPanel Grid.Row="14" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal"
+            <StackPanel Grid.Row="15" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal"
                         Margin="4,0,0,0">
                 <CheckBox x:Name="PhaseRtCheck" Content="RT" Margin="0,0,12,0"
                           VerticalAlignment="Center" Checked="SuggestedPhaseChanged" Unchecked="SuggestedPhaseChanged"/>
@@ -99,7 +104,7 @@
             </StackPanel>
 
             <CheckBox x:Name="PhaseTiterGridCheck"
-                      Grid.Row="15" Grid.Column="0" Grid.ColumnSpan="2"
+                      Grid.Row="16" Grid.Column="0" Grid.ColumnSpan="2"
                       Content="Titer grid (Dil1–Dil128)"
                       VerticalAlignment="Center" Margin="4,0,0,0"
                       ToolTip="Adds serial-dilution columns. Last reactive tube is the titer endpoint. These grades are not IAT and do not rule out or identify an antibody."

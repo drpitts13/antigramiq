@@ -2,7 +2,7 @@
 
 Patient Typing lines each candidate up against the phenotype, genotype, and antibody history stored on the specimen.
 
-The note on the tab states the rule: patient phenotype and historical antibodies are evidence for or against a candidate. Recent transfusion makes the phenotype uninterpretable. Record that transfusion in the specimen notes. This tab is not a diagnosis.
+The note on the tab states the rule: patient phenotype and historical antibodies are evidence for or against a candidate. Recent transfusion makes the phenotype uninterpretable. Record the transfusion status and last-transfusion date on the specimen. A **[Transfusion]** line in Summary states which record decided this: the structured date and its day count against the Preferences window, or the Notes keyword check when the status is Unknown. This tab is not a diagnosis.
 
 Columns:
 

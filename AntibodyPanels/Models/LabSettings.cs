@@ -26,6 +26,11 @@ namespace AntibodyPanels.Models
         public string DefaultIdentifiedBy { get; set; } = "";
         public int ExpirationWarningDays { get; set; } = 14;
         public int DefaultSpecimenDatingDays { get; set; } = 3;
+        /// <summary>
+        /// A transfusion this many days or fewer before the specimen makes
+        /// serologic patient typing uninterpretable (possible donor cells).
+        /// </summary>
+        public int RecentTransfusionWindowDays { get; set; } = 90;
         public int MaxDatabaseSizeMb { get; set; } = 500;
         public bool WorklistShowIncomplete { get; set; } = true;
         public bool WorklistShowStale { get; set; } = true;
@@ -59,6 +64,8 @@ namespace AntibodyPanels.Models
             if (ExpirationWarningDays > 90) ExpirationWarningDays = 90;
             if (DefaultSpecimenDatingDays < 0) DefaultSpecimenDatingDays = 0;
             if (DefaultSpecimenDatingDays > 14) DefaultSpecimenDatingDays = 14;
+            if (RecentTransfusionWindowDays < 1) RecentTransfusionWindowDays = 1;
+            if (RecentTransfusionWindowDays > 365) RecentTransfusionWindowDays = 365;
             if (MaxDatabaseSizeMb < 50) MaxDatabaseSizeMb = 50;
             if (MaxDatabaseSizeMb > 10240) MaxDatabaseSizeMb = 10240;
             if (string.IsNullOrWhiteSpace(LabName))
@@ -110,7 +117,8 @@ namespace AntibodyPanels.Models
             IdentificationCellCount,
             AcsRuleoutCount,
             DefaultMinRuleoutCount,
-            ExtraPhases
+            ExtraPhases,
+            RecentTransfusionWindowDays
         };
 
         public string IsolatedWorklistLabel =>

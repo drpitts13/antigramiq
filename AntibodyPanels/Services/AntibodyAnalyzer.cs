@@ -1217,7 +1217,10 @@ namespace AntibodyPanels.Services
                 important.Add(pattern.Explanation);
 
             if (result.PatientPhenotypeUnreliable)
-                important.Add("Patient phenotype cannot be interpreted for alloantibody exclusion because recent transfusion or another configured limitation was noted.");
+                important.Add("Patient phenotype cannot be interpreted for alloantibody exclusion. " +
+                    (string.IsNullOrEmpty(result.TransfusionContextNote)
+                        ? "Recent transfusion or another configured limitation was noted."
+                        : result.TransfusionContextNote));
 
             foreach (var c in result.PatientTypingConsiderations.Where(x => x.Kind == PatientTypingKind.Against))
             {
@@ -1294,9 +1297,13 @@ namespace AntibodyPanels.Services
         {
             var specimen = _db.GetSpecimen(specimenId);
             if (specimen == null) return;
+            var transfusion = TransfusionContext.Assess(
+                specimen.TransfusionStatus, specimen.LastTransfusionDate, specimen.CreatedDate,
+                AppSettings.Current.RecentTransfusionWindowDays, specimen.Phenotype, specimen.Notes);
             var typing = PatientTypingParser.Parse(
-                specimen.Phenotype, specimen.PreviousAntibodies, specimen.Notes, specimen.Genotype);
+                specimen.Phenotype, specimen.PreviousAntibodies, specimen.Notes, specimen.Genotype, transfusion);
             result.PatientPhenotypeUnreliable = typing.PhenotypeUnreliable;
+            result.TransfusionContextNote = transfusion.Explanation;
             result.PatientTypingConsiderations = PatientTypingParser.Evaluate(typing);
         }
 

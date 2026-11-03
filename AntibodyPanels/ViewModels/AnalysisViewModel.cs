@@ -735,6 +735,8 @@ namespace AntibodyPanels.ViewModels
             if (r.PatientTypingConsiderations.Count > 0)
             {
                 sb.AppendLine(PatientTypingHeader(r));
+                if (!string.IsNullOrEmpty(r.TransfusionContextNote))
+                    sb.AppendLine($"  [Transfusion] {r.TransfusionContextNote}");
                 foreach (var c in r.PatientTypingConsiderations)
                     sb.AppendLine($"  [{c.Kind}] {c.Explanation}");
                 sb.AppendLine();

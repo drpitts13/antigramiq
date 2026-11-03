@@ -397,7 +397,7 @@
             <TabItem Header="Patient Typing" help:Help.Topic="analysis-typing">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Margin="6,6,6,4"
-                               Text="Patient phenotype and historical antibodies are shown as evidence for or against a candidate. Recent transfusion makes phenotype uninterpretable. This is not a diagnosis."
+                               Text="Patient phenotype and historical antibodies are shown as evidence for or against a candidate. Recent transfusion (the specimen transfusion status and date, within the Preferences window) makes phenotype uninterpretable. This is not a diagnosis."
                                TextWrapping="Wrap" Foreground="#555" FontStyle="Italic"/>
                     <DataGrid ItemsSource="{Binding PatientTypingRows}" IsReadOnly="True"
                               AutoGenerateColumns="False" GridLinesVisibility="Horizontal"

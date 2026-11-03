@@ -15,6 +15,7 @@ Open **Tools → Preferences** to set laboratory defaults. **Save** writes them 
 - **Default specimen type** pre-selects serum, plasma, or eluate on a new specimen.
 - **Specimen dating (days)** pre-fills expiration when you add a specimen. 0 leaves the date blank. Three days is a typical antibody workup dating interval.
 - **Expiration warning (days)** is how far ahead the Worklist and the lists mark a specimen or panel as expiring.
+- **Recent transfusion (days)** is 1–365, default 90. If the specimen is Transfused and its last transfusion is this many days or fewer before the specimen date, the serologic phenotype is treated as possible donor cells and is not used against an alloantibody. The value is saved with each analysis snapshot.
 - **Max database size (MB)** warns when the database file reaches 80 percent of this size. The allowed range is 50 to 10240 MB. The warning can offer to open Purge Database.
 - **Default initials** pre-fills **Initials** on Confirm ID. Confirming an identification updates this value to the initials you used.
 - **Show inactive specimens and panels by default** turns on **Show Inactive** when those tabs open.

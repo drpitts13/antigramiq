@@ -170,6 +170,7 @@ namespace AntibodyPanels.ViewModels
             {
                 _db.AddSpecimen(dlg.AccessionNumber, dlg.SpecimenType, dlg.ExpirationDate, dlg.ItemIsActive,
                     dlg.Notes, dlg.Phenotype, dlg.PreviousAntibodies, dlg.DatResult, genotype: dlg.Genotype);
+                _db.UpdateSpecimenTransfusion(dlg.AccessionNumber, dlg.TransfusionStatusCode, dlg.LastTransfusionDate);
                 _main.SetStatus($"Specimen {dlg.AccessionNumber} added.");
                 NotifySpecimensChanged();
                 SelectedSpecimen = Specimens.FirstOrDefault(s => s.AccessionNumber == dlg.AccessionNumber);
@@ -190,6 +191,8 @@ namespace AntibodyPanels.ViewModels
             {
                 _db.UpdateSpecimen(SelectedSpecimen.AccessionNumber, dlg.SpecimenType, dlg.ExpirationDate, dlg.ItemIsActive,
                     dlg.Notes, dlg.Phenotype, dlg.PreviousAntibodies, dlg.DatResult, dlg.Genotype);
+                _db.UpdateSpecimenTransfusion(SelectedSpecimen.AccessionNumber, dlg.TransfusionStatusCode,
+                    dlg.LastTransfusionDate);
                 _main.SetStatus($"Specimen {SelectedSpecimen.AccessionNumber} updated.");
                 NotifySpecimensChanged();
             }
