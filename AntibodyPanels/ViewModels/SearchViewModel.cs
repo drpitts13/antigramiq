@@ -19,6 +19,77 @@ namespace AntibodyPanels.ViewModels
         public ICommand SearchCommand { get; }
         public ICommand ClearCommand { get; }
 
+        // ── Investigation search ───────────────────────────────────────
+        public ObservableCollection<Services.InvestigationSearchRow> InvestigationResults { get; } = new();
+        public ICommand InvestigationSearchCommand { get; }
+        public ICommand OpenInvestigationCommand { get; }
+
+        private string _investigationQuery = string.Empty;
+        public string InvestigationQuery
+        {
+            get => _investigationQuery;
+            set => SetField(ref _investigationQuery, value);
+        }
+
+        private System.DateTime? _fromDate;
+        public System.DateTime? FromDate
+        {
+            get => _fromDate;
+            set => SetField(ref _fromDate, value);
+        }
+
+        private System.DateTime? _toDate;
+        public System.DateTime? ToDate
+        {
+            get => _toDate;
+            set => SetField(ref _toDate, value);
+        }
+
+        private Services.InvestigationSearchRow? _selectedInvestigation;
+        public Services.InvestigationSearchRow? SelectedInvestigation
+        {
+            get => _selectedInvestigation;
+            set => SetField(ref _selectedInvestigation, value);
+        }
+
+        private string _investigationMessage = "Search by accession, MRN, patient name, DOB, final antibody, or technologist initials.";
+        public string InvestigationMessage
+        {
+            get => _investigationMessage;
+            private set => SetField(ref _investigationMessage, value);
+        }
+
+        public void RunInvestigationSearch()
+        {
+            InvestigationResults.Clear();
+            if (string.IsNullOrWhiteSpace(InvestigationQuery) && FromDate == null && ToDate == null)
+            {
+                InvestigationMessage = "Enter search text or a date range.";
+                return;
+            }
+            if (FromDate != null && ToDate != null && FromDate > ToDate)
+            {
+                InvestigationMessage = "The From date is after the To date.";
+                return;
+            }
+            foreach (var row in Services.InvestigationSearch.Search(_db, InvestigationQuery, FromDate, ToDate))
+                InvestigationResults.Add(row);
+            InvestigationMessage = InvestigationResults.Count == 0
+                ? "No investigations match."
+                : $"{InvestigationResults.Count} investigation(s), newest first. Double-click or Open to view.";
+            _main.SetStatus(InvestigationMessage);
+        }
+
+        private void OpenInvestigation()
+        {
+            if (SelectedInvestigation == null) return;
+            _main.NavigateToWorklistItem(new WorklistItem
+            {
+                AccessionNumber = SelectedInvestigation.Accession,
+                TargetTab = "Specimens",
+            });
+        }
+
         private string _selectedZygosity = AntigenConstants.ZygosityBoth;
         public string SelectedZygosity
         {
@@ -35,6 +106,8 @@ namespace AntibodyPanels.ViewModels
                 Criteria.Add(new AntigenCriterionRow(ag));
 
             SearchCommand = new RelayCommand(RunSearch);
+            InvestigationSearchCommand = new RelayCommand(RunInvestigationSearch);
+            OpenInvestigationCommand = new RelayCommand(OpenInvestigation, () => SelectedInvestigation != null);
             ClearCommand = new RelayCommand(ClearCriteria);
         }
 

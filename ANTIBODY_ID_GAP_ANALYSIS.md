@@ -7,7 +7,7 @@ rule-outs are analytical evidence, not a diagnosis.
 Status: **Present** (usable), **Partial** (exists but incomplete or silent),
 **Missing**.
 
-Last updated: 2026-11-03 (iteration 55 — derived investigation status with steps and next action).
+Last updated: 2026-11-03 (iteration 56 — investigation search by MRN, patient, antibody, technologist, and date).
 
 ## Capability matrix
 
@@ -30,6 +30,7 @@ Last updated: 2026-11-03 (iteration 55 — derived investigation status with ste
 | Analysis | Transparent candidate evidence | Partial | Explain Analysis lists suspected, in-progress, historical, untypeable, pattern, enzyme, DTT, and cell-level adsorption comparisons. Adsorbed aliquots do not rule out or enter ordinary scores for specificities they are expected to remove. A panreactive untreated run paired with autoadsorption or rr/R1R1/R2R2 adsorption is omitted from ordinary scores. Unpaired ficin, papain, and DTT runs are named and are not compared with another panel | Cross-panel enzyme and DTT pairing stays out of scope |
 | Analysis | Configurable visible rule-out | Partial | `Rule.MinRuleoutCount` is now applied; lab default + explanation sentences | Watch seeded anti-D/anti-k rules; ACS remains separate |
 | Analysis | Single / multiple / dosage scoring | Partial | Fisher + pattern; pairwise combinations; dosage averages | Label as evidence, not diagnosis |
+| Search | Investigation search | Present | Search tab › Investigations: accession, MRN, patient name/DOB, final/previous antibodies, technologist; every word must match; inclusive date range; status column; Open jumps to Specimens | Panel lot/manufacturer used in an investigation not yet searchable |
 | Workflow | Investigation status and next step | Partial | `InvestigationStatusService` derives five steps and a status (awaiting panel → testing → analysis needed → awaiting ID → completed / amended / reopened / inactive) from panels, grades, analysis time, final call, and audit; shown on Specimens and the worksheet; Worklist shares the completeness check | No technologist/supervisor review steps or cancel action yet; not shown as a column in the specimen list |
 | Patient | Permanent record and transfusion requirements | Partial | `patients` table (MRN, name, DOB, comments, requirements); audited add/update; Edit Patient on Specimens; reports print it; analysis raises REVIEW when a known antibody's antigen-negative requirement is not written | Structured requirement list instead of free text |
 | Patient | MRN and cross-specimen history | Partial | Indexed `specimens.mrn`; audited; confirmed final calls on the same MRN become Historical evidence citing the source accession; detail pane and reports list other specimens | Encounter, location, ordering provider, sex, pregnancy history |
@@ -966,11 +967,31 @@ and the worksheet prints the status line. The Worklist now uses the same
 an explicit Cancel action with reason, and a status column in the
 specimen list.
 
+## Iteration 56 (this change)
+
+**Deficiency:** The Search tab only searched reagent cells by antigen
+profile. A patient's earlier workups could not be found by MRN or name,
+and there was no way to list every anti-Jka identification or every
+call by one technologist.
+
+**Bounded improvement:** The Search tab now opens on **Investigations**.
+`InvestigationSearch` matches accession, MRN, patient name and DOB,
+final and previous antibodies, final comment, and technologist
+initials. Every word must match. An optional inclusive date range can be
+used alone. Rows show the derived status and sort newest first. Open
+(or double-click) goes to the specimen. Empty searches and reversed date
+ranges are refused with a message. The antigen-profile search moved
+unchanged to its own section.
+
+**Not in this tick:** Searching by panel lot or manufacturer used in an
+investigation. The specimen-list filter still matches MRN but not
+patient name.
+
 ## Likely next tick
 
-Make MRN and patient name searchable on the Search tab and show the
-derived status in the specimen list, so a technologist can find a
-patient's investigations and see their state without opening each one.
-After that: technologist/supervisor review steps (roadmap item 2 follow-up). Authenticated vendor portals stay later
+Technologist and supervisor review steps (roadmap item 2 follow-up):
+record a technologist review and, where the lab requires it, a separate
+supervisor sign-off before an identification counts as Completed, with
+audit and a Worklist queue for items awaiting supervisor review. Authenticated vendor portals stay later
 and must not bypass auth, CAPTCHA, licensing, or terms.
 

@@ -15,6 +15,19 @@ namespace AntibodyPanels.Views
             ApplyAntigenMarkStyle();
         }
 
+        private void InvestigationQueryBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key != System.Windows.Input.Key.Enter) return;
+            if (DataContext is ViewModels.SearchViewModel vm) vm.RunInvestigationSearch();
+            e.Handled = true;
+        }
+
+        private void InvestigationGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (DataContext is ViewModels.SearchViewModel vm && vm.OpenInvestigationCommand.CanExecute(null))
+                vm.OpenInvestigationCommand.Execute(null);
+        }
+
         private void AddWarehouseColumns()
         {
             foreach (var ag in AntigenConstants.WarehouseAntigens)

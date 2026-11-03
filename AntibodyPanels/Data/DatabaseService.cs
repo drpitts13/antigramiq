@@ -618,6 +618,19 @@ namespace AntibodyPanels.Data
                 JsonSerializer.Serialize(new { igg = newIgg, c3 = newC3 }));
         }
 
+        public List<Patient> GetAllPatients()
+        {
+            var list = new List<Patient>();
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "SELECT mrn FROM patients ORDER BY mrn";
+            var mrns = new List<string>();
+            using (var r = cmd.ExecuteReader())
+                while (r.Read()) mrns.Add(r.GetString(0));
+            foreach (var m in mrns)
+                if (GetPatient(m) is Patient p) list.Add(p);
+            return list;
+        }
+
         public Patient? GetPatient(string? mrn)
         {
             var key = Services.PatientHistory.NormalizeMrn(mrn);
