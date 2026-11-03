@@ -550,8 +550,16 @@ namespace HemoIQ.ViewModels
                 return;
             }
 
-            _db.SetSpecimenFinalCall(SelectedSpecimen.AccessionNumber, antibodies,
-                string.IsNullOrWhiteSpace(FinalComment) ? null : FinalComment.Trim(), initials);
+            try
+            {
+                _db.SetSpecimenFinalCall(SelectedSpecimen.AccessionNumber, antibodies,
+                    string.IsNullOrWhiteSpace(FinalComment) ? null : FinalComment.Trim(), initials);
+            }
+            catch (RecordLockedException ex)
+            {
+                MessageBox.Show(ex.Message, "Confirm identification", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
             RememberInitials(initials);
             LoadFinalCall(SelectedSpecimen);
             _main.SpecimensVM.Refresh();

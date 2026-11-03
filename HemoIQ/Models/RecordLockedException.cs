@@ -6,11 +6,16 @@ namespace HemoIQ.Models
     {
         public string AccessionNumber { get; }
 
-        public RecordLockedException(string accessionNumber)
-            : base($"Specimen {accessionNumber} has a confirmed identification and is locked. " +
-                   "Clear the confirmation with a reason before editing reactions, panels, or analysis.")
+        public bool Cancelled { get; }
+
+        public RecordLockedException(string accessionNumber, bool cancelled = false)
+            : base(cancelled
+                ? $"Investigation {accessionNumber} is cancelled and locked. Reinstate it with a reason before editing reactions, panels, analysis, or the identification."
+                : $"Specimen {accessionNumber} has a confirmed identification and is locked. " +
+                  "Clear the confirmation with a reason before editing reactions, panels, or analysis.")
         {
             AccessionNumber = accessionNumber;
+            Cancelled = cancelled;
         }
     }
 }

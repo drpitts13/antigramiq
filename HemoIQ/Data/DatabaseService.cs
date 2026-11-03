@@ -269,6 +269,10 @@ namespace HemoIQ.Data
                 ExecNonQuery("ALTER TABLE specimens ADD COLUMN reviewed_by TEXT");
             if (!cols.Contains("reviewed_at"))
                 ExecNonQuery("ALTER TABLE specimens ADD COLUMN reviewed_at TEXT");
+            if (!cols.Contains("cancelled_at"))
+                ExecNonQuery("ALTER TABLE specimens ADD COLUMN cancelled_at TEXT");
+            if (!cols.Contains("cancel_reason"))
+                ExecNonQuery("ALTER TABLE specimens ADD COLUMN cancel_reason TEXT");
         }
 
         /// <summary>
@@ -818,6 +822,8 @@ namespace HemoIQ.Data
             string? antibodies, string? comment, string? identifiedBy,
             DateTime? identifiedAt = null)
         {
+            if (antibodies != null && GetSpecimen(accessionNumber)?.IsCancelled == true)
+                throw new RecordLockedException(accessionNumber, cancelled: true);
             using var cmd = _conn.CreateCommand();
             cmd.CommandText = @"
                 UPDATE specimens SET
@@ -885,6 +891,50 @@ namespace HemoIQ.Data
                     finalAntibodies = s.FinalAntibodies,
                     identifiedBy = s.IdentifiedBy,
                 }));
+        }
+
+        /// <summary>
+        /// Cancels an investigation (e.g. mislabeled or unacceptable specimen, cancelled order).
+        /// Requires a reason and no confirmed identification. The record is kept, locked, and
+        /// removed from work queues. Audited.
+        /// </summary>
+        public void CancelInvestigation(string accessionNumber, string reason)
+        {
+            if (string.IsNullOrWhiteSpace(reason))
+                throw new ArgumentException("A reason is required to cancel an investigation.", nameof(reason));
+            var s = GetSpecimen(accessionNumber)
+                    ?? throw new ArgumentException($"Specimen {accessionNumber} not found.");
+            if (s.IsCancelled)
+                throw new InvalidOperationException($"{accessionNumber} is already cancelled.");
+            if (s.HasFinalCall)
+                throw new InvalidOperationException(
+                    "Clear the confirmed identification with a reason before cancelling the investigation.");
+            var at = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "UPDATE specimens SET cancelled_at = $at, cancel_reason = $r WHERE accession_number = $acc";
+            cmd.Parameters.AddWithValue("$at", at);
+            cmd.Parameters.AddWithValue("$r", reason.Trim());
+            cmd.Parameters.AddWithValue("$acc", accessionNumber);
+            cmd.ExecuteNonQuery();
+            AppendAudit("cancel_investigation", "specimen", accessionNumber, reason.Trim(),
+                afterJson: JsonSerializer.Serialize(new { cancelledAt = at }));
+        }
+
+        /// <summary>Reinstates a cancelled investigation. Requires a reason. Audited.</summary>
+        public void ReinstateInvestigation(string accessionNumber, string reason)
+        {
+            if (string.IsNullOrWhiteSpace(reason))
+                throw new ArgumentException("A reason is required to reinstate an investigation.", nameof(reason));
+            var s = GetSpecimen(accessionNumber)
+                    ?? throw new ArgumentException($"Specimen {accessionNumber} not found.");
+            if (!s.IsCancelled)
+                throw new InvalidOperationException($"{accessionNumber} is not cancelled.");
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "UPDATE specimens SET cancelled_at = NULL, cancel_reason = NULL WHERE accession_number = $acc";
+            cmd.Parameters.AddWithValue("$acc", accessionNumber);
+            cmd.ExecuteNonQuery();
+            AppendAudit("reinstate_investigation", "specimen", accessionNumber, reason.Trim(),
+                beforeJson: JsonSerializer.Serialize(new { s.CancelledAt, s.CancelReason }));
         }
 
         public void ClearSpecimenFinalCall(string accessionNumber, string reason)
@@ -2032,7 +2082,7 @@ namespace HemoIQ.Data
             var horizon = today.AddDays(expirationWarningDays).ToString("yyyy-MM-dd");
             var todayStr = today.ToString("yyyy-MM-dd");
 
-            foreach (var s in GetAllSpecimens().Where(s => s.IsActive))
+            foreach (var s in GetAllSpecimens().Where(s => s.IsActive && !s.IsCancelled))
             {
                 var panels = GetSpecimenPanels(s.AccessionNumber);
                 if (!s.HasFinalCall)
@@ -2432,6 +2482,8 @@ namespace HemoIQ.Data
             IdentifiedBy = SafeGetString(r, "identified_by"),
             IdentifiedAt = SafeGetString(r, "identified_at"),
             ReviewedBy = SafeGetString(r, "reviewed_by"),
+            CancelledAt = SafeGetString(r, "cancelled_at"),
+            CancelReason = SafeGetString(r, "cancel_reason"),
             ReviewedAt = SafeGetString(r, "reviewed_at"),
         };
 
@@ -3041,12 +3093,15 @@ namespace HemoIQ.Data
         public bool IsSpecimenLocked(string specimenId)
         {
             var specimen = GetSpecimen(specimenId);
-            return specimen?.HasFinalCall == true;
+            return specimen?.HasFinalCall == true || specimen?.IsCancelled == true;
         }
 
         public void EnsureSpecimenUnlocked(string specimenId)
         {
-            if (IsSpecimenLocked(specimenId))
+            var specimen = GetSpecimen(specimenId);
+            if (specimen?.IsCancelled == true)
+                throw new RecordLockedException(specimenId, cancelled: true);
+            if (specimen?.HasFinalCall == true)
                 throw new RecordLockedException(specimenId);
         }
 

@@ -40,6 +40,9 @@ namespace HemoIQ.Models
         public string? FinalComment { get; set; }
         public string? IdentifiedBy { get; set; }
         public string? IdentifiedAt { get; set; }
+        public string? CancelledAt { get; set; }
+        public string? CancelReason { get; set; }
+        public bool IsCancelled => !string.IsNullOrWhiteSpace(CancelledAt);
         public string? ReviewedBy { get; set; }
         public string? ReviewedAt { get; set; }
         public bool HasFinalCall => !string.IsNullOrWhiteSpace(FinalAntibodies);

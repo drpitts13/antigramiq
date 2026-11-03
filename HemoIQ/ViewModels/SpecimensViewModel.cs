@@ -58,6 +58,8 @@ namespace HemoIQ.ViewModels
         public ICommand RefreshCommand { get; }
         public ICommand EditPatientCommand { get; }
         public ICommand SupervisorReviewCommand { get; }
+        public ICommand CancelInvestigationCommand { get; }
+        public ICommand ReinstateInvestigationCommand { get; }
         public ICommand OpenReactionsCommand { get; }
         public ICommand OpenAnalysisCommand { get; }
         public ICommand OpenReportCommand { get; }
@@ -68,6 +70,10 @@ namespace HemoIQ.ViewModels
             _main = main;
 
             AddCommand = new RelayCommand(AddSpecimen);
+            CancelInvestigationCommand = new RelayCommand(CancelInvestigation,
+                () => SelectedSpecimen is { IsCancelled: false, HasFinalCall: false });
+            ReinstateInvestigationCommand = new RelayCommand(ReinstateInvestigation,
+                () => SelectedSpecimen is { IsCancelled: true });
             SupervisorReviewCommand = new RelayCommand(SupervisorReview,
                 () => SelectedSpecimen is { HasFinalCall: true, IsReviewed: false });
             EditPatientCommand = new RelayCommand(EditPatient,
@@ -148,6 +154,45 @@ namespace HemoIQ.ViewModels
         {
             get => _patientText;
             private set => SetField(ref _patientText, value);
+        }
+
+        private void CancelInvestigation()
+        {
+            var s = SelectedSpecimen;
+            if (s == null) return;
+            var dlg = new Views.Dialogs.ReasonDialog(
+                $"Cancel investigation {s.AccessionNumber}? The record is kept and locked, and it leaves the work queues.\n" +
+                "Enter the reason (for example: mislabeled specimen, hemolyzed, order cancelled).");
+            if (dlg.ShowDialog() != true) return;
+            try
+            {
+                _db.CancelInvestigation(s.AccessionNumber, dlg.Reason);
+                _main.SetStatus($"Investigation {s.AccessionNumber} cancelled.");
+                NotifySpecimensChanged();
+            }
+            catch (System.Exception ex) when (ex is System.ArgumentException or System.InvalidOperationException)
+            {
+                MessageBox.Show(ex.Message, "Cancel investigation", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private void ReinstateInvestigation()
+        {
+            var s = SelectedSpecimen;
+            if (s == null) return;
+            var dlg = new Views.Dialogs.ReasonDialog(
+                $"Reinstate investigation {s.AccessionNumber} (cancelled {s.CancelledAt}: {s.CancelReason})?\nEnter the reason.");
+            if (dlg.ShowDialog() != true) return;
+            try
+            {
+                _db.ReinstateInvestigation(s.AccessionNumber, dlg.Reason);
+                _main.SetStatus($"Investigation {s.AccessionNumber} reinstated.");
+                NotifySpecimensChanged();
+            }
+            catch (System.Exception ex) when (ex is System.ArgumentException or System.InvalidOperationException)
+            {
+                MessageBox.Show(ex.Message, "Reinstate investigation", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
 
         private void SupervisorReview()

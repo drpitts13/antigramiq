@@ -7,7 +7,7 @@ rule-outs are analytical evidence, not a diagnosis.
 Status: **Present** (usable), **Partial** (exists but incomplete or silent),
 **Missing**.
 
-Last updated: 2026-11-03 (iteration 61 — eluate specimens linked to their source and read as evidence).
+Last updated: 2026-11-03 (iteration 62 — audited cancel and reinstate of an investigation).
 
 ## Capability matrix
 
@@ -33,7 +33,7 @@ Last updated: 2026-11-03 (iteration 61 — eluate specimens linked to their sour
 | Audit | Investigation timeline | Present | `InvestigationTimeline` merges receipt, panel link/unlink (now audited), runs, grouped reaction saves, analysis snapshots, confirm/clear/review, MRN/transfusion/DAT/patient edits; Specimens Timeline expander and worksheet section | Report print/PDF/CSV audited with SHA-256 and shown on the timeline |
 | Tests | Isolation from user data | Present | `AppDataPaths.RootOverride` set by a test-module initializer to a temp folder; live vendor test persists only to its isolated database; full run verified to leave %AppData%\HemoIQ untouched | One intermittent failure seen once and not reproduced in two reruns |
 | Search | Investigation search | Present | Search tab › Investigations: accession, MRN, patient name/DOB, final/previous antibodies, technologist; every word must match; inclusive date range; status column; Open jumps to Specimens | Panel lot/manufacturer used in an investigation not yet searchable |
-| Workflow | Investigation status and next step | Partial | `InvestigationStatusService` derives five steps and a status (awaiting panel → testing → analysis needed → awaiting ID → completed / amended / reopened / inactive) from panels, grades, analysis time, final call, and audit; shown on Specimens and the worksheet; Worklist shares the completeness check | Optional supervisor review step (two-person, audited, invalidated by clear/re-confirm, Worklist queue); no cancel action or role-based permissions yet |
+| Workflow | Investigation status and next step | Partial | `InvestigationStatusService` derives five steps and a status (awaiting panel → testing → analysis needed → awaiting ID → completed / amended / reopened / inactive) from panels, grades, analysis time, final call, and audit; shown on Specimens and the worksheet; Worklist shares the completeness check | Optional supervisor review step (two-person, audited, invalidated by clear/re-confirm, Worklist queue); audited Cancel/Reinstate with reason, locked and off work queues; no role-based permissions yet |
 | Patient | Permanent record and transfusion requirements | Partial | `patients` table (MRN, name, DOB, comments, requirements); audited add/update; Edit Patient on Specimens; reports print it; analysis raises REVIEW when a known antibody's antigen-negative requirement is not written | Structured requirement list instead of free text |
 | Patient | MRN and cross-specimen history | Partial | Indexed `specimens.mrn`; audited; confirmed final calls on the same MRN become Historical evidence citing the source accession; detail pane and reports list other specimens | Encounter, location, ordering provider, sex, pregnancy history |
 | Specimen | DAT polyspecific / IgG / C3 | Present | `DatProfile` on specimen; MF grade; audited IgG/C3; positive if any reactive, negative only if all recorded negative; C3-only caveat on autoantibody notes; MF DAT donor-cell note | Eluate specimens link to their source; `EluateEvidence` reads specificity, panreactivity, and nonreactivity against DAT and transfusion |
@@ -1109,10 +1109,31 @@ timeline shows link changes.
 **Not in this tick:** Elution method and last-wash control are not
 recorded. Eluate antigen-negative rule-outs are not used for the source.
 
+## Iteration 62 (this change)
+
+**Deficiency:** An investigation could not be cancelled. A mislabeled
+or unacceptable specimen could only be deleted, which loses the record,
+or set inactive, which is meant for expiry and leaves the specimen
+editable and on work queues.
+
+**Bounded improvement:** `CancelInvestigation` and
+`ReinstateInvestigation` each require a reason and are audited.
+Cancelling is refused while an identification is confirmed or when
+already cancelled. The lock (`EnsureSpecimenUnlocked`, analysis save,
+and confirming a final call) now also covers cancelled records, with
+its own message. Status shows Cancelled with date and reason. The
+Worklist skips cancelled specimens. The timeline shows both events.
+Confirm ID on a cancelled record shows a message instead of an
+unhandled error.
+
+**Not in this tick:** Cancel reasons are free text (no configurable
+reason list). Turnaround metrics from the timeline remain.
+
 ## Likely next tick
 
-Roadmap item 3: a Cancel action with a required reason (audited,
-reversible with reason), shown as status Cancelled and excluded from
-work queues, plus turnaround metrics on Analytics from the timeline. Authenticated vendor portals stay later
+Turnaround metrics on Analytics: received → confirmed and confirmed →
+supervisor reviewed, median and 90th percentile over a date range,
+excluding cancelled investigations, with drill-down to the cases over a
+configurable threshold. Authenticated vendor portals stay later
 and must not bypass auth, CAPTCHA, licensing, or terms.
 

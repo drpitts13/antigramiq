@@ -143,6 +143,8 @@ namespace HemoIQ.Services
                 "update_dat" => $"DAT updated: IgG {Prop(a.AfterJson, "igg") ?? "NT"}, C3 {Prop(a.AfterJson, "c3") ?? "NT"}",
                 "update_mrn" => $"MRN set to {Prop(a.AfterJson, "mrn") ?? "(blank)"}",
                 "report_output" => DescribeReport(a),
+                "cancel_investigation" => $"Investigation cancelled; reason: {a.Reason}",
+                "reinstate_investigation" => $"Investigation reinstated; reason: {a.Reason}",
                 "link_eluate" => Prop(a.AfterJson, "source") is string src
                     ? $"Linked as eluate of {src}"
                     : "Eluate link removed",

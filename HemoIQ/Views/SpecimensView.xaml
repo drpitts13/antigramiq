@@ -96,9 +96,17 @@
                     <TextBlock Text="{Binding Status.NextAction, Mode=OneWay}" TextWrapping="Wrap" Margin="0,2,0,0" Foreground="#37474F"/>
                     <TextBlock Margin="0,2,0,0" Foreground="#37474F"
                                Text="{Binding SelectedSpecimen.ReviewedBy, StringFormat='Supervisor reviewed by {0}', Mode=OneWay}"/>
-                    <Button Content="Supervisor Review…" HorizontalAlignment="Left" Margin="0,4,0,0" Padding="8,2"
-                            Command="{Binding SupervisorReviewCommand}"
-                            ToolTip="Record a second-person review of the confirmed identification. Enabled when an identification is confirmed and not yet reviewed."/>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <Button Content="Supervisor Review…" Padding="8,2" Margin="0,0,6,0"
+                                Command="{Binding SupervisorReviewCommand}"
+                                ToolTip="Record a second-person review of the confirmed identification. Enabled when an identification is confirmed and not yet reviewed."/>
+                        <Button Content="Cancel Investigation…" Padding="8,2" Margin="0,0,6,0"
+                                Command="{Binding CancelInvestigationCommand}"
+                                ToolTip="Stop this investigation with a reason (e.g. mislabeled specimen). The record is kept, locked, and removed from work queues. Clear a confirmed identification first."/>
+                        <Button Content="Reinstate…" Padding="8,2"
+                                Command="{Binding ReinstateInvestigationCommand}"
+                                ToolTip="Reopen a cancelled investigation with a reason."/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 

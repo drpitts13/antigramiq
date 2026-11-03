@@ -49,6 +49,16 @@ The grey strip at the top of the detail pane shows where the investigation stand
 
 The identification worksheet prints the same status line.
 
+### Cancel and reinstate
+
+Use **Cancel Investigation…** to stop an investigation without deleting it, for example for a mislabeled or hemolyzed specimen or a cancelled order. A reason is required. A confirmed identification must be cleared first. A cancelled investigation:
+
+- shows status **Cancelled** with the date and reason,
+- is locked: reactions, panels, analysis saves, and confirming an identification are refused,
+- is removed from every Worklist queue.
+
+**Reinstate…** reopens it and also requires a reason. Both actions are written to the audit log and appear on the Timeline.
+
 ### Supervisor review
 
 When Preferences requires supervisor review, a sixth step, **Supervisor reviewed**, appears. Select **Supervisor Review…** and enter your initials. Rules:

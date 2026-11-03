@@ -55,6 +55,7 @@ namespace HemoIQ.Services
         public const string Amended = "Amended";
         public const string Reopened = "Reopened";
         public const string InactiveIncomplete = "Inactive – not completed";
+        public const string Cancelled = "Cancelled";
 
         public static InvestigationStatus Compute(DatabaseService db, Specimen s) =>
             Compute(db, s, AppSettings.Current.RequireSupervisorReview);
@@ -81,6 +82,14 @@ namespace HemoIQ.Services
             };
             if (requireReview)
                 steps.Add(new InvestigationStep { Name = "Supervisor reviewed", Done = s.HasFinalCall && s.IsReviewed });
+
+            if (s.IsCancelled)
+                return new InvestigationStatus
+                {
+                    Label = Cancelled,
+                    NextAction = $"Cancelled {s.CancelledAt}: {s.CancelReason}. The record is locked; reinstate it with a reason to continue.",
+                    Steps = steps,
+                };
 
             if (s.HasFinalCall && requireReview && !s.IsReviewed)
                 return new InvestigationStatus
