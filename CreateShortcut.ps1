@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Builds AntigramIQ and creates a desktop shortcut with the blood bag icon.
+    Builds HemoIQ and creates a desktop shortcut with the blood bag icon.
 .DESCRIPTION
     1. Builds the project in Release mode via dotnet build.
     2. Converts blood_bag_icon.png into a proper multi-size .ico file.
@@ -13,16 +13,16 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $ProjectRoot = $PSScriptRoot
-$CsprojPath  = Join-Path $ProjectRoot 'AntigramIQ\AntigramIQ.csproj'
-$PngPath     = Join-Path $ProjectRoot 'AntigramIQ\blood_bag_icon.png'
-$ExePath     = Join-Path $ProjectRoot 'AntigramIQ\bin\Release\net8.0-windows\AntigramIQ.exe'
-$IcoPath     = Join-Path $ProjectRoot 'AntigramIQ\bin\Release\net8.0-windows\blood_bag.ico'
-$ShortcutPath = Join-Path ([Environment]::GetFolderPath('Desktop')) 'AntigramIQ.lnk'
+$CsprojPath  = Join-Path $ProjectRoot 'HemoIQ\HemoIQ.csproj'
+$PngPath     = Join-Path $ProjectRoot 'HemoIQ\blood_bag_icon.png'
+$ExePath     = Join-Path $ProjectRoot 'HemoIQ\bin\Release\net8.0-windows\HemoIQ.exe'
+$IcoPath     = Join-Path $ProjectRoot 'HemoIQ\bin\Release\net8.0-windows\blood_bag.ico'
+$ShortcutPath = Join-Path ([Environment]::GetFolderPath('Desktop')) 'HemoIQ.lnk'
 
 # ---------------------------------------------------------------------------
 # 1. Build
 # ---------------------------------------------------------------------------
-Write-Host "`n==> Building AntigramIQ (Release)..." -ForegroundColor Cyan
+Write-Host "`n==> Building HemoIQ (Release)..." -ForegroundColor Cyan
 dotnet build $CsprojPath --configuration Release --nologo -v quiet
 if ($LASTEXITCODE -ne 0) { throw "dotnet build failed (exit $LASTEXITCODE)." }
 Write-Host "    Build succeeded." -ForegroundColor Green
@@ -113,8 +113,8 @@ Write-Host "    Icon written to: $IcoPath" -ForegroundColor Green
 # ---------------------------------------------------------------------------
 Write-Host "`n==> Creating desktop shortcut: $ShortcutPath ..." -ForegroundColor Cyan
 
-# Remove shortcuts left by releases named "Antibody Panels" / "Antibody Panel Management System".
-foreach ($oldName in @('Antibody Panels.lnk', 'Antibody Panel Management System.lnk')) {
+# Remove shortcuts left by builds named "Antibody Panels", "Antibody Panel Management System", or "AntigramIQ".
+foreach ($oldName in @('Antibody Panels.lnk', 'Antibody Panel Management System.lnk', 'AntigramIQ.lnk')) {
     $oldPath = Join-Path ([Environment]::GetFolderPath('Desktop')) $oldName
     if (Test-Path $oldPath) { Remove-Item $oldPath; Write-Host "    Removed old shortcut: $oldName" }
 }
@@ -124,8 +124,8 @@ $shortcut  = $WshShell.CreateShortcut($ShortcutPath)
 $shortcut.TargetPath       = $ExePath
 $shortcut.WorkingDirectory = Split-Path $ExePath
 $shortcut.IconLocation     = "$IcoPath,0"
-$shortcut.Description      = 'AntigramIQ'
+$shortcut.Description      = 'HemoIQ'
 $shortcut.Save()
 
 Write-Host "    Shortcut created." -ForegroundColor Green
-Write-Host "`nDone! Double-click 'AntigramIQ' on your desktop to launch the app.`n" -ForegroundColor Yellow
+Write-Host "`nDone! Double-click 'HemoIQ' on your desktop to launch the app.`n" -ForegroundColor Yellow

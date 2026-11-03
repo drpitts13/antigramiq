@@ -1,6 +1,6 @@
 # Intended use
 
-**Product:** AntigramIQ  
+**Product:** HemoIQ  
 **Software version:** assembly informational version (currently 2.0.0)
 
 ## Intended use statement
@@ -13,7 +13,7 @@ Licensed blood-bank / immunohematology technologists and supervisors working in 
 
 ## Intended use environment
 
-A local Windows workstation. The database and settings files reside on the workstation (or a path set by `ANTIGRAMIQ_DB`). The application does not expose a network server.
+A local Windows workstation. The database and settings files reside on the workstation (or a path set by `HEMOIQ_DB`). The application does not expose a network server.
 
 ## Indications
 

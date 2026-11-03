@@ -20,9 +20,9 @@ flowchart LR
 
 ## Safety-related modules
 
-- Identification engine: [AntibodyAnalyzer.cs](../../AntigramIQ/Services/AntibodyAnalyzer.cs)
-- Confirmation / lock: [DatabaseService.cs](../../AntigramIQ/Data/DatabaseService.cs), [AnalysisViewModel.cs](../../AntigramIQ/ViewModels/AnalysisViewModel.cs)
-- Labeling: [SoftwareIdentity.cs](../../AntigramIQ/Services/SoftwareIdentity.cs), [ReportService.cs](../../AntigramIQ/Services/ReportService.cs)
+- Identification engine: [AntibodyAnalyzer.cs](../../HemoIQ/Services/AntibodyAnalyzer.cs)
+- Confirmation / lock: [DatabaseService.cs](../../HemoIQ/Data/DatabaseService.cs), [AnalysisViewModel.cs](../../HemoIQ/ViewModels/AnalysisViewModel.cs)
+- Labeling: [SoftwareIdentity.cs](../../HemoIQ/Services/SoftwareIdentity.cs), [ReportService.cs](../../HemoIQ/Services/ReportService.cs)
 
 ## Data stores
 
@@ -30,4 +30,4 @@ SQLite file with foreign keys enabled. Audit table is append-only (no delete API
 
 ## External interfaces
 
-Optional vendor HTTPS clients under `AntigramIQ/Services/Vendors`.
+Optional vendor HTTPS clients under `HemoIQ/Services/Vendors`.

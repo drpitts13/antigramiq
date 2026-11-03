@@ -1,6 +1,6 @@
 # SOUP / OTS software inventory
 
-From [AntigramIQ.csproj](../../AntigramIQ/AntigramIQ.csproj) and the .NET 8 runtime.
+From [HemoIQ.csproj](../../HemoIQ/HemoIQ.csproj) and the .NET 8 runtime.
 
 | Component | Version | Purpose | Anomaly / residual note |
 |---|---|---|---|
