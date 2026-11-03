@@ -5,8 +5,14 @@
 .DESCRIPTION
     1. Builds the project in Release mode via dotnet build.
     2. Converts blood_bag_icon.png into a proper multi-size .ico file.
-    3. Places the .ico next to the executable.
+    3. Copies Start-AntibodyPanels.ps1 and the .ico to %LOCALAPPDATA%\AntibodyPanels.
     4. Creates (or updates) a shortcut on the current user's desktop.
+
+    The shortcut runs the launcher rather than a fixed .exe path. The launcher
+    opens whichever build was written last (Debug or Release, main checkout or
+    any worktree), so the shortcut keeps pointing at the current build after
+    rebuilds and after a worktree is removed. The launcher and icon live outside
+    the repo so the shortcut works no matter which checkout ran this script.
 #>
 
 Set-StrictMode -Version Latest
@@ -15,9 +21,18 @@ $ErrorActionPreference = 'Stop'
 $ProjectRoot = $PSScriptRoot
 $CsprojPath  = Join-Path $ProjectRoot 'AntibodyPanels\AntibodyPanels.csproj'
 $PngPath     = Join-Path $ProjectRoot 'AntibodyPanels\blood_bag_icon.png'
-$ExePath     = Join-Path $ProjectRoot 'AntibodyPanels\bin\Release\net8.0-windows\AntibodyPanels.exe'
-$IcoPath     = Join-Path $ProjectRoot 'AntibodyPanels\bin\Release\net8.0-windows\blood_bag.ico'
+$LauncherSrc = Join-Path $ProjectRoot 'Start-AntibodyPanels.ps1'
+
+# The main checkout, even when this script runs from a worktree.
+$GitCommonDir = git -C $ProjectRoot rev-parse --path-format=absolute --git-common-dir
+if ($LASTEXITCODE -ne 0) { throw "Could not locate the git repository from $ProjectRoot." }
+$RepoRoot = Split-Path ([System.IO.Path]::GetFullPath($GitCommonDir)) -Parent
+
+$InstallDir   = Join-Path $env:LOCALAPPDATA 'AntibodyPanels'
+$LauncherPath = Join-Path $InstallDir 'Start-AntibodyPanels.ps1'
+$IcoPath      = Join-Path $InstallDir 'blood_bag.ico'
 $ShortcutPath = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Antibody Panels.lnk'
+New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 
 # ---------------------------------------------------------------------------
 # 1. Build
@@ -74,7 +89,7 @@ function ConvertPngToIco {
     $entrySize  = 16
     $dataOffset = $headerSize + $entrySize * $Sizes.Count
 
-    $stream = [System.IO.File]::OpenWrite($Destination)
+    $stream = [System.IO.File]::Create($Destination)
     $w = [System.IO.BinaryWriter]::new($stream)
 
     # ICONDIR
@@ -109,16 +124,27 @@ ConvertPngToIco -Source $PngPath -Destination $IcoPath -Sizes @(16, 32, 48, 256)
 Write-Host "    Icon written to: $IcoPath" -ForegroundColor Green
 
 # ---------------------------------------------------------------------------
-# 3. Create / update the desktop shortcut
+# 3. Install the launcher
+# ---------------------------------------------------------------------------
+Write-Host "`n==> Installing launcher to $InstallDir ..." -ForegroundColor Cyan
+Copy-Item $LauncherSrc $LauncherPath -Force
+Write-Host "    Launcher will open the newest build under: $RepoRoot" -ForegroundColor Green
+
+# ---------------------------------------------------------------------------
+# 4. Create / update the desktop shortcut
 # ---------------------------------------------------------------------------
 Write-Host "`n==> Creating desktop shortcut: $ShortcutPath ..." -ForegroundColor Cyan
 
+$PowerShellExe = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+
 $WshShell  = New-Object -ComObject WScript.Shell
 $shortcut  = $WshShell.CreateShortcut($ShortcutPath)
-$shortcut.TargetPath       = $ExePath
-$shortcut.WorkingDirectory = Split-Path $ExePath
+$shortcut.TargetPath       = $PowerShellExe
+$shortcut.Arguments        = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$LauncherPath`" -RepoRoot `"$RepoRoot`""
+$shortcut.WorkingDirectory = $RepoRoot
 $shortcut.IconLocation     = "$IcoPath,0"
-$shortcut.Description      = 'Antibody Panels'
+$shortcut.Description      = 'Antibody Panels (opens the latest build)'
+$shortcut.WindowStyle      = 7   # Minimized, so the PowerShell host does not flash up
 $shortcut.Save()
 
 Write-Host "    Shortcut created." -ForegroundColor Green
