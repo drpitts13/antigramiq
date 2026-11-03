@@ -7,7 +7,7 @@ rule-outs are analytical evidence, not a diagnosis.
 Status: **Present** (usable), **Partial** (exists but incomplete or silent),
 **Missing**.
 
-Last updated: 2026-11-03 (iteration 54 — patient record with transfusion requirements checked against known antibodies).
+Last updated: 2026-11-03 (iteration 55 — derived investigation status with steps and next action).
 
 ## Capability matrix
 
@@ -30,6 +30,7 @@ Last updated: 2026-11-03 (iteration 54 — patient record with transfusion requi
 | Analysis | Transparent candidate evidence | Partial | Explain Analysis lists suspected, in-progress, historical, untypeable, pattern, enzyme, DTT, and cell-level adsorption comparisons. Adsorbed aliquots do not rule out or enter ordinary scores for specificities they are expected to remove. A panreactive untreated run paired with autoadsorption or rr/R1R1/R2R2 adsorption is omitted from ordinary scores. Unpaired ficin, papain, and DTT runs are named and are not compared with another panel | Cross-panel enzyme and DTT pairing stays out of scope |
 | Analysis | Configurable visible rule-out | Partial | `Rule.MinRuleoutCount` is now applied; lab default + explanation sentences | Watch seeded anti-D/anti-k rules; ACS remains separate |
 | Analysis | Single / multiple / dosage scoring | Partial | Fisher + pattern; pairwise combinations; dosage averages | Label as evidence, not diagnosis |
+| Workflow | Investigation status and next step | Partial | `InvestigationStatusService` derives five steps and a status (awaiting panel → testing → analysis needed → awaiting ID → completed / amended / reopened / inactive) from panels, grades, analysis time, final call, and audit; shown on Specimens and the worksheet; Worklist shares the completeness check | No technologist/supervisor review steps or cancel action yet; not shown as a column in the specimen list |
 | Patient | Permanent record and transfusion requirements | Partial | `patients` table (MRN, name, DOB, comments, requirements); audited add/update; Edit Patient on Specimens; reports print it; analysis raises REVIEW when a known antibody's antigen-negative requirement is not written | Structured requirement list instead of free text |
 | Patient | MRN and cross-specimen history | Partial | Indexed `specimens.mrn`; audited; confirmed final calls on the same MRN become Historical evidence citing the source accession; detail pane and reports list other specimens | Encounter, location, ordering provider, sex, pregnancy history |
 | Specimen | DAT polyspecific / IgG / C3 | Present | `DatProfile` on specimen; MF grade; audited IgG/C3; positive if any reactive, negative only if all recorded negative; C3-only caveat on autoantibody notes; MF DAT donor-cell note | Eluate results still free text |
@@ -945,11 +946,31 @@ list. Encounter, location, ordering provider, sex, and pregnancy history
 are not recorded. There is no patient search screen beyond the
 specimen filter.
 
+## Iteration 55 (this change)
+
+**Deficiency:** Where an investigation stood had to be pieced together
+from panel links, the reaction grid, analysis time, and the final call.
+A cleared and re-confirmed identification looked the same as one never
+changed.
+
+**Bounded improvement:** `InvestigationStatusService` derives five steps
+and a status from recorded data. No status is stored, so it cannot
+drift. Amended means a confirmed identification was cleared and
+confirmed again (from the audit log). Reopened means cleared and not yet
+re-confirmed. The next action names incomplete panels with
+entered/total counts. The Specimens detail pane shows a status strip,
+and the worksheet prints the status line. The Worklist now uses the same
+`GetIncompleteReactionPanels` check.
+
+**Not in this tick:** Separate technologist and supervisor review steps,
+an explicit Cancel action with reason, and a status column in the
+specimen list.
+
 ## Likely next tick
 
-Roadmap item 2: an investigation status per specimen (created, testing,
-analysis available, review, completed, amended, cancelled), derived from
-recorded work where possible and shown as a step indicator on the
-Specimens tab and Worklist. Authenticated vendor portals stay later
+Make MRN and patient name searchable on the Search tab and show the
+derived status in the specimen list, so a technologist can find a
+patient's investigations and see their state without opening each one.
+After that: technologist/supervisor review steps (roadmap item 2 follow-up). Authenticated vendor portals stay later
 and must not bypass auth, CAPTCHA, licensing, or terms.
 

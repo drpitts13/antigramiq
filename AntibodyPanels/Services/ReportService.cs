@@ -211,6 +211,7 @@ namespace AntibodyPanels.Services
             sb.AppendLine(AnalysisTraceLine(specimenId));
             sb.AppendLine($"Accession: {s.AccessionNumber,-16} Type: {s.Type,-10} Date: {DateTime.Now:yyyy-MM-dd}");
             sb.AppendLine($"MRN: {s.Mrn ?? "Not recorded"}");
+            sb.AppendLine($"Investigation status: {InvestigationStatusService.Compute(_db, s).Summary}");
             sb.AppendLine($"Phenotype: {s.Phenotype ?? "N/A"}");
             sb.AppendLine($"Genotype: {s.Genotype ?? "N/A"}");
             sb.AppendLine($"Previous antibodies: {s.PreviousAntibodies ?? "N/A"}");

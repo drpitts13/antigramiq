@@ -38,3 +38,13 @@ When the specimen has an MRN, the detail pane lists the patient's other specimen
 The **Patient (permanent, shared by MRN)** box shows information that belongs to the patient rather than to this specimen: name, date of birth, special transfusion requirements, and permanent blood bank comments. Select **Edit Patient** to change it. The button needs an MRN on the specimen. Every change is written to the audit log with the old and new values. A confirmed identification on one specimen does not lock the patient record, because the record spans all of the patient's specimens.
 
 Write antigen-negative requirements so analysis can read them, for example `K-negative`, `E neg`, or `Fy(a-)`. Capital and lower-case letters are different antigens (C is not c). When an antibody is known for the MRN (Previous antibodies, a confirmed call on this specimen, or a confirmed call on another specimen with the same MRN) and its antigen-negative requirement is not written on the patient record, analysis lists a **REVIEW** suggestion at the top. It is a prompt to check the record, not a transfusion order.
+
+## Investigation status
+
+The grey strip at the top of the detail pane shows where the investigation stands. It is worked out from what has been recorded, so it cannot fall out of date:
+
+- **Steps:** ✓ Received, Panel attached, Reactions complete, Analysis current, ID confirmed. ○ marks a step that is not done.
+- **Status:** Awaiting panel, Testing in progress, Analysis needed, Awaiting identification, Completed, **Amended** (an identification was cleared and confirmed again), **Reopened** (cleared and not yet confirmed again), or Inactive – not completed.
+- **Next:** the specific next action, for example `Finish reactions: Panel A (1/2).`
+
+The identification worksheet prints the same status line.

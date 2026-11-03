@@ -85,6 +85,18 @@
             </StackPanel>
 
             <!-- Linked Panels -->
+            <Border DockPanel.Dock="Top" Margin="0,0,0,8" Padding="8,6" Background="#ECEFF1" CornerRadius="3"
+                    ToolTip="Derived from recorded work: panels, reaction grades, analysis time, final call, and the audit log.">
+                <StackPanel>
+                    <TextBlock FontWeight="SemiBold">
+                        <Run Text="Status: "/>
+                        <Run Text="{Binding Status.Label, Mode=OneWay}"/>
+                    </TextBlock>
+                    <TextBlock Text="{Binding Status.StepsDisplay, Mode=OneWay}" Margin="0,2,0,0" FontFamily="Segoe UI Symbol"/>
+                    <TextBlock Text="{Binding Status.NextAction, Mode=OneWay}" TextWrapping="Wrap" Margin="0,2,0,0" Foreground="#37474F"/>
+                </StackPanel>
+            </Border>
+
             <GroupBox DockPanel.Dock="Top" Header="Patient (permanent, shared by MRN)" Margin="0,0,0,8" Padding="6">
                 <DockPanel>
                     <Button DockPanel.Dock="Right" Content="Edit Patient" VerticalAlignment="Top"

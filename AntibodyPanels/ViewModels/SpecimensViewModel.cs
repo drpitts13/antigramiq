@@ -129,6 +129,14 @@ namespace AntibodyPanels.ViewModels
             ApplyFilter(accessionNumber);
         }
 
+        private Services.InvestigationStatus? _status;
+        /// <summary>Derived investigation status for the selected specimen.</summary>
+        public Services.InvestigationStatus? Status
+        {
+            get => _status;
+            private set => SetField(ref _status, value);
+        }
+
         private string _patientText = string.Empty;
         /// <summary>Permanent patient information for the selected specimen's MRN.</summary>
         public string PatientText
@@ -179,6 +187,7 @@ namespace AntibodyPanels.ViewModels
         {
             PatientHistoryText = string.Empty;
             PatientText = string.Empty;
+            Status = null;
             LinkedPanels.Clear();
             Antibodies.Clear();
             Ruleouts.Clear();
@@ -191,6 +200,7 @@ namespace AntibodyPanels.ViewModels
             foreach (var r in _db.GetSpecimenRuleouts(sid)) Ruleouts.Add(r);
 
             PatientText = FormatPatient(_db.GetPatient(_selectedSpecimen.Mrn), _selectedSpecimen.Mrn);
+            Status = Services.InvestigationStatusService.Compute(_db, _selectedSpecimen);
             if (string.IsNullOrWhiteSpace(_selectedSpecimen.Mrn))
                 PatientHistoryText = "No MRN recorded; history from other specimens is not linked.";
             else

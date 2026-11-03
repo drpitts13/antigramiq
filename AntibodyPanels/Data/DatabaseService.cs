@@ -1860,6 +1860,46 @@ namespace AntibodyPanels.Data
 
         // ── Worklist ──────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Linked panels whose untreated run (or first run) lacks grades for
+        /// any cell, as "Panel name (entered/total)" or the bare name when no
+        /// run exists. Empty when every linked panel is fully graded.
+        /// </summary>
+        public List<string> GetIncompleteReactionPanels(string accessionNumber, List<Panel>? panels = null)
+        {
+            var missing = new List<string>();
+            foreach (var p in panels ?? GetSpecimenPanels(accessionNumber))
+            {
+                var runs = GetPanelRuns(accessionNumber, p.PanelId);
+                var run = runs.FirstOrDefault(r => r.IsUntreated) ?? runs.FirstOrDefault();
+                if (run == null)
+                {
+                    missing.Add(p.Name);
+                    continue;
+                }
+                var cells = GetPanelCells(p.PanelId);
+                var rxns = GetReactions(run.RunId).ToDictionary(r => r.CellNumber);
+                int entered = 0;
+                foreach (var cell in cells)
+                {
+                    if (!rxns.TryGetValue(cell.CellNumber, out var rxn)) continue;
+                    if (HasEnteredGrade(rxn)) entered++;
+                }
+                if (entered == 0 || entered < cells.Count)
+                    missing.Add($"{p.Name} ({entered}/{cells.Count})");
+            }
+            return missing;
+        }
+
+        public int CountAuditEvents(string action, string entityId)
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM audit_events WHERE action = $a AND entity_id = $id";
+            cmd.Parameters.AddWithValue("$a", action);
+            cmd.Parameters.AddWithValue("$id", entityId);
+            return Convert.ToInt32(cmd.ExecuteScalar());
+        }
+
         public List<WorklistItem> GetWorklistItems(int expirationWarningDays = 14)
         {
             var items = new List<WorklistItem>();
@@ -1888,33 +1928,8 @@ namespace AntibodyPanels.Data
                     }
                     else
                     {
-                        bool incomplete = false;
-                        var missing = new List<string>();
-                        foreach (var p in panels)
-                        {
-                            var runs = GetPanelRuns(s.AccessionNumber, p.PanelId);
-                            var run = runs.FirstOrDefault(r => r.IsUntreated) ?? runs.FirstOrDefault();
-                            if (run == null)
-                            {
-                                incomplete = true;
-                                missing.Add(p.Name);
-                                continue;
-                            }
-                            var cells = GetPanelCells(p.PanelId);
-                            var rxns = GetReactions(run.RunId).ToDictionary(r => r.CellNumber);
-                            int entered = 0;
-                            foreach (var cell in cells)
-                            {
-                                if (!rxns.TryGetValue(cell.CellNumber, out var rxn)) continue;
-                                if (HasEnteredGrade(rxn)) entered++;
-                            }
-                            if (entered == 0 || entered < cells.Count)
-                            {
-                                incomplete = true;
-                                missing.Add($"{p.Name} ({entered}/{cells.Count})");
-                            }
-                        }
-                        if (incomplete)
+                        var missing = GetIncompleteReactionPanels(s.AccessionNumber, panels);
+                        if (missing.Count > 0)
                         {
                             items.Add(new WorklistItem
                             {
