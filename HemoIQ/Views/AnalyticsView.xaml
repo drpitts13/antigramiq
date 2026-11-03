@@ -78,6 +78,47 @@
             </Border>
         </UniformGrid>
 
+        <UniformGrid DockPanel.Dock="Top" Columns="4" Margin="0,0,0,8">
+            <Border Style="{StaticResource StatCard}" Background="#F3E5F5" BorderBrush="#CE93D8"
+                    ToolTip="Received date to confirmed identification, for investigations received in the range. Received is a date only, so this is an upper bound. Cancelled investigations are excluded.">
+                <StackPanel>
+                    <TextBlock Text="Received → confirmed (median)" FontSize="11" Foreground="#37474F"/>
+                    <TextBlock Text="{Binding ConfirmMedian}" FontSize="20" FontWeight="Bold" Foreground="#6A1B9A"/>
+                    <TextBlock Text="{Binding ConfirmP90}" FontSize="11" Foreground="#6A1B9A"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource StatCard}" Background="#F3E5F5" BorderBrush="#CE93D8"
+                    ToolTip="Confirmed identification to supervisor review, where a review was recorded.">
+                <StackPanel>
+                    <TextBlock Text="Confirmed → reviewed (median)" FontSize="11" Foreground="#37474F"/>
+                    <TextBlock Text="{Binding ReviewMedian}" FontSize="20" FontWeight="Bold" Foreground="#6A1B9A"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource StatCard}" Background="#FFEBEE" BorderBrush="#EF9A9A" Margin="0"
+                    ToolTip="Active investigations in the range with no confirmed identification, older than the Preferences turnaround threshold.">
+                <StackPanel>
+                    <TextBlock Text="Overdue open investigations" FontSize="11" Foreground="#37474F"/>
+                    <TextBlock Text="{Binding OverdueLabel}" FontSize="20" FontWeight="Bold" Foreground="#C62828"/>
+                </StackPanel>
+            </Border>
+        </UniformGrid>
+
+        <GroupBox DockPanel.Dock="Bottom" Header="Overdue open investigations" Height="170" Margin="0,8,0,0">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="Open" VerticalAlignment="Top" Padding="10,2" Margin="6,0,0,0"
+                        Command="{Binding OpenOverdueCommand}" ToolTip="Open the selected investigation on the Specimens tab."/>
+                <DataGrid ItemsSource="{Binding Overdue}" SelectedItem="{Binding SelectedOverdue}"
+                          AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Accession" Binding="{Binding Accession}" Width="140"/>
+                        <DataGridTextColumn Header="Received" Binding="{Binding Received}" Width="110"/>
+                        <DataGridTextColumn Header="Age (days)" Binding="{Binding AgeDays}" Width="90"/>
+                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </GroupBox>
+
         <Grid DockPanel.Dock="Top" Height="280" Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>

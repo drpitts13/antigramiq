@@ -7,7 +7,7 @@ rule-outs are analytical evidence, not a diagnosis.
 Status: **Present** (usable), **Partial** (exists but incomplete or silent),
 **Missing**.
 
-Last updated: 2026-11-03 (iteration 62 — audited cancel and reinstate of an investigation).
+Last updated: 2026-11-03 (iteration 63 — turnaround metrics and overdue list on Analytics).
 
 ## Capability matrix
 
@@ -31,6 +31,7 @@ Last updated: 2026-11-03 (iteration 62 — audited cancel and reinstate of an in
 | Analysis | Configurable visible rule-out | Partial | `Rule.MinRuleoutCount` is now applied; lab default + explanation sentences | Watch seeded anti-D/anti-k rules; ACS remains separate |
 | Analysis | Single / multiple / dosage scoring | Partial | Fisher + pattern; pairwise combinations; dosage averages | Label as evidence, not diagnosis |
 | Audit | Investigation timeline | Present | `InvestigationTimeline` merges receipt, panel link/unlink (now audited), runs, grouped reaction saves, analysis snapshots, confirm/clear/review, MRN/transfusion/DAT/patient edits; Specimens Timeline expander and worksheet section | Report print/PDF/CSV audited with SHA-256 and shown on the timeline |
+| Reporting | Turnaround metrics | Present | `TurnaroundService`: received→confirmed (days) and confirmed→reviewed (hours) median and nearest-rank 90th percentile by received date, cancelled excluded; overdue open list with status and Open; configurable threshold; CSV | Received time is date-only (upper bound); no workload-by-technologist yet |
 | Tests | Isolation from user data | Present | `AppDataPaths.RootOverride` set by a test-module initializer to a temp folder; live vendor test persists only to its isolated database; full run verified to leave %AppData%\HemoIQ untouched | One intermittent failure seen once and not reproduced in two reruns |
 | Search | Investigation search | Present | Search tab › Investigations: accession, MRN, patient name/DOB, final/previous antibodies, technologist; every word must match; inclusive date range; status column; Open jumps to Specimens | Panel lot/manufacturer used in an investigation not yet searchable |
 | Workflow | Investigation status and next step | Partial | `InvestigationStatusService` derives five steps and a status (awaiting panel → testing → analysis needed → awaiting ID → completed / amended / reopened / inactive) from panels, grades, analysis time, final call, and audit; shown on Specimens and the worksheet; Worklist shares the completeness check | Optional supervisor review step (two-person, audited, invalidated by clear/re-confirm, Worklist queue); audited Cancel/Reinstate with reason, locked and off work queues; no role-based permissions yet |
@@ -1129,11 +1130,31 @@ unhandled error.
 **Not in this tick:** Cancel reasons are free text (no configurable
 reason list). Turnaround metrics from the timeline remain.
 
+## Iteration 63 (this change)
+
+**Deficiency:** Analytics only counted confirmed antibodies. There was
+no measure of investigation turnaround time and no view of open
+investigations that were running late.
+
+**Bounded improvement:** `TurnaroundService` is a reporting-only
+service, separate from workflow code. For investigations received in
+the Analytics date range, with cancelled ones excluded, it computes
+received→confirmed in days and confirmed→reviewed in hours, each as a
+median and nearest-rank 90th percentile with a count. It also lists
+active open investigations older than the new Preferences turnaround
+threshold (1–60 days, default 3), oldest first, with their derived
+status. Analytics shows three cards and an overdue list with Open.
+Export CSV appends the figures and the list.
+
+**Not in this tick:** A received time (only the date is recorded),
+workload by technologist, and a Worklist queue for overdue
+investigations.
+
 ## Likely next tick
 
-Turnaround metrics on Analytics: received → confirmed and confirmed →
-supervisor reviewed, median and 90th percentile over a date range,
-excluding cancelled investigations, with drill-down to the cases over a
-configurable threshold. Authenticated vendor portals stay later
+Product review is due (iterations 60–63). Leading candidates: record
+received date and time on specimens (makes turnaround exact and lets
+specimen dating use hours), role-based permissions, and workload by
+technologist. Authenticated vendor portals stay later
 and must not bypass auth, CAPTCHA, licensing, or terms.
 

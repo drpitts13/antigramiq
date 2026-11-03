@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
@@ -24,6 +26,37 @@ namespace HemoIQ.ViewModels
         public ICommand AllTimeCommand { get; }
         public ICommand RefreshCommand { get; }
         public ICommand ExportCsvCommand { get; }
+        public ICommand OpenOverdueCommand { get; }
+
+        public ObservableCollection<OverdueInvestigation> Overdue { get; } = new();
+
+        private OverdueInvestigation? _selectedOverdue;
+        public OverdueInvestigation? SelectedOverdue
+        {
+            get => _selectedOverdue;
+            set => SetField(ref _selectedOverdue, value);
+        }
+
+        private TurnaroundResult _turnaround = new();
+        public TurnaroundResult Turnaround
+        {
+            get => _turnaround;
+            private set
+            {
+                if (!SetField(ref _turnaround, value)) return;
+                OnPropertyChanged(nameof(ConfirmMedian));
+                OnPropertyChanged(nameof(ConfirmP90));
+                OnPropertyChanged(nameof(ReviewMedian));
+                OnPropertyChanged(nameof(OverdueLabel));
+            }
+        }
+
+        public string ConfirmMedian => Turnaround.ReceivedToConfirmed.MedianDisplay("d");
+        public string ConfirmP90 =>
+            $"90th pct {Turnaround.ReceivedToConfirmed.P90Display("d")} (n={Turnaround.ReceivedToConfirmed.Count})";
+        public string ReviewMedian =>
+            $"{Turnaround.ConfirmedToReviewed.MedianDisplay("h")} (n={Turnaround.ConfirmedToReviewed.Count})";
+        public string OverdueLabel => $"{Turnaround.Overdue.Count} open > {Turnaround.ThresholdDays} d";
 
         public event EventHandler? ChartDataChanged;
 
@@ -86,6 +119,7 @@ namespace HemoIQ.ViewModels
             AllTimeCommand = new RelayCommand(() => ApplyRange(null, null));
             RefreshCommand = new RelayCommand(Refresh);
             ExportCsvCommand = new RelayCommand(ExportCsv);
+            OpenOverdueCommand = new RelayCommand(OpenOverdue, () => SelectedOverdue != null);
             _fromDate = DateTime.Today.AddYears(-1);
             _toDate = DateTime.Today;
             Recompute();
@@ -119,9 +153,40 @@ namespace HemoIQ.ViewModels
             foreach (var point in result.Trend)
                 Trend.Add(point);
 
+            var specimens = _db.GetAllSpecimens();
+            Turnaround = TurnaroundService.Compute(specimens, FromDate, ToDate,
+                AppSettings.Current.TurnaroundThresholdDays, DateTime.Now,
+                s => InvestigationStatusService.Compute(_db, s).Label);
+            Overdue.Clear();
+            foreach (var o in Turnaround.Overdue) Overdue.Add(o);
+
             OnPropertyChanged(nameof(IsAllTime));
             OnPropertyChanged(nameof(RangeLabel));
             ChartDataChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        public static IEnumerable<string> TurnaroundCsvLines(TurnaroundResult t)
+        {
+            static string N(double? v) => v is double d ? d.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "";
+            yield return "";
+            yield return "Turnaround,Count,Median,90th percentile,Unit";
+            yield return $"Received to confirmed,{t.ReceivedToConfirmed.Count},{N(t.ReceivedToConfirmed.Median)},{N(t.ReceivedToConfirmed.Percentile90)},days";
+            yield return $"Confirmed to supervisor review,{t.ConfirmedToReviewed.Count},{N(t.ConfirmedToReviewed.Median)},{N(t.ConfirmedToReviewed.Percentile90)},hours";
+            yield return "";
+            yield return $"Open investigations older than {t.ThresholdDays} days";
+            yield return "Accession,Received,Age (days),Status";
+            foreach (var o in t.Overdue)
+                yield return $"{o.Accession},{o.Received},{o.AgeDays},{o.Status}";
+        }
+
+        private void OpenOverdue()
+        {
+            if (SelectedOverdue == null || _main == null) return;
+            _main.NavigateToWorklistItem(new WorklistItem
+            {
+                AccessionNumber = SelectedOverdue.Accession,
+                TargetTab = "Specimens",
+            });
         }
 
         private void ExportCsv()
@@ -140,6 +205,7 @@ namespace HemoIQ.ViewModels
                     Trend = Trend.ToList()
                 };
                 AntibodyAnalyticsService.ExportToCsv(result, FromDate, ToDate, dlg.FileName);
+                File.AppendAllLines(dlg.FileName, TurnaroundCsvLines(Turnaround));
                 _main?.SetStatus($"CSV exported: {dlg.FileName}");
                 MessageBox.Show("CSV exported successfully.", "Export",
                     MessageBoxButton.OK, MessageBoxImage.Information);

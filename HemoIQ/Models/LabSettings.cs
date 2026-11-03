@@ -36,6 +36,8 @@ namespace HemoIQ.Models
         /// after a second person records a supervisor review.
         /// </summary>
         public bool RequireSupervisorReview { get; set; }
+        /// <summary>Open investigations older than this many days are listed as overdue on Analytics.</summary>
+        public int TurnaroundThresholdDays { get; set; } = 3;
         public int MaxDatabaseSizeMb { get; set; } = 500;
         public bool WorklistShowIncomplete { get; set; } = true;
         public bool WorklistShowStale { get; set; } = true;
@@ -69,6 +71,8 @@ namespace HemoIQ.Models
             if (ExpirationWarningDays > 90) ExpirationWarningDays = 90;
             if (DefaultSpecimenDatingDays < 0) DefaultSpecimenDatingDays = 0;
             if (DefaultSpecimenDatingDays > 14) DefaultSpecimenDatingDays = 14;
+            if (TurnaroundThresholdDays < 1) TurnaroundThresholdDays = 1;
+            if (TurnaroundThresholdDays > 60) TurnaroundThresholdDays = 60;
             if (RecentTransfusionWindowDays < 1) RecentTransfusionWindowDays = 1;
             if (RecentTransfusionWindowDays > 365) RecentTransfusionWindowDays = 365;
             if (MaxDatabaseSizeMb < 50) MaxDatabaseSizeMb = 50;

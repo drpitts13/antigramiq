@@ -36,6 +36,7 @@ namespace HemoIQ.Views.Dialogs
             ShowInactiveCheck.IsChecked = s.ShowInactiveByDefault;
             HideRuledOutCheck.IsChecked = s.HideRuledOutAntigenColumns;
             RequireReviewCheck.IsChecked = s.RequireSupervisorReview;
+            TurnaroundBox.Text = s.TurnaroundThresholdDays.ToString();
             ExtraPhasesBox.Text = s.ExtraPhases;
             SyncSuggestedChecks();
         }
@@ -122,6 +123,14 @@ namespace HemoIQ.Views.Dialogs
                 TransfusionWindowBox.Focus();
                 return;
             }
+            if (!int.TryParse(TurnaroundBox.Text.Trim(), out var turnaroundDays) ||
+                turnaroundDays < 1 || turnaroundDays > 60)
+            {
+                MessageBox.Show("Turnaround threshold must be between 1 and 60 days.",
+                    "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                TurnaroundBox.Focus();
+                return;
+            }
             if (!int.TryParse(MaxDbSizeBox.Text.Trim(), out var maxMb) || maxMb < 50 || maxMb > 10240)
             {
                 MessageBox.Show("Maximum database size must be between 50 and 10240 MB.",
@@ -148,6 +157,7 @@ namespace HemoIQ.Views.Dialogs
             AppSettings.Current.ShowInactiveByDefault = ShowInactiveCheck.IsChecked == true;
             AppSettings.Current.HideRuledOutAntigenColumns = HideRuledOutCheck.IsChecked == true;
             AppSettings.Current.RequireSupervisorReview = RequireReviewCheck.IsChecked == true;
+            AppSettings.Current.TurnaroundThresholdDays = turnaroundDays;
             AppSettings.Current.ExtraPhases = ExtraPhasesBox.Text;
             SettingsService.Save();
             var after = JsonSerializer.Serialize(AppSettings.Current.ClinicalSnapshot());

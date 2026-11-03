@@ -24,3 +24,13 @@ The line under the toolbar names the range that is actually in use.
 The two charts show counts by specificity and the trend over time. The grid under the charts lists the same breakdown. Use the grid when you need the exact counts behind a bar.
 
 Analytics describes work this laboratory confirmed in the application. It is not a population frequency and it does not change any specimen.
+
+## Turnaround
+
+The purple and red cards measure workflow time for investigations **received** in the selected date range. Cancelled investigations are not counted.
+
+- **Received → confirmed** is the median time from the received date to the confirmed identification, in days, with the 90th percentile and the number of investigations. Only the received date is recorded, so it is counted from midnight and the figure is an upper bound.
+- **Confirmed → reviewed** is the median time from confirmation to supervisor review, in hours, for investigations that have a review.
+- **Overdue open investigations** counts active investigations with no confirmed identification that are older than the Preferences **Turnaround threshold (days)**, default 3.
+
+The overdue list at the bottom shows each case, oldest first, with its current status. Select one and choose **Open** to go to it. **Export CSV** adds the turnaround figures and the overdue list after the antibody counts. The 90th percentile uses the nearest-rank method.

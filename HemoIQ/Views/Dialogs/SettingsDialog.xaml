@@ -30,6 +30,7 @@
                 <RowDefinition Height="32"/>
                 <RowDefinition Height="32"/>
                 <RowDefinition Height="32"/>
+                <RowDefinition Height="36"/>
             </Grid.RowDefinitions>
 
             <Label Content="Lab name:" Grid.Row="0" VerticalAlignment="Center"/>
@@ -116,6 +117,10 @@
                       Content="Require supervisor review before an investigation is Completed"
                       VerticalAlignment="Center" Margin="4,0,0,0"
                       ToolTip="A second person, not the one who confirmed the identification, records a review on the Specimens tab. Until then the investigation shows Awaiting supervisor review and is listed on the Worklist."/>
+
+            <Label Content="Turnaround threshold (days):" Grid.Row="18" VerticalAlignment="Center"
+                   ToolTip="Open investigations older than this are listed as overdue on Analytics (1–60)."/>
+            <TextBox x:Name="TurnaroundBox" Grid.Row="18" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
         </Grid>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
