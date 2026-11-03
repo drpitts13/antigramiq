@@ -28,6 +28,8 @@ Antigen columns come from the panel. Red header text means that antibody is rule
 
 Row colors: blue when no grades have been entered, green when the row contributed to a rule-out. Phase cells use yellow for w+ or 1+, orange for 2+, red for 3+, 4+, or hemolysis, and purple for mixed field. A pink CC cell is invalid when AHG is 0.
 
+Mixed field on the autocontrol (AC) row is read against the specimen's transfusion record. After a recent transfusion, analysis notes that alloantibody may be coating surviving donor cells and suggests a DAT and an eluate. If the status is Not transfused, the note asks you to review transfusion history, transplant, and the specimen. If the status is Unknown, it asks you to record the status. Mixed field on a panel cell is still treated as reactive evidence. None of these notes changes the suspected or ruled-out lists.
+
 ## Keyboard
 
 Click a phase cell, then type:

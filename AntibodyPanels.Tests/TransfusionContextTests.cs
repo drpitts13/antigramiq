@@ -248,6 +248,88 @@ public class TransfusionContextTests
         Assert.Contains("review that text", result.TransfusionContextNote);
     }
 
+    // ── Mixed-field autocontrol ────────────────────────────────────────
+
+    private static List<Reaction> AutocontrolRows(string ahg, string? extraPhase = null, string? extraValue = null)
+    {
+        var ac = new Reaction { CellNumber = "AC", IS = "0", C37 = "0", AHG = ahg };
+        if (extraPhase != null) ac.ExtraPhases[extraPhase] = extraValue!;
+        return new List<Reaction>
+        {
+            new() { CellNumber = "1", AHG = "MF" }, // panel-cell MF is not a donor-cell signal
+            ac,
+        };
+    }
+
+    [Fact]
+    public void MixedFieldAutocontrol_RecentTransfusion_SuggestsDatAndEluate()
+    {
+        var t = TransfusionContext.Assess("transfused", "2026-10-25", "2026-11-03", 90, null, null);
+        var note = Assert.Single(TransfusionContext.DescribeMixedFieldAutocontrol(AutocontrolRows("MF"), t));
+        Assert.Contains("Autocontrol AHG is mixed-field", note);
+        Assert.Contains("surviving donor cells", note);
+        Assert.Contains("eluate", note);
+        Assert.Contains("9 day(s)", note);
+        Assert.Contains("not a diagnosis", note);
+    }
+
+    [Fact]
+    public void MixedFieldAutocontrol_NotTransfused_AsksForHistoryAndTransplantReview()
+    {
+        var t = TransfusionContext.Assess("none", null, "2026-11-03", 90, null, null);
+        var note = Assert.Single(TransfusionContext.DescribeMixedFieldAutocontrol(AutocontrolRows("MF"), t));
+        Assert.Contains("Not transfused", note);
+        Assert.Contains("transplant", note);
+        Assert.DoesNotContain("surviving donor cells", note);
+    }
+
+    [Fact]
+    public void MixedFieldAutocontrol_OldTransfusion_SaysDonorCellsLessLikely()
+    {
+        var t = TransfusionContext.Assess("transfused", "2025-01-01", "2026-11-03", 90, null, null);
+        var note = Assert.Single(TransfusionContext.DescribeMixedFieldAutocontrol(AutocontrolRows("MF"), t));
+        Assert.Contains("outside the configured 90-day window", note);
+        Assert.Contains("less likely", note);
+    }
+
+    [Fact]
+    public void MixedFieldAutocontrol_Unknown_AsksToRecordStatus_AndNamesExtraPhase()
+    {
+        var t = TransfusionContext.Assess("unknown", null, "2026-11-03", 90, null, null);
+        var note = Assert.Single(TransfusionContext.DescribeMixedFieldAutocontrol(
+            AutocontrolRows("MF", "Gel", "mf"), t));
+        Assert.Contains("Autocontrol AHG, Gel is mixed-field", note);
+        Assert.Contains("record the transfusion status", note);
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("2+")]
+    [InlineData("NT")]
+    public void NonMixedFieldAutocontrol_GivesNoNote(string ahg)
+    {
+        var t = TransfusionContext.Assess("transfused", "2026-10-25", "2026-11-03", 90, null, null);
+        Assert.Empty(TransfusionContext.DescribeMixedFieldAutocontrol(AutocontrolRows(ahg), t));
+    }
+
+    [Fact]
+    public void Analyzer_MixedFieldAutocontrol_AddsNote_WithoutChangingCandidates()
+    {
+        using var iso = new IsolatedDatabase();
+        SetUpAntiEPattern(iso, "TX-MF", null, "2026-11-03");
+        var panelId = iso.Db.GetSpecimenPanels("TX-MF").Single().PanelId;
+        iso.Db.UpdateSpecimenTransfusion("TX-MF", "transfused", "2026-10-28");
+        var before = WithWindow(90, () => iso.Analyzer.AnalyzeSpecimen("TX-MF", updateDb: false));
+
+        iso.Db.SaveReaction("TX-MF", panelId, "AC", "0", "0", "MF", "NT");
+        var after = WithWindow(90, () => iso.Analyzer.AnalyzeSpecimen("TX-MF", updateDb: false));
+
+        Assert.Contains(after.SpecialReactionNotes, n => n.Contains("Autocontrol AHG is mixed-field") && n.Contains("eluate"));
+        Assert.Contains(after.Suggestions, s => s.Contains("Autocontrol AHG is mixed-field"));
+        Assert.Equal(before.Suspected.Keys.OrderBy(k => k), after.Suspected.Keys.OrderBy(k => k));
+        Assert.Equal(before.RuledOut.Keys.OrderBy(k => k), after.RuledOut.Keys.OrderBy(k => k));
+    }
+
     [Fact]
     public void WorksheetReport_ShowsTransfusionLine()
     {

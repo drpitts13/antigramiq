@@ -87,8 +87,10 @@ namespace AntibodyPanels.Services
                 AnalyzedBy = AnalysisRuleTrace.ResolveOperator(AppSettings.Current),
                 OperatorNote = AnalysisRuleTrace.FormatOperatorNote(AppSettings.Current),
             };
-            ApplyPatientTyping(specimenId, result);
+            var transfusion = ApplyPatientTyping(specimenId, result);
             result.SpecialReactionNotes = DescribeSpecialGrades(reactions);
+            result.SpecialReactionNotes.AddRange(
+                TransfusionContext.DescribeMixedFieldAutocontrol(reactions, transfusion));
             result.ReactionPatterns = ClassifyReactionPatterns(specimenId, byRun, contexts);
             ApplyHtlaTitration(specimenId, result, reactions);
             ApplyNeutralization(specimenId, result, reactions, runs);
@@ -1293,10 +1295,10 @@ namespace AntibodyPanels.Services
             return critical.Concat(important).Concat(informational).Distinct().ToList();
         }
 
-        private void ApplyPatientTyping(string specimenId, AnalysisResult result)
+        private TransfusionAssessment? ApplyPatientTyping(string specimenId, AnalysisResult result)
         {
             var specimen = _db.GetSpecimen(specimenId);
-            if (specimen == null) return;
+            if (specimen == null) return null;
             var transfusion = TransfusionContext.Assess(
                 specimen.TransfusionStatus, specimen.LastTransfusionDate, specimen.CreatedDate,
                 AppSettings.Current.RecentTransfusionWindowDays, specimen.Phenotype, specimen.Notes);
@@ -1305,6 +1307,7 @@ namespace AntibodyPanels.Services
             result.PatientPhenotypeUnreliable = typing.PhenotypeUnreliable;
             result.TransfusionContextNote = transfusion.Explanation;
             result.PatientTypingConsiderations = PatientTypingParser.Evaluate(typing);
+            return transfusion;
         }
 
         private void ApplyHtlaTitration(string specimenId, AnalysisResult result, List<Reaction> reactions)

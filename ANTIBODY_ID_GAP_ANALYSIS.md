@@ -7,7 +7,7 @@ rule-outs are analytical evidence, not a diagnosis.
 Status: **Present** (usable), **Partial** (exists but incomplete or silent),
 **Missing**.
 
-Last updated: 2026-11-03 (iteration 50 — structured transfusion status and date decide phenotype reliability).
+Last updated: 2026-11-03 (iteration 51 — mixed-field autocontrol is read against the transfusion record).
 
 ## Capability matrix
 
@@ -32,7 +32,7 @@ Last updated: 2026-11-03 (iteration 50 — structured transfusion status and dat
 | Analysis | Single / multiple / dosage scoring | Partial | Fisher + pattern; pairwise combinations; dosage averages | Label as evidence, not diagnosis |
 | Analysis | Panreactive / cold / warm / HTLA / auto / HFA / LFA models | Partial | DAT scores; named LFA/pan cells; enzyme lost/gained/resistant; DTT lost/resistant vs untreated. Unpaired runs, comparisons with fewer than 3 paired cells, and comparisons that meet no threshold are each named | Cells tested on only one of the paired runs stay unnamed |
 | Analysis | Selected-cell recommendations with “why” | Partial | Unused in-date vials preferred; P1−/Ch−/Sd(a−) selected cells ranked when neutralization favors soluble substance | More ISBT alleles later |
-| Specimen | Structured transfusion context | Partial | Status (Unknown / Not transfused / Transfused) + last-transfusion date on the specimen; DB CHECK constraint; audited; locked after final call; Preferences window (default 90 days) in analysis snapshot | Product counts/types, pregnancy, HSCT/BMT, mixed-field concern |
+| Specimen | Structured transfusion context | Partial | Status (Unknown / Not transfused / Transfused) + last-transfusion date on the specimen; DB CHECK constraint; audited; locked after final call; Preferences window (default 90 days) in analysis snapshot; MF autocontrol named against the record | Product counts/types, pregnancy, HSCT/BMT, mixed-field concern |
 | Analysis | Patient phenotype / genotype / transfusion limits | Partial | Structured transfusion date vs configurable window decides phenotype reliability and is explained; note keywords only when status is Unknown; GYPA null/Mk En(a); RHCE*Ce vs ce case-sensitive; CeRN variant-C; RHD DAR/DVI/DNB partial D does not rule out anti-D; GATA still does not support anti-Fya | More ISBT alleles later |
 | UI | Antigram freeze / slashes / run compare | Partial | Frozen cell; slashes; compare extras; Show dosage; filter/sort; panel lot compare | — |
 | UI | Explain Analysis panel | Present | Explain tab + Summary + clinical report assemble rule-out, support, conflict, phenotype, additional testing | Keep wording as evidence, not diagnosis |
@@ -840,12 +840,32 @@ HSCT/BMT, mixed-field concern, and connecting transfusion context to
 mixed-field reaction notes. The legacy keyword check remains as the
 fallback for Unknown.
 
+## Iteration 51 (this change)
+
+**Deficiency:** A mixed-field autocontrol produced no note, because the
+special-grade notes skip the AC row. After a recent transfusion that
+result is the classic sign of alloantibody coating surviving donor
+cells (possible delayed serologic or hemolytic transfusion reaction).
+
+**Bounded improvement:** Every autocontrol phase graded MF, including
+extra phases, is named once per row and read against the transfusion
+assessment from iteration 50. The note covers four cases: recent
+transfusion (suggest a DAT and an eluate), Not transfused (review
+history, transplant, and the specimen), Transfused outside the window
+(donor cells less likely), and Unknown (record the status). Panel-cell
+MF is unchanged. Suspected and ruled-out lists are unchanged. The note
+reaches Summary, Explain Analysis, suggestions, and reports through the
+existing special-reaction notes.
+
+**Not in this tick:** DAT has no mixed-field option, and DAT IgG/C3 are
+not recorded separately. Eluate results are not structured.
+
 ## Likely next tick
 
-Connect the structured transfusion record to mixed-field reactions.
-When cells grade MF and the specimen is Transfused within the window,
-name possible donor cells in the pattern note rather than treating MF as
-ordinary reactivity. Naming enzyme or DTT cells tested on only one run
-stays queued. Authenticated vendor portals stay later
+Structure the DAT: record polyspecific, IgG, and C3 results separately,
+with a mixed-field option, and keep the existing single DAT value
+readable. A mixed-field IgG DAT after recent transfusion would then use
+the same donor-cell note. Naming enzyme or DTT cells tested on only one
+run stays queued. Authenticated vendor portals stay later
 and must not bypass auth, CAPTCHA, licensing, or terms.
 

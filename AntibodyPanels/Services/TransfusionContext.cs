@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using AntibodyPanels.Models;
 
@@ -11,6 +12,8 @@ namespace AntibodyPanels.Services
         public string Explanation { get; init; } = string.Empty;
         /// <summary>"structured", "notes", or "none".</summary>
         public string Source { get; init; } = "none";
+        /// <summary>Normalized <see cref="TransfusionStatus"/> code that was assessed.</summary>
+        public string Status { get; init; } = TransfusionStatus.Unknown;
     }
 
     /// <summary>
@@ -29,8 +32,21 @@ namespace AntibodyPanels.Services
                             PatientTypingParser.LooksRecentlyTransfused(notes);
 
             if (code == TransfusionStatus.Transfused)
-                return AssessTransfused(lastTransfusionDate, specimenDate, windowDays);
+                return WithStatus(AssessTransfused(lastTransfusionDate, specimenDate, windowDays), code);
 
+            return WithStatus(AssessUntransfused(code, notesHint), code);
+        }
+
+        private static TransfusionAssessment WithStatus(TransfusionAssessment a, string code) => new()
+        {
+            PhenotypeUnreliable = a.PhenotypeUnreliable,
+            Explanation = a.Explanation,
+            Source = a.Source,
+            Status = code,
+        };
+
+        private static TransfusionAssessment AssessUntransfused(string code, bool notesHint)
+        {
             if (code == TransfusionStatus.NotTransfused)
             {
                 if (notesHint)
@@ -108,6 +124,56 @@ namespace AntibodyPanels.Services
                     $"Last transfusion {lastText} was {days} day(s) before the specimen, outside the configured {windowDays}-day window, " +
                     "so serologic patient typing is used as evidence.",
             };
+        }
+
+        /// <summary>
+        /// Names a mixed-field autocontrol in each phase and reads it against
+        /// the transfusion record. Two red-cell populations in the patient's
+        /// own cells are a review signal, not an identification.
+        /// </summary>
+        public static List<string> DescribeMixedFieldAutocontrol(
+            IEnumerable<Reaction> reactions, TransfusionAssessment? transfusion)
+        {
+            var notes = new List<string>();
+            foreach (var rxn in reactions)
+            {
+                if (!string.Equals(rxn.CellNumber, "AC", StringComparison.OrdinalIgnoreCase)) continue;
+                var phases = new List<string>();
+                foreach (var (phase, val) in AutocontrolPhases(rxn))
+                    if (ReactionGrade.Normalize(val) == ReactionGrade.MixedField && !phases.Contains(phase))
+                        phases.Add(phase);
+                if (phases.Count == 0) continue;
+
+                var where = $"Autocontrol {string.Join(", ", phases)} is mixed-field (MF)";
+                notes.Add(MixedFieldSentence(where, transfusion));
+            }
+            return notes;
+        }
+
+        private static IEnumerable<(string Phase, string Value)> AutocontrolPhases(Reaction rxn)
+        {
+            yield return ("IS", rxn.IS);
+            yield return ("37°C", rxn.C37);
+            yield return ("AHG", rxn.AHG);
+            foreach (var (phase, val) in rxn.ExtraPhases)
+                yield return (phase, val);
+        }
+
+        private static string MixedFieldSentence(string where, TransfusionAssessment? t)
+        {
+            const string tail = " This is evidence for review, not a diagnosis.";
+            if (t != null && t.PhenotypeUnreliable)
+                return $"{where} with a recent transfusion recorded. {t.Explanation} " +
+                       "A mixed-field autocontrol after transfusion can mean alloantibody coating surviving donor cells " +
+                       "(possible delayed serologic or hemolytic transfusion reaction). Consider a DAT and an eluate tested against the panel." + tail;
+            if (t != null && t.Status == TransfusionStatus.NotTransfused)
+                return $"{where}, but transfusion status is Not transfused. Two red-cell populations without a recorded transfusion " +
+                       "warrant review of transfusion history elsewhere, stem-cell or marrow transplant, and the specimen itself." + tail;
+            if (t != null && t.Status == TransfusionStatus.Transfused)
+                return $"{where}. {t.Explanation} Donor cells are less likely after this interval; " +
+                       "review for a more recent transfusion, transplant, or a specimen problem." + tail;
+            return $"{where} and transfusion status is Unknown. A mixed-field autocontrol often follows recent transfusion; " +
+                   "record the transfusion status and date on the specimen, and consider a DAT and an eluate." + tail;
         }
 
         private static bool TryDate(string? text, out DateTime date)
