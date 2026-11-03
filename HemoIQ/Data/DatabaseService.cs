@@ -235,6 +235,9 @@ namespace HemoIQ.Data
                 ExecNonQuery("ALTER TABLE specimens ADD COLUMN dat_c3 TEXT");
             if (!cols.Contains("mrn"))
                 ExecNonQuery("ALTER TABLE specimens ADD COLUMN mrn TEXT");
+            if (!cols.Contains("source_accession"))
+                ExecNonQuery("ALTER TABLE specimens ADD COLUMN source_accession TEXT");
+            ExecNonQuery("CREATE INDEX IF NOT EXISTS ix_specimens_source ON specimens(source_accession)");
             ExecNonQuery("CREATE INDEX IF NOT EXISTS ix_specimens_mrn ON specimens(mrn)");
         }
 
@@ -716,6 +719,53 @@ namespace HemoIQ.Data
             AppendAudit(before == null ? "add_patient" : "update_patient", "patient", key, null,
                 before == null ? null : JsonSerializer.Serialize(Snap(before)),
                 JsonSerializer.Serialize(Snap(after)));
+        }
+
+        /// <summary>Eluate specimens linked to <paramref name="sourceAccession"/>, oldest first.</summary>
+        public List<Specimen> GetEluatesFor(string sourceAccession)
+        {
+            var list = new List<Specimen>();
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "SELECT * FROM specimens WHERE source_accession = $src ORDER BY created_date, accession_number";
+            cmd.Parameters.AddWithValue("$src", sourceAccession);
+            using var r = cmd.ExecuteReader();
+            while (r.Read()) list.Add(ReadSpecimen(r));
+            return list;
+        }
+
+        /// <summary>
+        /// Links an eluate specimen to the specimen whose red cells were eluted, or clears
+        /// the link with null. Only eluate specimens may be linked; the source must exist,
+        /// must not be the eluate itself, and must not be another eluate. Audited.
+        /// </summary>
+        public void SetEluateSource(string eluateAccession, string? sourceAccession)
+        {
+            var eluate = GetSpecimen(eluateAccession)
+                         ?? throw new ArgumentException($"Specimen {eluateAccession} not found.");
+            var src = string.IsNullOrWhiteSpace(sourceAccession) ? null : sourceAccession.Trim();
+            if (src != null)
+            {
+                if (!eluate.IsEluate)
+                    throw new ArgumentException("Only an eluate specimen can be linked to a source specimen.");
+                if (string.Equals(src, eluateAccession, StringComparison.OrdinalIgnoreCase))
+                    throw new ArgumentException("An eluate cannot be its own source.");
+                var source = GetSpecimen(src)
+                             ?? throw new ArgumentException($"Source specimen {src} not found.");
+                if (source.IsEluate)
+                    throw new ArgumentException("The source must be the patient's serum or plasma specimen, not another eluate.");
+                src = source.AccessionNumber;
+            }
+            if (eluate.SourceAccession == src) return;
+            EnsureSpecimenUnlocked(eluateAccession);
+
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "UPDATE specimens SET source_accession = $src WHERE accession_number = $acc";
+            cmd.Parameters.AddWithValue("$src", (object?)src ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$acc", eluateAccession);
+            cmd.ExecuteNonQuery();
+            AppendAudit("link_eluate", "specimen", eluateAccession, null,
+                JsonSerializer.Serialize(new { source = eluate.SourceAccession }),
+                JsonSerializer.Serialize(new { source = src }));
         }
 
         public List<Specimen> GetSpecimensByMrn(string mrn)
@@ -2375,6 +2425,7 @@ namespace HemoIQ.Data
             LastTransfusionDate = SafeGetString(r, "last_transfusion_date"),
             DatIgg = SafeGetString(r, "dat_igg"),
             Mrn = SafeGetString(r, "mrn"),
+            SourceAccession = SafeGetString(r, "source_accession"),
             DatC3 = SafeGetString(r, "dat_c3"),
             FinalAntibodies = SafeGetString(r, "final_antibodies"),
             FinalComment = SafeGetString(r, "final_comment"),

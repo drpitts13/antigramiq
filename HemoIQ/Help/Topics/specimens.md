@@ -70,3 +70,16 @@ Expand **Timeline** to see the investigation in time order, with who did each st
 - Changes to MRN, transfusion record, DAT, and the patient record.
 
 Receipt and run starts record only a date, so they show first on their day. The identification worksheet prints the same timeline. Panels attached before this version were not audited, so only their run start dates appear.
+
+## Eluate evidence
+
+Enter an eluate as its own specimen with Type **eluate**, set **Eluate of** to the source accession, attach a panel, and grade it like any panel. **Eluate link** in Clinical Context shows *Eluate of X* on the eluate and *Eluates: …* on the source.
+
+When the source specimen is analyzed, each linked eluate adds a note:
+
+- **No reactions entered yet** — the eluate is linked but not tested.
+- **Specificity** — the eluate's confirmed identification, or its suspected antibodies from its own analysis, with reactive and evaluated cell counts. After a recent transfusion, the note says this supports alloantibody coating transfused donor cells (possible delayed hemolytic or serologic transfusion reaction). An antibody in the eluate but not suspected in the source is named, because it may be bound to the red cells.
+- **Panreactive** — four or more evaluated cells, at least 80% reactive. This supports IgG autoantibody; adsorption is suggested before ruling out an alloantibody after transfusion.
+- **Nonreactive** — three or more evaluated cells, none reactive. With a positive DAT, the note lists drug-related antibodies, antibodies to antigens not on the panel, and complement-only coating. With a C3-only DAT, a nonreactive eluate is expected.
+
+These notes never add, remove, or rule out an antibody.

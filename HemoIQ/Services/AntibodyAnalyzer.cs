@@ -91,6 +91,9 @@ namespace HemoIQ.Services
             result.SpecialReactionNotes = DescribeSpecialGrades(reactions);
             result.SpecialReactionNotes.AddRange(
                 TransfusionContext.DescribeMixedFieldAutocontrol(reactions, transfusion));
+            if (_db.GetSpecimen(specimenId) is Specimen eluateSource)
+                result.SpecialReactionNotes.AddRange(
+                    EluateEvidence.Describe(_db, eluateSource, result.Suspected.Keys, transfusion));
             var datProfile = _db.GetSpecimen(specimenId)?.Dat;
             if (datProfile != null)
                 result.SpecialReactionNotes.AddRange(

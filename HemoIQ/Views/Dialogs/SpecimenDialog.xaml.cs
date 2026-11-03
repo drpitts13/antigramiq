@@ -10,6 +10,8 @@ namespace HemoIQ.Views.Dialogs
     {
         public string AccessionNumber => AccessionBox.Text.Trim();
         public string? Mrn => Services.PatientHistory.NormalizeMrn(MrnBox.Text);
+        public string? SourceAccession =>
+            SpecimenType == "eluate" && !string.IsNullOrWhiteSpace(SourceBox.Text) ? SourceBox.Text.Trim() : null;
         public string SpecimenType => TypeBox.SelectedItem?.ToString() ?? TypeBox.Text;
         public string? ExpirationDate => ExpirationPicker.SelectedDate?.ToString("yyyy-MM-dd");
         public bool ItemIsActive => ActiveCheck.IsChecked == true;
@@ -77,6 +79,7 @@ namespace HemoIQ.Views.Dialogs
 
                 ActiveCheck.IsChecked = existing.IsActive;
                 MrnBox.Text = existing.Mrn ?? "";
+                SourceBox.Text = existing.SourceAccession ?? "";
                 PhenotypeBox.Text = existing.Phenotype ?? "";
                 GenotypeBox.Text = existing.Genotype ?? "";
                 PreviousAbsBox.Text = existing.PreviousAntibodies ?? "";
@@ -97,6 +100,15 @@ namespace HemoIQ.Views.Dialogs
                     LastTransfusionPicker.SelectedDate = td;
             }
             SyncTransfusionDate();
+            SyncSource();
+        }
+
+        private void TypeBox_SelectionChanged(object sender, SelectionChangedEventArgs e) => SyncSource();
+
+        private void SyncSource()
+        {
+            if (SourceBox == null) return;
+            SourceBox.IsEnabled = SpecimenType == "eluate";
         }
 
         private static void SelectGrade(ComboBox box, string? value)

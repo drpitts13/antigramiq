@@ -7,7 +7,7 @@ rule-outs are analytical evidence, not a diagnosis.
 Status: **Present** (usable), **Partial** (exists but incomplete or silent),
 **Missing**.
 
-Last updated: 2026-11-03 (iteration 60 — audited report output with fingerprint and reissue prompt).
+Last updated: 2026-11-03 (iteration 61 — eluate specimens linked to their source and read as evidence).
 
 ## Capability matrix
 
@@ -36,7 +36,7 @@ Last updated: 2026-11-03 (iteration 60 — audited report output with fingerprin
 | Workflow | Investigation status and next step | Partial | `InvestigationStatusService` derives five steps and a status (awaiting panel → testing → analysis needed → awaiting ID → completed / amended / reopened / inactive) from panels, grades, analysis time, final call, and audit; shown on Specimens and the worksheet; Worklist shares the completeness check | Optional supervisor review step (two-person, audited, invalidated by clear/re-confirm, Worklist queue); no cancel action or role-based permissions yet |
 | Patient | Permanent record and transfusion requirements | Partial | `patients` table (MRN, name, DOB, comments, requirements); audited add/update; Edit Patient on Specimens; reports print it; analysis raises REVIEW when a known antibody's antigen-negative requirement is not written | Structured requirement list instead of free text |
 | Patient | MRN and cross-specimen history | Partial | Indexed `specimens.mrn`; audited; confirmed final calls on the same MRN become Historical evidence citing the source accession; detail pane and reports list other specimens | Encounter, location, ordering provider, sex, pregnancy history |
-| Specimen | DAT polyspecific / IgG / C3 | Present | `DatProfile` on specimen; MF grade; audited IgG/C3; positive if any reactive, negative only if all recorded negative; C3-only caveat on autoantibody notes; MF DAT donor-cell note | Eluate results still free text |
+| Specimen | DAT polyspecific / IgG / C3 | Present | `DatProfile` on specimen; MF grade; audited IgG/C3; positive if any reactive, negative only if all recorded negative; C3-only caveat on autoantibody notes; MF DAT donor-cell note | Eluate specimens link to their source; `EluateEvidence` reads specificity, panreactivity, and nonreactivity against DAT and transfusion |
 | Analysis | Panreactive / cold / warm / HTLA / auto / HFA / LFA models | Partial | DAT scores; named LFA/pan cells; enzyme lost/gained/resistant; DTT lost/resistant vs untreated. Unpaired runs, comparisons with fewer than 3 paired cells, and comparisons that meet no threshold are each named | Cells tested on only one of the paired runs stay unnamed |
 | Analysis | Selected-cell recommendations with “why” | Partial | Unused in-date vials preferred; P1−/Ch−/Sd(a−) selected cells ranked when neutralization favors soluble substance | More ISBT alleles later |
 | Specimen | Structured transfusion context | Partial | Status (Unknown / Not transfused / Transfused) + last-transfusion date on the specimen; DB CHECK constraint; audited; locked after final call; Preferences window (default 90 days) in analysis snapshot; MF autocontrol named against the record | Product counts/types, pregnancy, HSCT/BMT, mixed-field concern |
@@ -1086,10 +1086,33 @@ failed export writes nothing.
 completed the job (the event is written when the job is handed to
 Windows). There is no Worklist queue for reports needing reissue.
 
+## Iteration 61 (this change)
+
+**Deficiency:** An eluate could be entered as a specimen of type eluate,
+but nothing tied it to the patient specimen it came from. Eluate
+findings, which are central to recognizing delayed transfusion reactions
+and warm autoantibodies, never reached the source investigation.
+
+**Bounded improvement:** `specimens.source_accession` (indexed) links an
+eluate to its source. `SetEluateSource` refuses non-eluates,
+self-links, missing sources, and eluate sources, is audited, and is
+locked after the eluate's final call. `EluateEvidence` counts graded and
+reactive cells on each linked eluate's untreated runs and adds one note
+per eluate to the source analysis. The note covers: not yet tested;
+specificity (confirmed preferred over suspected), worded as possible
+DHTR/DSTR after a recent transfusion and naming antibodies not suspected
+in the source; panreactive (at least 80% of four or more cells); or
+nonreactive with a positive DAT, explained for a C3-only DAT. The dialog
+has *Eluate of*. The detail pane shows the link both ways, and the
+timeline shows link changes.
+
+**Not in this tick:** Elution method and last-wash control are not
+recorded. Eluate antigen-negative rule-outs are not used for the source.
+
 ## Likely next tick
 
-Roadmap item 2: structured eluate results (method, reactions per cell
-or specificity found) feeding analysis as evidence, with a mixed-field
-or panreactive eluate explained alongside the DAT. Authenticated vendor portals stay later
+Roadmap item 3: a Cancel action with a required reason (audited,
+reversible with reason), shown as status Cancelled and excluded from
+work queues, plus turnaround metrics on Analytics from the timeline. Authenticated vendor portals stay later
 and must not bypass auth, CAPTCHA, licensing, or terms.
 

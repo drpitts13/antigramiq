@@ -8,6 +8,9 @@ namespace HemoIQ.Models
         public string AccessionNumber { get; set; } = string.Empty;
         /// <summary>Medical record number; links specimens of the same patient. Stored upper-case.</summary>
         public string? Mrn { get; set; }
+        /// <summary>For an eluate: the accession of the specimen whose red cells were eluted.</summary>
+        public string? SourceAccession { get; set; }
+        public bool IsEluate => string.Equals(Type, "eluate", StringComparison.OrdinalIgnoreCase);
         public string Type { get; set; } = "serum";
         public string? ExpirationDate { get; set; }
         public string CreatedDate { get; set; } = string.Empty;

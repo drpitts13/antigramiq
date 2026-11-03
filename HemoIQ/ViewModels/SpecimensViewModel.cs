@@ -200,6 +200,14 @@ namespace HemoIQ.ViewModels
             return string.Join(System.Environment.NewLine, lines);
         }
 
+        private string _eluateLinkText = string.Empty;
+        /// <summary>"Eluate of X" for an eluate, or "Eluates: A, B" for a source specimen.</summary>
+        public string EluateLinkText
+        {
+            get => _eluateLinkText;
+            private set => SetField(ref _eluateLinkText, value);
+        }
+
         private string _patientHistoryText = string.Empty;
         /// <summary>Other specimens with the same MRN, newest first.</summary>
         public string PatientHistoryText
@@ -227,6 +235,10 @@ namespace HemoIQ.ViewModels
 
             PatientText = FormatPatient(_db.GetPatient(_selectedSpecimen.Mrn), _selectedSpecimen.Mrn);
             Status = Services.InvestigationStatusService.Compute(_db, _selectedSpecimen);
+            var eluates = _db.GetEluatesFor(sid);
+            EluateLinkText = _selectedSpecimen.SourceAccession is string src
+                ? $"Eluate of {src}"
+                : eluates.Count > 0 ? "Eluates: " + string.Join(", ", eluates.Select(e => e.AccessionNumber)) : "None";
             foreach (var e in Services.InvestigationTimeline.Build(_db, _selectedSpecimen)) Timeline.Add(e);
             if (string.IsNullOrWhiteSpace(_selectedSpecimen.Mrn))
                 PatientHistoryText = "No MRN recorded; history from other specimens is not linked.";
@@ -273,6 +285,7 @@ namespace HemoIQ.ViewModels
                 _db.UpdateSpecimenTransfusion(dlg.AccessionNumber, dlg.TransfusionStatusCode, dlg.LastTransfusionDate);
                 _db.UpdateSpecimenDatSplit(dlg.AccessionNumber, dlg.DatIgg, dlg.DatC3);
                 _db.UpdateSpecimenMrn(dlg.AccessionNumber, dlg.Mrn);
+                _db.SetEluateSource(dlg.AccessionNumber, dlg.SourceAccession);
                 _main.SetStatus($"Specimen {dlg.AccessionNumber} added.");
                 NotifySpecimensChanged();
                 SelectedSpecimen = Specimens.FirstOrDefault(s => s.AccessionNumber == dlg.AccessionNumber);
@@ -297,6 +310,7 @@ namespace HemoIQ.ViewModels
                     dlg.LastTransfusionDate);
                 _db.UpdateSpecimenDatSplit(SelectedSpecimen.AccessionNumber, dlg.DatIgg, dlg.DatC3);
                 _db.UpdateSpecimenMrn(SelectedSpecimen.AccessionNumber, dlg.Mrn);
+                _db.SetEluateSource(SelectedSpecimen.AccessionNumber, dlg.SourceAccession);
                 _main.SetStatus($"Specimen {SelectedSpecimen.AccessionNumber} updated.");
                 NotifySpecimensChanged();
             }
