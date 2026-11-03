@@ -150,6 +150,17 @@ namespace AntibodyPanels.Services
             return notes;
         }
 
+        /// <summary>
+        /// Names DAT results graded mixed field and reads them against the
+        /// transfusion record, using the same wording as the autocontrol.
+        /// </summary>
+        public static List<string> DescribeMixedFieldDat(DatProfile dat, TransfusionAssessment? transfusion)
+        {
+            var mf = dat.MixedFieldResults;
+            if (mf.Count == 0) return new List<string>();
+            return new List<string> { MixedFieldSentence($"DAT {string.Join(", ", mf)} is mixed-field (MF)", transfusion) };
+        }
+
         private static IEnumerable<(string Phase, string Value)> AutocontrolPhases(Reaction rxn)
         {
             yield return ("IS", rxn.IS);

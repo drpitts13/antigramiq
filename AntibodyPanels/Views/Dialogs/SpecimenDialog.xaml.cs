@@ -17,6 +17,8 @@ namespace AntibodyPanels.Views.Dialogs
         public string? Genotype => string.IsNullOrWhiteSpace(GenotypeBox.Text) ? null : GenotypeBox.Text.Trim();
         public string? PreviousAntibodies => string.IsNullOrWhiteSpace(PreviousAbsBox.Text) ? null : PreviousAbsBox.Text.Trim();
         public string? DatResult => DatBox.SelectedItem?.ToString();
+        public string? DatIgg => DatIggBox.SelectedItem?.ToString();
+        public string? DatC3 => DatC3Box.SelectedItem?.ToString();
         public string TransfusionStatusCode =>
             (TransfusionBox.SelectedItem as TransfusionOption)?.Code ?? Models.TransfusionStatus.Unknown;
         public string? LastTransfusionDate =>
@@ -32,6 +34,10 @@ namespace AntibodyPanels.Views.Dialogs
 
             TypeBox.ItemsSource = AntigenConstants.SpecimenTypes;
             DatBox.ItemsSource = AntigenConstants.DatResults;
+            DatIggBox.ItemsSource = AntigenConstants.DatResults;
+            DatC3Box.ItemsSource = AntigenConstants.DatResults;
+            DatIggBox.SelectedIndex = 0;
+            DatC3Box.SelectedIndex = 0;
             var transfusionOptions = new System.Collections.Generic.List<TransfusionOption>();
             foreach (var (code, label) in Models.TransfusionStatus.Options)
                 transfusionOptions.Add(new TransfusionOption(code, label));
@@ -78,6 +84,8 @@ namespace AntibodyPanels.Views.Dialogs
                 for (int i = 0; i < AntigenConstants.DatResults.Count; i++)
                     if (AntigenConstants.DatResults[i] == existing.DatResult) { datIdx = i; break; }
                 DatBox.SelectedIndex = datIdx;
+                SelectGrade(DatIggBox, existing.DatIgg);
+                SelectGrade(DatC3Box, existing.DatC3);
 
                 var status = Models.TransfusionStatus.Normalize(existing.TransfusionStatus);
                 for (int i = 0; i < transfusionOptions.Count; i++)
@@ -87,6 +95,14 @@ namespace AntibodyPanels.Views.Dialogs
                     LastTransfusionPicker.SelectedDate = td;
             }
             SyncTransfusionDate();
+        }
+
+        private static void SelectGrade(ComboBox box, string? value)
+        {
+            box.SelectedIndex = 0;
+            for (int i = 0; i < AntigenConstants.DatResults.Count; i++)
+                if (string.Equals(AntigenConstants.DatResults[i], value, StringComparison.OrdinalIgnoreCase))
+                { box.SelectedIndex = i; break; }
         }
 
         private void TransfusionBox_SelectionChanged(object sender, SelectionChangedEventArgs e) =>

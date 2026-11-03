@@ -17,7 +17,12 @@ namespace AntibodyPanels.Models
         public string? Phenotype { get; set; }
         public string? Genotype { get; set; }
         public string? PreviousAntibodies { get; set; }
+        /// <summary>Polyspecific DAT (the original single DAT value).</summary>
         public string? DatResult { get; set; }
+        public string? DatIgg { get; set; }
+        public string? DatC3 { get; set; }
+        public DatProfile Dat => new() { Polyspecific = DatResult, IgG = DatIgg, C3 = DatC3 };
+        public string DatDisplay => Dat.Describe();
         /// <summary>Normalized <see cref="Models.TransfusionStatus"/> code.</summary>
         public string TransfusionStatus { get; set; } = Models.TransfusionStatus.Unknown;
         public string? LastTransfusionDate { get; set; }
@@ -61,6 +66,6 @@ namespace AntibodyPanels.Models
 
         public bool MatchesFilter(string? query) =>
             TextFilter.Matches(query, AccessionNumber, Type, Phenotype, Genotype, PreviousAntibodies,
-                Notes, FinalAntibodies, DatResult, ExpirationDate);
+                Notes, FinalAntibodies, DatResult, DatIgg, DatC3, ExpirationDate);
     }
 }

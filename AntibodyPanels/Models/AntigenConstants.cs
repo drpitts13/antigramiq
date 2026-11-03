@@ -199,7 +199,7 @@ namespace AntibodyPanels.Models
             new[] { "serum", "plasma", "eluate" };
 
         public static readonly IReadOnlyList<string> DatResults =
-            new[] { "NT", "Negative", "W+", "1+", "2+", "3+", "4+" };
+            new[] { "NT", "Negative", "W+", "1+", "2+", "3+", "4+", "MF" };
 
         public const string AntigenNotTested = "NT";
         public const string AntigenHomozygous = "++";

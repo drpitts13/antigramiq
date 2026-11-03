@@ -91,6 +91,10 @@ namespace AntibodyPanels.Services
             result.SpecialReactionNotes = DescribeSpecialGrades(reactions);
             result.SpecialReactionNotes.AddRange(
                 TransfusionContext.DescribeMixedFieldAutocontrol(reactions, transfusion));
+            var datProfile = _db.GetSpecimen(specimenId)?.Dat;
+            if (datProfile != null)
+                result.SpecialReactionNotes.AddRange(
+                    TransfusionContext.DescribeMixedFieldDat(datProfile, transfusion));
             result.ReactionPatterns = ClassifyReactionPatterns(specimenId, byRun, contexts);
             ApplyHtlaTitration(specimenId, result, reactions);
             ApplyNeutralization(specimenId, result, reactions, runs);
@@ -1361,7 +1365,7 @@ namespace AntibodyPanels.Services
                 foreach (var rxn in rxns)
                     observations.Add(ReactionPatternClassifier.Observe(rxn, ctx));
             }
-            var dat = _db.GetSpecimen(specimenId)?.DatResult;
+            var dat = _db.GetSpecimen(specimenId)?.Dat ?? new DatProfile();
             return ReactionPatternClassifier.Classify(observations, dat);
         }
 

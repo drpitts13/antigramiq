@@ -7,7 +7,7 @@ rule-outs are analytical evidence, not a diagnosis.
 Status: **Present** (usable), **Partial** (exists but incomplete or silent),
 **Missing**.
 
-Last updated: 2026-11-03 (iteration 51 — mixed-field autocontrol is read against the transfusion record).
+Last updated: 2026-11-03 (iteration 52 — DAT recorded as polyspecific, IgG, and C3 with mixed field).
 
 ## Capability matrix
 
@@ -30,6 +30,7 @@ Last updated: 2026-11-03 (iteration 51 — mixed-field autocontrol is read again
 | Analysis | Transparent candidate evidence | Partial | Explain Analysis lists suspected, in-progress, historical, untypeable, pattern, enzyme, DTT, and cell-level adsorption comparisons. Adsorbed aliquots do not rule out or enter ordinary scores for specificities they are expected to remove. A panreactive untreated run paired with autoadsorption or rr/R1R1/R2R2 adsorption is omitted from ordinary scores. Unpaired ficin, papain, and DTT runs are named and are not compared with another panel | Cross-panel enzyme and DTT pairing stays out of scope |
 | Analysis | Configurable visible rule-out | Partial | `Rule.MinRuleoutCount` is now applied; lab default + explanation sentences | Watch seeded anti-D/anti-k rules; ACS remains separate |
 | Analysis | Single / multiple / dosage scoring | Partial | Fisher + pattern; pairwise combinations; dosage averages | Label as evidence, not diagnosis |
+| Specimen | DAT polyspecific / IgG / C3 | Present | `DatProfile` on specimen; MF grade; audited IgG/C3; positive if any reactive, negative only if all recorded negative; C3-only caveat on autoantibody notes; MF DAT donor-cell note | Eluate results still free text |
 | Analysis | Panreactive / cold / warm / HTLA / auto / HFA / LFA models | Partial | DAT scores; named LFA/pan cells; enzyme lost/gained/resistant; DTT lost/resistant vs untreated. Unpaired runs, comparisons with fewer than 3 paired cells, and comparisons that meet no threshold are each named | Cells tested on only one of the paired runs stay unnamed |
 | Analysis | Selected-cell recommendations with “why” | Partial | Unused in-date vials preferred; P1−/Ch−/Sd(a−) selected cells ranked when neutralization favors soluble substance | More ISBT alleles later |
 | Specimen | Structured transfusion context | Partial | Status (Unknown / Not transfused / Transfused) + last-transfusion date on the specimen; DB CHECK constraint; audited; locked after final call; Preferences window (default 90 days) in analysis snapshot; MF autocontrol named against the record | Product counts/types, pregnancy, HSCT/BMT, mixed-field concern |
@@ -860,12 +861,34 @@ existing special-reaction notes.
 **Not in this tick:** DAT has no mixed-field option, and DAT IgG/C3 are
 not recorded separately. Eluate results are not structured.
 
+## Iteration 52 (this change)
+
+**Deficiency:** The DAT was one polyspecific value with no IgG or C3
+result and no mixed-field grade. Pattern notes could not tell a warm
+IgG picture from C3-only reactivity. A mixed-field DAT after
+transfusion could not be recorded.
+
+**Bounded improvement:** Specimens store IgG and C3 DAT results beside
+the polyspecific value. MF is now a DAT grade. A `DatProfile` makes the
+DAT positive if any recorded result is reactive, and negative only when
+every recorded result is negative. Autoantibody-favoring pattern notes
+add a cold or complement caveat when only C3 reacts. A mixed-field DAT
+gets the donor-cell note from iteration 51. IgG and C3 changes are
+audited, validated against the grade list, and locked after a final
+call. The dialog, specimen detail, and reports show the full DAT.
+Polyspecific-only wording is unchanged.
+
+**Not in this tick:** Eluate results are not structured, and DAT history
+across specimens is not tracked by patient (there is no patient entity
+yet).
+
 ## Likely next tick
 
-Structure the DAT: record polyspecific, IgG, and C3 results separately,
-with a mixed-field option, and keep the existing single DAT value
-readable. A mixed-field IgG DAT after recent transfusion would then use
-the same donor-cell note. Naming enzyme or DTT cells tested on only one
-run stays queued. Authenticated vendor portals stay later
+Product review is due next tick. Specimen context (transfusion, DAT) is
+now structured, but there is still no patient entity: MRN, name, and
+history are not shared across specimens. Assess whether a minimal
+patient record (MRN plus linked specimens, with history surfaced on new
+specimens) is the next cohesive slice. Naming enzyme or DTT cells tested
+on only one run stays queued. Authenticated vendor portals stay later
 and must not bypass auth, CAPTCHA, licensing, or terms.
 

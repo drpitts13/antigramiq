@@ -222,6 +222,10 @@ namespace AntibodyPanels.Data
                     "CHECK (transfusion_status IN ('unknown','none','transfused'))");
             if (!cols.Contains("last_transfusion_date"))
                 ExecNonQuery("ALTER TABLE specimens ADD COLUMN last_transfusion_date TEXT");
+            if (!cols.Contains("dat_igg"))
+                ExecNonQuery("ALTER TABLE specimens ADD COLUMN dat_igg TEXT");
+            if (!cols.Contains("dat_c3"))
+                ExecNonQuery("ALTER TABLE specimens ADD COLUMN dat_c3 TEXT");
         }
 
         private void MigrateSpecimenFinalCall()
@@ -562,6 +566,39 @@ namespace AntibodyPanels.Data
             AppendAudit("update_transfusion", "specimen", accessionNumber, null,
                 JsonSerializer.Serialize(new { status = before.TransfusionStatus, lastTransfusionDate = before.LastTransfusionDate }),
                 JsonSerializer.Serialize(new { status = code, lastTransfusionDate = date }));
+        }
+
+        /// <summary>
+        /// Records monospecific IgG and C3 DAT results. NT or blank clears a
+        /// value. Audited with before and after values.
+        /// </summary>
+        public void UpdateSpecimenDatSplit(string accessionNumber, string? igg, string? c3)
+        {
+            static string? Clean(string? v, string name)
+            {
+                if (string.IsNullOrWhiteSpace(v) || v.Trim().Equals("NT", StringComparison.OrdinalIgnoreCase))
+                    return null;
+                var match = AntigenConstants.DatResults.FirstOrDefault(
+                    d => string.Equals(d, v.Trim(), StringComparison.OrdinalIgnoreCase));
+                return match ?? throw new ArgumentException($"DAT {name} value '{v}' is not a recognized grade.");
+            }
+            var newIgg = Clean(igg, "IgG");
+            var newC3 = Clean(c3, "C3");
+
+            var before = GetSpecimen(accessionNumber)
+                         ?? throw new ArgumentException($"Specimen {accessionNumber} not found.");
+            if (before.DatIgg == newIgg && before.DatC3 == newC3) return;
+            EnsureSpecimenUnlocked(accessionNumber);
+
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "UPDATE specimens SET dat_igg = $igg, dat_c3 = $c3 WHERE accession_number = $acc";
+            cmd.Parameters.AddWithValue("$igg", (object?)newIgg ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$c3", (object?)newC3 ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$acc", accessionNumber);
+            cmd.ExecuteNonQuery();
+            AppendAudit("update_dat", "specimen", accessionNumber, null,
+                JsonSerializer.Serialize(new { igg = before.DatIgg, c3 = before.DatC3 }),
+                JsonSerializer.Serialize(new { igg = newIgg, c3 = newC3 }));
         }
 
         public void SetSpecimenActive(string accessionNumber, bool active)
@@ -2100,6 +2137,8 @@ namespace AntibodyPanels.Data
             DatResult = SafeGetString(r, "dat_result"),
             TransfusionStatus = TransfusionStatus.Normalize(SafeGetString(r, "transfusion_status")),
             LastTransfusionDate = SafeGetString(r, "last_transfusion_date"),
+            DatIgg = SafeGetString(r, "dat_igg"),
+            DatC3 = SafeGetString(r, "dat_c3"),
             FinalAntibodies = SafeGetString(r, "final_antibodies"),
             FinalComment = SafeGetString(r, "final_comment"),
             IdentifiedBy = SafeGetString(r, "identified_by"),

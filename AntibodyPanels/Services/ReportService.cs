@@ -69,8 +69,8 @@ namespace AntibodyPanels.Services
             if (!string.IsNullOrWhiteSpace(s.PreviousAntibodies))
                 sb.AppendLine($"Previous Abs:    {s.PreviousAntibodies}");
             sb.AppendLine($"Transfusion:     {s.TransfusionDisplay}");
-            if (!string.IsNullOrWhiteSpace(s.DatResult))
-                sb.AppendLine($"DAT:             {s.DatResult}");
+            if (s.Dat.AnyRecorded)
+                sb.AppendLine($"DAT:             {s.DatDisplay}");
             if (!string.IsNullOrWhiteSpace(s.Notes))
                 sb.AppendLine($"Notes:           {s.Notes}");
             sb.AppendLine();
@@ -187,7 +187,7 @@ namespace AntibodyPanels.Services
             sb.AppendLine($"Genotype: {s.Genotype ?? "N/A"}");
             sb.AppendLine($"Previous antibodies: {s.PreviousAntibodies ?? "N/A"}");
             sb.AppendLine($"Transfusion: {s.TransfusionDisplay}");
-            sb.AppendLine($"DAT: {s.DatResult ?? "NT"}");
+            sb.AppendLine($"DAT: {s.DatDisplay}");
             if (!string.IsNullOrWhiteSpace(s.Notes))
                 sb.AppendLine($"Notes: {s.Notes}");
             sb.AppendLine();

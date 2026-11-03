@@ -48,7 +48,11 @@ namespace AntibodyPanels.Services
         }
 
         public static List<ReactionPatternNote> Classify(
-            IEnumerable<PatternCellObservation> cells, string? datResult = null)
+            IEnumerable<PatternCellObservation> cells, string? datResult = null) =>
+            Classify(cells, DatProfile.FromPolyspecific(datResult));
+
+        public static List<ReactionPatternNote> Classify(
+            IEnumerable<PatternCellObservation> cells, DatProfile dat)
         {
             var all = cells.ToList();
             var evaluated = all
@@ -112,7 +116,7 @@ namespace AntibodyPanels.Services
                     if (ac.AnyReactive)
                     {
                         notes.Add(DatAwareNote(
-                            Autoantibody, pan, evaluated.Count, reactive, nonreactive, datResult,
+                            Autoantibody, pan, evaluated.Count, reactive, nonreactive, dat,
                             "Autocontrol is reactive with a panagglutinin pattern. " +
                             "This favors autoantibody (or recently transfused cells) over a high-prevalence alloantibody. Not a diagnosis.",
                             favorsAuto: true));
@@ -120,24 +124,24 @@ namespace AntibodyPanels.Services
                     else
                     {
                         notes.Add(DatAwareNote(
-                            HighPrevalence, pan, evaluated.Count, reactive, nonreactive, datResult,
+                            HighPrevalence, pan, evaluated.Count, reactive, nonreactive, dat,
                             "Autocontrol is nonreactive with a panagglutinin pattern. " +
                             "This favors a high-prevalence alloantibody over a warm autoantibody. Consider rare Ag− cells. Not a diagnosis.",
                             favorsAuto: false));
                     }
                 }
-                else if (IsDatPositive(datResult))
+                else if (dat.IsPositive)
                 {
                     notes.Add(DatAwareNote(
-                        Autoantibody, pan, evaluated.Count, reactive, nonreactive, datResult,
+                        Autoantibody, pan, evaluated.Count, reactive, nonreactive, dat,
                         "Autocontrol was not recorded. A positive DAT with panagglutination favors autoantibody " +
                         "over a high-prevalence alloantibody, but does not replace an autocontrol. Not a diagnosis.",
                         favorsAuto: true));
                 }
-                else if (IsDatNegative(datResult))
+                else if (dat.IsNegative)
                 {
                     notes.Add(DatAwareNote(
-                        HighPrevalence, pan, evaluated.Count, reactive, nonreactive, datResult,
+                        HighPrevalence, pan, evaluated.Count, reactive, nonreactive, dat,
                         "Autocontrol was not recorded. A negative DAT with panagglutination favors a " +
                         "high-prevalence alloantibody over a typical warm autoantibody. Consider rare Ag− cells. Not a diagnosis.",
                         favorsAuto: false));
@@ -182,11 +186,14 @@ namespace AntibodyPanels.Services
                    || ReactionGrade.IsNegative(v);
         }
 
+        private static string MonoDetail(DatProfile dat) =>
+            dat.HasMonospecific ? $" ({dat.Describe()})" : string.Empty;
+
         private static ReactionPatternNote DatAwareNote(
             string kind, int matching, int evaluated,
             List<PatternCellObservation> supporting,
             List<PatternCellObservation> conflicting,
-            string? datResult, string baseExplanation, bool favorsAuto)
+            DatProfile datProfile, string baseExplanation, bool favorsAuto)
         {
             var note = new ReactionPatternNote
             {
@@ -198,13 +205,17 @@ namespace AntibodyPanels.Services
                 EvidenceScore = Score(matching, evaluated),
                 Explanation = baseExplanation
             };
-            if (IsDatPositive(datResult))
+            if (datProfile.IsPositive)
             {
-                var dat = datResult!.Trim();
+                var dat = datProfile.Describe();
                 if (favorsAuto)
                 {
                     note.Explanation = note.Explanation.TrimEnd() +
                         $" DAT is {dat}, which supports autoantibody over a high-prevalence alloantibody.";
+                    if (datProfile.C3Only)
+                        note.Explanation +=
+                            " Only C3 is reactive with IgG negative, which is more typical of a cold-reactive autoantibody " +
+                            "or complement-binding process than a warm IgG autoantibody. Consider prewarm testing.";
                     note.EvidenceScore = Math.Min(1, note.EvidenceScore + 0.1);
                 }
                 else
@@ -216,19 +227,19 @@ namespace AntibodyPanels.Services
                     note.EvidenceScore = Math.Max(0.2, note.EvidenceScore - 0.15);
                 }
             }
-            else if (IsDatNegative(datResult))
+            else if (datProfile.IsNegative)
             {
                 if (favorsAuto)
                 {
                     note.Explanation = note.Explanation.TrimEnd() +
-                        " DAT is negative, which argues against a typical warm autoantibody despite the autocontrol.";
+                        $" DAT is negative{MonoDetail(datProfile)}, which argues against a typical warm autoantibody despite the autocontrol.";
                     note.ConflictingCells.Add("DAT");
                     note.EvidenceScore = Math.Max(0.2, note.EvidenceScore - 0.15);
                 }
                 else
                 {
                     note.Explanation = note.Explanation.TrimEnd() +
-                        " DAT is negative, which agrees with a high-prevalence alloantibody over a warm autoantibody.";
+                        $" DAT is negative{MonoDetail(datProfile)}, which agrees with a high-prevalence alloantibody over a warm autoantibody.";
                     note.EvidenceScore = Math.Min(1, note.EvidenceScore + 0.1);
                 }
             }
