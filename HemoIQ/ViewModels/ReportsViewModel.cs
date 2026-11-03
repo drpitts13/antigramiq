@@ -222,6 +222,8 @@ namespace HemoIQ.ViewModels
                 var doc = BuildPrintDocument(SelectedReportType, PreviewText, width, height);
                 dialog.PrintDocument(((IDocumentPaginatorSource)doc).DocumentPaginator,
                     $"{SelectedReportType} report");
+                _reportService.RecordPrint(GetReportType(), SelectedSpecimen?.AccessionNumber,
+                    SelectedPanel?.PanelId, PreviewText);
                 _main?.SetStatus($"Sent {SelectedReportType} to the printer.");
             }
             catch (Exception ex)

@@ -27,3 +27,9 @@ The **Report** list has eight types:
 The preview is read-only. To change what it says, update the specimen, the panel, the grades, or the confirmed ID, then return to this tab. The preview refreshes when you change the report type or the selected specimen or panel.
 
 **Help** opens this chapter.
+
+## Report record
+
+Every **Print**, **Export PDF**, and **Export CSV** is written to the audit log. The record holds the report type, the output, the file name, the software version, and a SHA-256 fingerprint of exactly what was issued. Specimen reports also record the confirmed identification and supervisor review at that moment, and appear on the specimen's Timeline, for example *Report exported to PDF: Clinical Identification (A123.pdf); ID at issue: anti-E; fingerprint 3F2A…*. Panel reports appear in the panel's audit history. An export that fails writes no record.
+
+If a Clinical Identification report was issued and the identification was later cleared and confirmed again, the specimen's status says **Reissue the Clinical Identification report** until a new one is printed or exported.

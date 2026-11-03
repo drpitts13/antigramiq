@@ -29,6 +29,23 @@ namespace HemoIQ.Services
     /// </summary>
     public static class InvestigationStatusService
     {
+        /// <summary>
+        /// The issue time of the latest Clinical Identification report when it is older
+        /// than the latest clear of the identification; otherwise null.
+        /// </summary>
+        public static string? ReportPredatesLastClear(DatabaseService db, string accession)
+        {
+            var events = db.GetAuditEventsForEntity("specimen", accession);
+            var lastClear = events.LastOrDefault(e => e.Action == "clear_final_call");
+            var lastReport = events.LastOrDefault(e => e.Action == "report_output" &&
+                (e.AfterJson ?? "").Contains("\"ClinicalIdentification\""));
+            if (lastClear == null || lastReport == null || lastReport.Id > lastClear.Id) return null;
+            return System.DateTime.TryParse(lastReport.OccurredAtUtc, System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.AdjustToUniversal, out var utc)
+                ? utc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                : lastReport.OccurredAtUtc;
+        }
+
         public const string AwaitingPanel = "Awaiting panel";
         public const string TestingInProgress = "Testing in progress";
         public const string AnalysisNeeded = "Analysis needed";
@@ -70,6 +87,14 @@ namespace HemoIQ.Services
                 {
                     Label = AwaitingSupervisorReview,
                     NextAction = $"A supervisor other than {s.IdentifiedBy ?? "the confirming technologist"} reviews the identification (Supervisor Review on the Specimens tab).",
+                    Steps = steps,
+                };
+
+            if (s.HasFinalCall && cleared > 0 && ReportPredatesLastClear(db, s.AccessionNumber) is string issued)
+                return new InvestigationStatus
+                {
+                    Label = Amended,
+                    NextAction = $"Reissue the Clinical Identification report: the last one ({issued}) was issued before the identification was cleared and changed.",
                     Steps = steps,
                 };
 

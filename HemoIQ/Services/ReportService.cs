@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using CsvHelper;
 using CsvHelper.Configuration;
 using PdfSharp.Drawing;
@@ -499,10 +501,76 @@ namespace HemoIQ.Services
             return sb.ToString();
         }
 
+        // ── Report output audit ───────────────────────────────────────────────
+
+        /// <summary>Records a printed report. Call after the print job was sent.</summary>
+        public void RecordPrint(ReportType type, string? specimenId, int? panelId, string printedText) =>
+            RecordReportOutput(type, "print", specimenId, panelId, null, Encoding.UTF8.GetBytes(printedText));
+
+        public static bool IsSpecimenReport(ReportType t) =>
+            t is ReportType.SpecimenSummary or ReportType.AnalysisResults or ReportType.ClinicalIdentification;
+
+        public static bool IsPanelReport(ReportType t) => t is ReportType.PanelSummary or ReportType.PanelAntigram;
+
+        /// <summary>
+        /// Writes a report_output audit event: report type, output kind, file name,
+        /// SHA-256 of what was issued, software version, and (for specimen reports) the
+        /// identification and review state at that moment. Specimen and panel reports are
+        /// attached to their specimen or panel so they appear on that record's timeline.
+        /// </summary>
+        private void RecordReportOutput(ReportType type, string output, string? specimenId, int? panelId,
+            string? filePath, byte[] content)
+        {
+            string entityType = "report", entityId = type.ToString();
+            string? finalAntibodies = null, reviewedBy = null;
+            if (IsSpecimenReport(type) && specimenId != null)
+            {
+                entityType = "specimen";
+                entityId = specimenId;
+                var s = _db.GetSpecimen(specimenId);
+                finalAntibodies = s?.FinalAntibodies;
+                reviewedBy = s?.ReviewedBy;
+            }
+            else if (IsPanelReport(type) && panelId.HasValue)
+            {
+                entityType = "panel";
+                entityId = panelId.Value.ToString(CultureInfo.InvariantCulture);
+            }
+            _db.AppendAudit("report_output", entityType, entityId, null, afterJson: JsonSerializer.Serialize(new
+            {
+                reportType = type.ToString(),
+                output,
+                file = filePath == null ? null : Path.GetFileName(filePath),
+                sha256 = Convert.ToHexString(SHA256.HashData(content)),
+                softwareVersion = SoftwareIdentity.Version,
+                finalAntibodies,
+                reviewedBy,
+            }));
+        }
+
+        public static string ReportLabel(string? reportType) => reportType switch
+        {
+            nameof(ReportType.SpecimenSummary) => "Specimen Summary",
+            nameof(ReportType.PanelSummary) => "Panel Summary",
+            nameof(ReportType.AnalysisResults) => "Analysis Results",
+            nameof(ReportType.ClinicalIdentification) => "Clinical Identification",
+            nameof(ReportType.PanelAntigram) => "Panel Antigram",
+            nameof(ReportType.AllPanels) => "All Panels",
+            nameof(ReportType.AllSpecimens) => "All Specimens",
+            nameof(ReportType.PendingWork) => "Pending Work",
+            _ => reportType ?? "Report",
+        };
+
         // ── CSV Export ────────────────────────────────────────────────────────
 
         public void ExportToCsv(ReportType type, string filePath,
             string? specimenId = null, int? panelId = null)
+        {
+            WriteCsv(type, filePath, specimenId, panelId);
+            RecordReportOutput(type, "csv", specimenId, panelId, filePath, File.ReadAllBytes(filePath));
+        }
+
+        private void WriteCsv(ReportType type, string filePath, string? specimenId, int? panelId)
         {
             var config = new CsvConfiguration(CultureInfo.InvariantCulture);
             using var writer = new StreamWriter(filePath, false, Encoding.UTF8);
@@ -585,6 +653,7 @@ namespace HemoIQ.Services
             }
             gfx?.Dispose();
             doc.Save(filePath);
+            RecordReportOutput(type, "pdf", specimenId, panelId, filePath, Encoding.UTF8.GetBytes(text));
             doc.Dispose();
         }
     }

@@ -7,7 +7,7 @@ rule-outs are analytical evidence, not a diagnosis.
 Status: **Present** (usable), **Partial** (exists but incomplete or silent),
 **Missing**.
 
-Last updated: 2026-11-03 (iteration 59 — product review; tests isolated from the user's real data).
+Last updated: 2026-11-03 (iteration 60 — audited report output with fingerprint and reissue prompt).
 
 ## Capability matrix
 
@@ -30,7 +30,7 @@ Last updated: 2026-11-03 (iteration 59 — product review; tests isolated from t
 | Analysis | Transparent candidate evidence | Partial | Explain Analysis lists suspected, in-progress, historical, untypeable, pattern, enzyme, DTT, and cell-level adsorption comparisons. Adsorbed aliquots do not rule out or enter ordinary scores for specificities they are expected to remove. A panreactive untreated run paired with autoadsorption or rr/R1R1/R2R2 adsorption is omitted from ordinary scores. Unpaired ficin, papain, and DTT runs are named and are not compared with another panel | Cross-panel enzyme and DTT pairing stays out of scope |
 | Analysis | Configurable visible rule-out | Partial | `Rule.MinRuleoutCount` is now applied; lab default + explanation sentences | Watch seeded anti-D/anti-k rules; ACS remains separate |
 | Analysis | Single / multiple / dosage scoring | Partial | Fisher + pattern; pairwise combinations; dosage averages | Label as evidence, not diagnosis |
-| Audit | Investigation timeline | Present | `InvestigationTimeline` merges receipt, panel link/unlink (now audited), runs, grouped reaction saves, analysis snapshots, confirm/clear/review, MRN/transfusion/DAT/patient edits; Specimens Timeline expander and worksheet section | Report generation is not yet an audited event |
+| Audit | Investigation timeline | Present | `InvestigationTimeline` merges receipt, panel link/unlink (now audited), runs, grouped reaction saves, analysis snapshots, confirm/clear/review, MRN/transfusion/DAT/patient edits; Specimens Timeline expander and worksheet section | Report print/PDF/CSV audited with SHA-256 and shown on the timeline |
 | Tests | Isolation from user data | Present | `AppDataPaths.RootOverride` set by a test-module initializer to a temp folder; live vendor test persists only to its isolated database; full run verified to leave %AppData%\HemoIQ untouched | One intermittent failure seen once and not reproduced in two reruns |
 | Search | Investigation search | Present | Search tab › Investigations: accession, MRN, patient name/DOB, final/previous antibodies, technologist; every word must match; inclusive date range; status column; Open jumps to Specimens | Panel lot/manufacturer used in an investigation not yet searchable |
 | Workflow | Investigation status and next step | Partial | `InvestigationStatusService` derives five steps and a status (awaiting panel → testing → analysis needed → awaiting ID → completed / amended / reopened / inactive) from panels, grades, analysis time, final call, and audit; shown on Specimens and the worksheet; Worklist shares the completeness check | Optional supervisor review step (two-person, audited, invalidated by clear/re-confirm, Worklist queue); no cancel action or role-based permissions yet |
@@ -1065,10 +1065,31 @@ failure appeared once and could not be reproduced.
 3. Cancel action with reason, and turnaround metrics from the timeline.
 4. Role-based permissions (initials are not authenticated users).
 
+## Iteration 60 (this change)
+
+**Deficiency:** Printing and exporting a report left no record. Nobody
+could tell which identification a report carried or whether a report
+was issued before the identification was later amended.
+
+**Bounded improvement:** `ReportService` writes a `report_output` audit
+event after each successful PDF export, CSV export, or print. The event
+holds the report type, output, file name, SHA-256 of the issued
+content, software version, and, for specimen reports, the confirmed
+identification and reviewer at issue. Specimen reports attach to the
+specimen, panel reports to the panel, and list reports to `report`.
+The timeline shows each issue. When the latest Clinical Identification
+report predates the latest clear, an Amended investigation's next
+action is to reissue the report, until a newer report is issued. A
+failed export writes nothing.
+
+**Not in this tick:** Printing has no confirmation that the printer
+completed the job (the event is written when the job is handed to
+Windows). There is no Worklist queue for reports needing reissue.
+
 ## Likely next tick
 
-Roadmap item 1: record report print and PDF export as audited events
-with the report type and software version, and show them on the
-investigation timeline. Authenticated vendor portals stay later
+Roadmap item 2: structured eluate results (method, reactions per cell
+or specificity found) feeding analysis as evidence, with a mixed-field
+or panreactive eluate explained alongside the DAT. Authenticated vendor portals stay later
 and must not bypass auth, CAPTCHA, licensing, or terms.
 

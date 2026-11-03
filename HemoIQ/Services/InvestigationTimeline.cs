@@ -142,9 +142,27 @@ namespace HemoIQ.Services
                                         (Prop(a.AfterJson, "lastTransfusionDate") is string d ? $", last {d}" : ""),
                 "update_dat" => $"DAT updated: IgG {Prop(a.AfterJson, "igg") ?? "NT"}, C3 {Prop(a.AfterJson, "c3") ?? "NT"}",
                 "update_mrn" => $"MRN set to {Prop(a.AfterJson, "mrn") ?? "(blank)"}",
+                "report_output" => DescribeReport(a),
                 _ => null,
             };
             return what == null ? null : new TimelineEvent { When = at, What = what, Who = a.Operator };
+        }
+
+        private static string DescribeReport(AuditEvent a)
+        {
+            var label = ReportService.ReportLabel(Prop(a.AfterJson, "reportType"));
+            var output = Prop(a.AfterJson, "output");
+            var what = output switch
+            {
+                "print" => $"Report printed: {label}",
+                "pdf" => $"Report exported to PDF: {label}",
+                "csv" => $"Report exported to CSV: {label}",
+                _ => $"Report issued: {label}",
+            };
+            if (Prop(a.AfterJson, "file") is string f) what += $" ({f})";
+            if (Prop(a.AfterJson, "finalAntibodies") is string fa) what += $"; ID at issue: {fa}";
+            if (Prop(a.AfterJson, "sha256") is string h && h.Length >= 12) what += $"; fingerprint {h[..12]}";
+            return what;
         }
 
         private static int? RunId(string? json)
