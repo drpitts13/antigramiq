@@ -6,6 +6,7 @@ Use this dialog to add or edit an accession. Open it with **Add** or **Edit** on
 
 - **Accession Number** identifies the specimen. Use the accession your laboratory already uses.
 - **MRN** is the patient's medical record number. It is stored in capitals. Specimens with the same MRN share history: an antibody confirmed on an earlier specimen appears on this specimen's Patient Typing tab as historical evidence, with the accession it came from. Suspected antibodies that were never confirmed are not carried forward. MRN changes are audited and locked after an identification is confirmed.
+- **Collected** and **Received** are date and time (HH:mm, 24-hour). Received defaults to now on a new specimen. Neither may be in the future, and Received cannot be before Collected. On a new specimen, choosing a collection date sets Expiration to collection + the Preferences specimen-dating days. Changes are audited and locked after an identification is confirmed.
 - **Type** is serum, plasma, or eluate.
 - **Eluate of** is available when Type is eluate. Enter the accession of the serum or plasma specimen whose red cells were eluted. The eluate's results then appear in that specimen's analysis as reviewable notes (see *Eluate evidence* in the Specimens chapter). The link is audited and cannot point to the eluate itself or to another eluate. The default comes from Preferences.
 - **Expiration Date** is the specimen dating date. Preferences can pre-fill it from the specimen-dating setting. Clear the date if this specimen should not expire.

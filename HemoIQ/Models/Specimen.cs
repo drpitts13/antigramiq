@@ -10,6 +10,10 @@ namespace HemoIQ.Models
         public string? Mrn { get; set; }
         /// <summary>For an eluate: the accession of the specimen whose red cells were eluted.</summary>
         public string? SourceAccession { get; set; }
+        /// <summary>Collection date and time, "yyyy-MM-dd HH:mm".</summary>
+        public string? CollectedAt { get; set; }
+        /// <summary>Received in the laboratory, "yyyy-MM-dd HH:mm".</summary>
+        public string? ReceivedAt { get; set; }
         public bool IsEluate => string.Equals(Type, "eluate", StringComparison.OrdinalIgnoreCase);
         public string Type { get; set; } = "serum";
         public string? ExpirationDate { get; set; }

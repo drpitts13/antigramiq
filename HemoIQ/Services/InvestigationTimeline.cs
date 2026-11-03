@@ -143,6 +143,7 @@ namespace HemoIQ.Services
                 "update_dat" => $"DAT updated: IgG {Prop(a.AfterJson, "igg") ?? "NT"}, C3 {Prop(a.AfterJson, "c3") ?? "NT"}",
                 "update_mrn" => $"MRN set to {Prop(a.AfterJson, "mrn") ?? "(blank)"}",
                 "report_output" => DescribeReport(a),
+                "update_collection" => $"Collection/receipt recorded: collected {Prop(a.AfterJson, "collectedAt") ?? "—"}, received {Prop(a.AfterJson, "receivedAt") ?? "—"}",
                 "cancel_investigation" => $"Investigation cancelled; reason: {a.Reason}",
                 "reinstate_investigation" => $"Investigation reinstated; reason: {a.Reason}",
                 "link_eluate" => Prop(a.AfterJson, "source") is string src

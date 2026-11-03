@@ -235,6 +235,10 @@ namespace HemoIQ.Data
                 ExecNonQuery("ALTER TABLE specimens ADD COLUMN dat_c3 TEXT");
             if (!cols.Contains("mrn"))
                 ExecNonQuery("ALTER TABLE specimens ADD COLUMN mrn TEXT");
+            if (!cols.Contains("collected_at"))
+                ExecNonQuery("ALTER TABLE specimens ADD COLUMN collected_at TEXT");
+            if (!cols.Contains("received_at"))
+                ExecNonQuery("ALTER TABLE specimens ADD COLUMN received_at TEXT");
             if (!cols.Contains("source_accession"))
                 ExecNonQuery("ALTER TABLE specimens ADD COLUMN source_accession TEXT");
             ExecNonQuery("CREATE INDEX IF NOT EXISTS ix_specimens_source ON specimens(source_accession)");
@@ -770,6 +774,34 @@ namespace HemoIQ.Data
             AppendAudit("link_eluate", "specimen", eluateAccession, null,
                 JsonSerializer.Serialize(new { source = eluate.SourceAccession }),
                 JsonSerializer.Serialize(new { source = src }));
+        }
+
+        /// <summary>
+        /// Records collection and receipt date-times. Neither may be in the future and
+        /// receipt may not precede collection. Blank clears a value. Audited; locked
+        /// after a final call.
+        /// </summary>
+        public void UpdateSpecimenCollection(string accessionNumber, string? collectedAt, string? receivedAt)
+        {
+            var now = DateTime.Now;
+            var collected = Services.SpecimenDating.Normalize(collectedAt, "Collection time", now);
+            var received = Services.SpecimenDating.Normalize(receivedAt, "Received time", now);
+            if (collected != null && received != null && string.CompareOrdinal(received, collected) < 0)
+                throw new ArgumentException("Received time cannot be before collection time.");
+            var before = GetSpecimen(accessionNumber)
+                         ?? throw new ArgumentException($"Specimen {accessionNumber} not found.");
+            if (before.CollectedAt == collected && before.ReceivedAt == received) return;
+            EnsureSpecimenUnlocked(accessionNumber);
+
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "UPDATE specimens SET collected_at = $c, received_at = $r WHERE accession_number = $acc";
+            cmd.Parameters.AddWithValue("$c", (object?)collected ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$r", (object?)received ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$acc", accessionNumber);
+            cmd.ExecuteNonQuery();
+            AppendAudit("update_collection", "specimen", accessionNumber, null,
+                JsonSerializer.Serialize(new { collectedAt = before.CollectedAt, receivedAt = before.ReceivedAt }),
+                JsonSerializer.Serialize(new { collectedAt = collected, receivedAt = received }));
         }
 
         public List<Specimen> GetSpecimensByMrn(string mrn)
@@ -2476,6 +2508,8 @@ namespace HemoIQ.Data
             DatIgg = SafeGetString(r, "dat_igg"),
             Mrn = SafeGetString(r, "mrn"),
             SourceAccession = SafeGetString(r, "source_accession"),
+            CollectedAt = SafeGetString(r, "collected_at"),
+            ReceivedAt = SafeGetString(r, "received_at"),
             DatC3 = SafeGetString(r, "dat_c3"),
             FinalAntibodies = SafeGetString(r, "final_antibodies"),
             FinalComment = SafeGetString(r, "final_comment"),

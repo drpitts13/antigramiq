@@ -7,7 +7,7 @@ rule-outs are analytical evidence, not a diagnosis.
 Status: **Present** (usable), **Partial** (exists but incomplete or silent),
 **Missing**.
 
-Last updated: 2026-11-03 (iteration 63 — turnaround metrics and overdue list on Analytics).
+Last updated: 2026-11-03 (iteration 64 — product review; collection/receipt times and specimen dating after transfusion).
 
 ## Capability matrix
 
@@ -31,7 +31,8 @@ Last updated: 2026-11-03 (iteration 63 — turnaround metrics and overdue list o
 | Analysis | Configurable visible rule-out | Partial | `Rule.MinRuleoutCount` is now applied; lab default + explanation sentences | Watch seeded anti-D/anti-k rules; ACS remains separate |
 | Analysis | Single / multiple / dosage scoring | Partial | Fisher + pattern; pairwise combinations; dosage averages | Label as evidence, not diagnosis |
 | Audit | Investigation timeline | Present | `InvestigationTimeline` merges receipt, panel link/unlink (now audited), runs, grouped reaction saves, analysis snapshots, confirm/clear/review, MRN/transfusion/DAT/patient edits; Specimens Timeline expander and worksheet section | Report print/PDF/CSV audited with SHA-256 and shown on the timeline |
-| Reporting | Turnaround metrics | Present | `TurnaroundService`: received→confirmed (days) and confirmed→reviewed (hours) median and nearest-rank 90th percentile by received date, cancelled excluded; overdue open list with status and Open; configurable threshold; CSV | Received time is date-only (upper bound); no workload-by-technologist yet |
+| Reporting | Turnaround metrics | Present | `TurnaroundService`: received→confirmed (days) and confirmed→reviewed (hours) median and nearest-rank 90th percentile by received date, cancelled excluded; overdue open list with status and Open; configurable threshold; CSV | Uses recorded received time when present; no workload-by-technologist yet |
+| Specimen | Collection/receipt time and dating check | Present | Audited `collected_at`/`received_at`; expiration defaults from collection; `SpecimenDating` REVIEW when transfused within the look-back and expiration exceeds collection + dating days, or cannot be checked | Pregnancy history not yet a dating trigger |
 | Tests | Isolation from user data | Present | `AppDataPaths.RootOverride` set by a test-module initializer to a temp folder; live vendor test persists only to its isolated database; full run verified to leave %AppData%\HemoIQ untouched | One intermittent failure seen once and not reproduced in two reruns |
 | Search | Investigation search | Present | Search tab › Investigations: accession, MRN, patient name/DOB, final/previous antibodies, technologist; every word must match; inclusive date range; status column; Open jumps to Specimens | Panel lot/manufacturer used in an investigation not yet searchable |
 | Workflow | Investigation status and next step | Partial | `InvestigationStatusService` derives five steps and a status (awaiting panel → testing → analysis needed → awaiting ID → completed / amended / reopened / inactive) from panels, grades, analysis time, final call, and audit; shown on Specimens and the worksheet; Worklist shares the completeness check | Optional supervisor review step (two-person, audited, invalidated by clear/re-confirm, Worklist queue); audited Cancel/Reinstate with reason, locked and off work queues; no role-based permissions yet |
@@ -1150,11 +1151,40 @@ Export CSV appends the figures and the list.
 workload by technologist, and a Worklist queue for overdue
 investigations.
 
+## Iteration 64 — product review and specimen timing (this change)
+
+**Product review.** Iterations 60–63 completed audited report output,
+eluate evidence, cancel/reinstate, and turnaround metrics. The weakest
+remaining part of the specimen workflow was timing. Specimens had only
+a received date set at record creation and no collection or receipt
+time. Expiration defaulted from *today* instead of from collection.
+Nothing checked dating against recent transfusion. That is the
+highest-value gap and ties to the iteration-50 transfusion record.
+
+**Bounded improvement:** Specimens carry collection and receipt
+date-times. They are validated (not in the future, receipt not before
+collection), audited, locked after a final call, and on the timeline.
+On a new specimen, receipt defaults to now and choosing a collection
+date sets expiration from collection. `SpecimenDating` raises a REVIEW
+(Specimens pane, top of analysis suggestions, worksheet) when the
+patient was transfused within a configurable look-back (default 90
+days) and the expiration is later than collection + dating days, or
+when it cannot be checked because the collection time or expiration is
+missing. Turnaround uses the recorded receipt time.
+
+**Not in this tick:** Pregnancy within 3 months as a dating trigger
+(no structured pregnancy field yet), collector and location.
+
+## Roadmap after review
+
+1. Structured pregnancy history on the patient record (also a dating trigger).
+2. Role-based permissions (initials are not authenticated users).
+3. Workload by technologist on Analytics.
+
 ## Likely next tick
 
-Product review is due (iterations 60–63). Leading candidates: record
-received date and time on specimens (makes turnaround exact and lets
-specimen dating use hours), role-based permissions, and workload by
-technologist. Authenticated vendor portals stay later
+Roadmap item 1: structured pregnancy history (recently pregnant / date
+of delivery) on the patient or specimen, used as a specimen-dating
+trigger alongside transfusion and shown in analysis context. Authenticated vendor portals stay later
 and must not bypass auth, CAPTCHA, licensing, or terms.
 

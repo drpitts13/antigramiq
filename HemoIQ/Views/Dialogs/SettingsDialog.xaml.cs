@@ -37,6 +37,7 @@ namespace HemoIQ.Views.Dialogs
             HideRuledOutCheck.IsChecked = s.HideRuledOutAntigenColumns;
             RequireReviewCheck.IsChecked = s.RequireSupervisorReview;
             TurnaroundBox.Text = s.TurnaroundThresholdDays.ToString();
+            DatingLookbackBox.Text = s.DatingTransfusionLookbackDays.ToString();
             ExtraPhasesBox.Text = s.ExtraPhases;
             SyncSuggestedChecks();
         }
@@ -131,6 +132,13 @@ namespace HemoIQ.Views.Dialogs
                 TurnaroundBox.Focus();
                 return;
             }
+            if (!int.TryParse(DatingLookbackBox.Text.Trim(), out var lookback) || lookback < 1 || lookback > 365)
+            {
+                MessageBox.Show("Dating look-back must be between 1 and 365 days.",
+                    "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                DatingLookbackBox.Focus();
+                return;
+            }
             if (!int.TryParse(MaxDbSizeBox.Text.Trim(), out var maxMb) || maxMb < 50 || maxMb > 10240)
             {
                 MessageBox.Show("Maximum database size must be between 50 and 10240 MB.",
@@ -158,6 +166,7 @@ namespace HemoIQ.Views.Dialogs
             AppSettings.Current.HideRuledOutAntigenColumns = HideRuledOutCheck.IsChecked == true;
             AppSettings.Current.RequireSupervisorReview = RequireReviewCheck.IsChecked == true;
             AppSettings.Current.TurnaroundThresholdDays = turnaroundDays;
+            AppSettings.Current.DatingTransfusionLookbackDays = lookback;
             AppSettings.Current.ExtraPhases = ExtraPhasesBox.Text;
             SettingsService.Save();
             var after = JsonSerializer.Serialize(AppSettings.Current.ClinicalSnapshot());

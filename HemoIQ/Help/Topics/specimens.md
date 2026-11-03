@@ -29,6 +29,16 @@ The right pane follows the selected specimen.
 
 **Suspected Antibodies** and **Ruled-out Antibodies** are read-only summaries from the latest analysis. Change them by entering grades and running analysis, not by typing in these grids.
 
+## Specimen dating
+
+**Collection** in Clinical Context shows the collection and receipt times. When the transfusion record shows a transfusion within the Preferences **Dating look-back** (default 90 days), the specimen should not be used after collection date + **Specimen dating** days. A **REVIEW** note appears here, at the top of the analysis suggestions, and on the worksheet when:
+
+- the recorded expiration is later than that date,
+- no expiration is recorded, or
+- no collection time is recorded, so dating cannot be checked.
+
+The note is a prompt; HemoIQ never changes the expiration itself.
+
 ## Patient history
 
 When the specimen has an MRN, the detail pane lists the patient's other specimens, newest first. Each line shows the confirmed identification, DAT, and transfusion status. Specimen Summary and the identification worksheet print the same list. Search and the specimen filter match MRN.

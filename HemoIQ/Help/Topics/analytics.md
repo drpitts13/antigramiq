@@ -29,7 +29,7 @@ Analytics describes work this laboratory confirmed in the application. It is not
 
 The purple and red cards measure workflow time for investigations **received** in the selected date range. Cancelled investigations are not counted.
 
-- **Received → confirmed** is the median time from the received date to the confirmed identification, in days, with the 90th percentile and the number of investigations. Only the received date is recorded, so it is counted from midnight and the figure is an upper bound.
+- **Received → confirmed** is the median time from the received date to the confirmed identification, in days, with the 90th percentile and the number of investigations. When a received time is recorded on the specimen it is used exactly; otherwise the received date is counted from midnight and the figure is an upper bound.
 - **Confirmed → reviewed** is the median time from confirmation to supervisor review, in hours, for investigations that have a review.
 - **Overdue open investigations** counts active investigations with no confirmed identification that are older than the Preferences **Turnaround threshold (days)**, default 3.
 

@@ -1323,6 +1323,9 @@ namespace HemoIQ.Services
                 .Concat(FinalAntibodyParser.Split(specimen.FinalAntibodies));
             result.TransfusionRequirementNotes = TransfusionRequirementCheck.MissingAntigenNegative(
                 known, _db.GetPatient(specimen.Mrn), specimen.Mrn);
+            if (SpecimenDating.Check(specimen, AppSettings.Current.DefaultSpecimenDatingDays,
+                    AppSettings.Current.DatingTransfusionLookbackDays) is string dating)
+                result.TransfusionRequirementNotes.Insert(0, dating);
             foreach (var prior in priorConfirmed)
             {
                 if (typing.HistoricalAntibodies.Contains(prior.Antibody, StringComparer.OrdinalIgnoreCase))

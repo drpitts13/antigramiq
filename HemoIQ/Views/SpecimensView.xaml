@@ -155,6 +155,10 @@
                         <Run Text="{Binding SelectedSpecimen.PreviousAntibodies, TargetNullValue=N/A}"/>
                     </TextBlock>
                     <TextBlock TextWrapping="Wrap" Margin="0,0,0,2">
+                        <Run FontWeight="SemiBold" Text="Collection: "/>
+                        <Run Text="{Binding DatingText, Mode=OneWay}"/>
+                    </TextBlock>
+                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,2">
                         <Run FontWeight="SemiBold" Text="Eluate link: "/>
                         <Run Text="{Binding EluateLinkText, Mode=OneWay}"/>
                     </TextBlock>

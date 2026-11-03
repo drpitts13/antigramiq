@@ -214,6 +214,7 @@ namespace HemoIQ.Services
             sb.AppendLine($"Accession: {s.AccessionNumber,-16} Type: {s.Type,-10} Date: {DateTime.Now:yyyy-MM-dd}");
             sb.AppendLine($"MRN: {s.Mrn ?? "Not recorded"}");
             sb.AppendLine($"Investigation status: {InvestigationStatusService.Compute(_db, s).Summary}");
+            sb.AppendLine($"Collected: {s.CollectedAt ?? "not recorded"}   Received: {s.ReceivedAt ?? s.CreatedDate}   Expires: {s.ExpirationDate ?? "N/A"}");
             sb.AppendLine($"Phenotype: {s.Phenotype ?? "N/A"}");
             sb.AppendLine($"Genotype: {s.Genotype ?? "N/A"}");
             sb.AppendLine($"Previous antibodies: {s.PreviousAntibodies ?? "N/A"}");

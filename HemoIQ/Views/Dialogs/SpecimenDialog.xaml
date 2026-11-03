@@ -27,6 +27,8 @@
                 <RowDefinition Height="36"/>
                 <RowDefinition Height="36"/>
                 <RowDefinition Height="36"/>
+                <RowDefinition Height="36"/>
+                <RowDefinition Height="36"/>
                 <RowDefinition Height="80"/>
             </Grid.RowDefinitions>
 
@@ -48,56 +50,70 @@
                      VerticalAlignment="Center" Margin="0,2"
                      ToolTip="For an eluate: the accession of the serum or plasma specimen whose red cells were eluted. The eluate's results then appear as evidence in that specimen's analysis."/>
 
-            <Label Content="Expiration Date:" Grid.Row="4" VerticalAlignment="Center"/>
-            <DatePicker x:Name="ExpirationPicker" Grid.Row="4" Grid.Column="1"
+            <Label Content="Collected:" Grid.Row="4" VerticalAlignment="Center"/>
+            <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <DatePicker x:Name="CollectedPicker" Width="150" SelectedDateChanged="CollectedPicker_SelectedDateChanged"/>
+                <TextBox x:Name="CollectedTimeBox" Width="60" Margin="6,0,0,0" VerticalContentAlignment="Center"
+                         ToolTip="Time as HH:mm (24-hour). Used for specimen dating after recent transfusion."/>
+            </StackPanel>
+
+            <Label Content="Received:" Grid.Row="5" VerticalAlignment="Center"/>
+            <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <DatePicker x:Name="ReceivedPicker" Width="150"/>
+                <TextBox x:Name="ReceivedTimeBox" Width="60" Margin="6,0,0,0" VerticalContentAlignment="Center"
+                         ToolTip="Time as HH:mm (24-hour). Used for turnaround on Analytics."/>
+            </StackPanel>
+
+            <Label Content="Expiration Date:" Grid.Row="6" VerticalAlignment="Center"/>
+            <DatePicker x:Name="ExpirationPicker" Grid.Row="6" Grid.Column="1"
                         VerticalAlignment="Center" Margin="0,2"
                         SelectedDateChanged="ExpirationPicker_SelectedDateChanged"/>
 
-            <Label Content="DAT polyspecific:" Grid.Row="5" VerticalAlignment="Center"/>
-            <ComboBox x:Name="DatBox" Grid.Row="5" Grid.Column="1"
+            <Label Content="DAT polyspecific:" Grid.Row="7" VerticalAlignment="Center"/>
+            <ComboBox x:Name="DatBox" Grid.Row="7" Grid.Column="1"
                       VerticalAlignment="Center" Margin="0,2"/>
 
-            <Label Content="DAT IgG:" Grid.Row="6" VerticalAlignment="Center"/>
-            <ComboBox x:Name="DatIggBox" Grid.Row="6" Grid.Column="1"
+            <Label Content="DAT IgG:" Grid.Row="8" VerticalAlignment="Center"/>
+            <ComboBox x:Name="DatIggBox" Grid.Row="8" Grid.Column="1"
                       VerticalAlignment="Center" Margin="0,2"
                       ToolTip="Monospecific anti-IgG DAT. NT if not performed. MF (mixed field) after transfusion is reviewed against the transfusion record."/>
 
-            <Label Content="DAT C3:" Grid.Row="7" VerticalAlignment="Center"/>
-            <ComboBox x:Name="DatC3Box" Grid.Row="7" Grid.Column="1"
+            <Label Content="DAT C3:" Grid.Row="9" VerticalAlignment="Center"/>
+            <ComboBox x:Name="DatC3Box" Grid.Row="9" Grid.Column="1"
                       VerticalAlignment="Center" Margin="0,2"
                       ToolTip="Monospecific anti-C3 DAT. C3 reactive with IgG negative is noted as more typical of cold or complement-mediated reactivity."/>
 
-            <Label Content="Transfusion status:" Grid.Row="8" VerticalAlignment="Center"/>
-            <ComboBox x:Name="TransfusionBox" Grid.Row="8" Grid.Column="1"
+            <Label Content="Transfusion status:" Grid.Row="10" VerticalAlignment="Center"/>
+            <ComboBox x:Name="TransfusionBox" Grid.Row="10" Grid.Column="1"
                       VerticalAlignment="Center" Margin="0,2" DisplayMemberPath="Label"
                       SelectionChanged="TransfusionBox_SelectionChanged"
                       ToolTip="Transfused within the configured Preferences window makes serologic phenotype uninterpretable for analysis. Unknown falls back to wording in Notes."/>
 
-            <Label Content="Last transfusion:" Grid.Row="9" VerticalAlignment="Center"/>
-            <DatePicker x:Name="LastTransfusionPicker" Grid.Row="9" Grid.Column="1"
+            <Label Content="Last transfusion:" Grid.Row="11" VerticalAlignment="Center"/>
+            <DatePicker x:Name="LastTransfusionPicker" Grid.Row="11" Grid.Column="1"
                         VerticalAlignment="Center" Margin="0,2"
                         ToolTip="Date of the most recent red-cell transfusion. Leave blank if unknown; the phenotype is then treated as uninterpretable."/>
 
-            <Label Content="Phenotype:" Grid.Row="10" VerticalAlignment="Center"/>
-            <TextBox x:Name="PhenotypeBox" Grid.Row="10" Grid.Column="1"
+            <Label Content="Phenotype:" Grid.Row="12" VerticalAlignment="Center"/>
+            <TextBox x:Name="PhenotypeBox" Grid.Row="12" Grid.Column="1"
                      VerticalAlignment="Center" Margin="0,2"
                      ToolTip="e.g. R1r, K−, Fy(a−b+). Record recent transfusion in Transfusion status so analysis will not use typing to exclude alloantibodies."/>
 
-            <Label Content="Genotype:" Grid.Row="11" VerticalAlignment="Center"/>
-            <TextBox x:Name="GenotypeBox" Grid.Row="11" Grid.Column="1"
+            <Label Content="Genotype:" Grid.Row="13" VerticalAlignment="Center"/>
+            <TextBox x:Name="GenotypeBox" Grid.Row="13" Grid.Column="1"
                      VerticalAlignment="Center" Margin="0,2"
                      ToolTip="Predicted type from molecular results, e.g. RHCE*ce/ce; FY*02/FY*02. Remains reviewable after transfusion. Not a diagnosis."/>
 
-            <Label Content="Previous antibodies:" Grid.Row="12" VerticalAlignment="Center"/>
-            <TextBox x:Name="PreviousAbsBox" Grid.Row="12" Grid.Column="1"
+            <Label Content="Previous antibodies:" Grid.Row="14" VerticalAlignment="Center"/>
+            <TextBox x:Name="PreviousAbsBox" Grid.Row="14" Grid.Column="1"
                      VerticalAlignment="Center" Margin="0,2"/>
 
-            <Label Content="Active:" Grid.Row="13" VerticalAlignment="Center"/>
-            <CheckBox x:Name="ActiveCheck" Grid.Row="13" Grid.Column="1"
+            <Label Content="Active:" Grid.Row="15" VerticalAlignment="Center"/>
+            <CheckBox x:Name="ActiveCheck" Grid.Row="15" Grid.Column="1"
                       VerticalAlignment="Center" Margin="0,2" IsChecked="True"/>
 
-            <Label Content="Notes:" Grid.Row="14" VerticalAlignment="Top" Margin="0,4,0,0"/>
-            <TextBox x:Name="NotesBox" Grid.Row="14" Grid.Column="1"
+            <Label Content="Notes:" Grid.Row="16" VerticalAlignment="Top" Margin="0,4,0,0"/>
+            <TextBox x:Name="NotesBox" Grid.Row="16" Grid.Column="1"
                      AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
                      Height="70" Margin="0,2"/>
         </Grid>

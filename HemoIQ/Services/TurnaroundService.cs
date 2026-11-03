@@ -55,7 +55,7 @@ namespace HemoIQ.Services
             var toReview = new List<double>();
             foreach (var s in inRange)
             {
-                TryDate(s.CreatedDate, out var received);
+                var received = ReceivedTime(s);
                 if (s.HasFinalCall && TryDate(s.IdentifiedAt, out var confirmed) && confirmed >= received)
                 {
                     toConfirm.Add((confirmed - received).TotalDays);
@@ -107,6 +107,10 @@ namespace HemoIQ.Services
             var rank = (int)Math.Ceiling(p * sorted.Count);
             return sorted[Math.Clamp(rank, 1, sorted.Count) - 1];
         }
+
+        /// <summary>Recorded received time, falling back to the received date at midnight.</summary>
+        public static DateTime ReceivedTime(Specimen s) =>
+            TryDate(s.ReceivedAt, out var exact) ? exact : TryDate(s.CreatedDate, out var d) ? d : DateTime.MinValue;
 
         private static bool TryDate(string? text, out DateTime d) =>
             DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out d);

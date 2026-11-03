@@ -10,6 +10,29 @@ namespace HemoIQ.Views.Dialogs
     {
         public string AccessionNumber => AccessionBox.Text.Trim();
         public string? Mrn => Services.PatientHistory.NormalizeMrn(MrnBox.Text);
+        public string? CollectedAt => Combine(CollectedPicker.SelectedDate, CollectedTimeBox.Text);
+        public string? ReceivedAt => Combine(ReceivedPicker.SelectedDate, ReceivedTimeBox.Text);
+
+        private bool _isNew;
+
+        private static string? Combine(DateTime? date, string time)
+        {
+            if (date == null) return null;
+            var t = string.IsNullOrWhiteSpace(time) ? "00:00" : time.Trim();
+            return $"{date.Value:yyyy-MM-dd} {t}";
+        }
+
+        private static bool ValidTime(string text) =>
+            string.IsNullOrWhiteSpace(text) ||
+            DateTime.TryParseExact(text.Trim(), new[] { "H:mm", "HH:mm" },
+                System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _);
+
+        private static void Load(DatePicker picker, TextBox timeBox, string? value)
+        {
+            if (!Services.SpecimenDating.TryParse(value, out var t)) return;
+            picker.SelectedDate = t.Date;
+            timeBox.Text = t.ToString("HH:mm");
+        }
         public string? SourceAccession =>
             SpecimenType == "eluate" && !string.IsNullOrWhiteSpace(SourceBox.Text) ? SourceBox.Text.Trim() : null;
         public string SpecimenType => TypeBox.SelectedItem?.ToString() ?? TypeBox.Text;
@@ -51,6 +74,9 @@ namespace HemoIQ.Views.Dialogs
             if (existing == null)
             {
                 Title = "Add Specimen";
+                _isNew = true;
+                ReceivedPicker.SelectedDate = DateTime.Today;
+                ReceivedTimeBox.Text = DateTime.Now.ToString("HH:mm");
                 var def = AppSettings.Current.DefaultSpecimenType;
                 int t = -1;
                 for (int i = 0; i < AntigenConstants.SpecimenTypes.Count; i++)
@@ -79,6 +105,8 @@ namespace HemoIQ.Views.Dialogs
 
                 ActiveCheck.IsChecked = existing.IsActive;
                 MrnBox.Text = existing.Mrn ?? "";
+                Load(CollectedPicker, CollectedTimeBox, existing.CollectedAt);
+                Load(ReceivedPicker, ReceivedTimeBox, existing.ReceivedAt);
                 SourceBox.Text = existing.SourceAccession ?? "";
                 PhenotypeBox.Text = existing.Phenotype ?? "";
                 GenotypeBox.Text = existing.Genotype ?? "";
@@ -101,6 +129,13 @@ namespace HemoIQ.Views.Dialogs
             }
             SyncTransfusionDate();
             SyncSource();
+        }
+
+        private void CollectedPicker_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // New specimens: date expiration from collection rather than from today.
+            if (!_isNew || CollectedPicker.SelectedDate is not DateTime c) return;
+            ExpirationPicker.SelectedDate = LabSettings.DefaultExpirationDate(c.Date, AppSettings.Current.DefaultSpecimenDatingDays);
         }
 
         private void TypeBox_SelectionChanged(object sender, SelectionChangedEventArgs e) => SyncSource();
@@ -152,6 +187,25 @@ namespace HemoIQ.Views.Dialogs
                 MessageBox.Show("Last transfusion date cannot be in the future.", "Validation",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 LastTransfusionPicker.Focus();
+                return;
+            }
+            if (!ValidTime(CollectedTimeBox.Text) || !ValidTime(ReceivedTimeBox.Text))
+            {
+                MessageBox.Show("Times must be HH:mm (24-hour), for example 07:45.", "Validation",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            try
+            {
+                var now = DateTime.Now;
+                var c = Services.SpecimenDating.Normalize(CollectedAt, "Collection time", now);
+                var r = Services.SpecimenDating.Normalize(ReceivedAt, "Received time", now);
+                if (c != null && r != null && string.CompareOrdinal(r, c) < 0)
+                    throw new ArgumentException("Received time cannot be before collection time.");
+            }
+            catch (ArgumentException ex)
+            {
+                MessageBox.Show(ex.Message, "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             DialogResult = true;

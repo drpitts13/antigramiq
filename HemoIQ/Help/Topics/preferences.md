@@ -16,6 +16,7 @@ Open **Tools → Preferences** to set laboratory defaults. **Save** writes them 
 - **Specimen dating (days)** pre-fills expiration when you add a specimen. 0 leaves the date blank. Three days is a typical antibody workup dating interval.
 - **Expiration warning (days)** is how far ahead the Worklist and the lists mark a specimen or panel as expiring.
 - **Require supervisor review before an investigation is Completed** adds a sixth status step. After an identification is confirmed, a second person must record **Supervisor Review…** on the Specimens tab before the investigation counts as Completed. Until then it shows *Awaiting supervisor review* and appears on the Worklist.
+- **Dating look-back (days)** is 1–365, default 90. A transfusion this recent before collection makes the specimen-dating check apply (collection + Specimen dating days).
 - **Turnaround threshold (days)** is 1–60, default 3. Open investigations older than this are listed as overdue on Analytics.
 - **Recent transfusion (days)** is 1–365, default 90. If the specimen is Transfused and its last transfusion is this many days or fewer before the specimen date, the serologic phenotype is treated as possible donor cells and is not used against an alloantibody. The value is saved with each analysis snapshot.
 - **Max database size (MB)** warns when the database file reaches 80 percent of this size. The allowed range is 50 to 10240 MB. The warning can offer to open Purge Database.
