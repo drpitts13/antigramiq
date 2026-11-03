@@ -1,6 +1,6 @@
 # Software description
 
-Antibody Panel Management System is a .NET 8 WPF desktop application with SQLite persistence.
+HemoIQ is a .NET 8 WPF desktop application with SQLite persistence.
 
 ## Device software functions
 
@@ -32,6 +32,6 @@ No inbound listener. Optional outbound HTTPS to vendor catalog URLs.
 
 ## Persistent data
 
-- `%AppData%\AntibodyPanels\antibody_panels.db` (or `ANTIBODY_PANELS_DB`)
-- `%AppData%\AntibodyPanels\settings.json`
-- `%AppData%\AntibodyPanels\logs\app-yyyy-MM-dd.log`
+- `%AppData%\HemoIQ\hemoiq.db` (or `HEMOIQ_DB`)
+- `%AppData%\HemoIQ\settings.json`
+- `%AppData%\HemoIQ\logs\app-yyyy-MM-dd.log`
