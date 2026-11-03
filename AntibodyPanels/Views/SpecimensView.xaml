@@ -102,6 +102,23 @@
                 </StackPanel>
             </Border>
 
+            <Expander DockPanel.Dock="Top" Header="Timeline" Margin="0,0,0,8"
+                      ToolTip="Chronological history from the specimen record, panel runs, analyses, and the audit log.">
+                <ListBox ItemsSource="{Binding Timeline}" MaxHeight="220" BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock TextWrapping="Wrap">
+                                <Run Text="{Binding WhenDisplay, Mode=OneWay}" FontFamily="Consolas" Foreground="#546E7A"/>
+                                <Run Text="  "/>
+                                <Run Text="{Binding What, Mode=OneWay}"/>
+                                <Run Text="{Binding WhoDisplay, Mode=OneWay}" Foreground="#78909C"/>
+                            </TextBlock>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Expander>
+
             <GroupBox DockPanel.Dock="Top" Header="Patient (permanent, shared by MRN)" Margin="0,0,0,8" Padding="6">
                 <DockPanel>
                     <Button DockPanel.Dock="Right" Content="Edit Patient" VerticalAlignment="Top"

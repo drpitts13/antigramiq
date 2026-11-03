@@ -7,7 +7,7 @@ rule-outs are analytical evidence, not a diagnosis.
 Status: **Present** (usable), **Partial** (exists but incomplete or silent),
 **Missing**.
 
-Last updated: 2026-11-03 (iteration 57 — optional two-person supervisor review before Completed).
+Last updated: 2026-11-03 (iteration 58 — investigation timeline from audit, runs, and analyses).
 
 ## Capability matrix
 
@@ -30,6 +30,7 @@ Last updated: 2026-11-03 (iteration 57 — optional two-person supervisor review
 | Analysis | Transparent candidate evidence | Partial | Explain Analysis lists suspected, in-progress, historical, untypeable, pattern, enzyme, DTT, and cell-level adsorption comparisons. Adsorbed aliquots do not rule out or enter ordinary scores for specificities they are expected to remove. A panreactive untreated run paired with autoadsorption or rr/R1R1/R2R2 adsorption is omitted from ordinary scores. Unpaired ficin, papain, and DTT runs are named and are not compared with another panel | Cross-panel enzyme and DTT pairing stays out of scope |
 | Analysis | Configurable visible rule-out | Partial | `Rule.MinRuleoutCount` is now applied; lab default + explanation sentences | Watch seeded anti-D/anti-k rules; ACS remains separate |
 | Analysis | Single / multiple / dosage scoring | Partial | Fisher + pattern; pairwise combinations; dosage averages | Label as evidence, not diagnosis |
+| Audit | Investigation timeline | Present | `InvestigationTimeline` merges receipt, panel link/unlink (now audited), runs, grouped reaction saves, analysis snapshots, confirm/clear/review, MRN/transfusion/DAT/patient edits; Specimens Timeline expander and worksheet section | Report generation is not yet an audited event |
 | Search | Investigation search | Present | Search tab › Investigations: accession, MRN, patient name/DOB, final/previous antibodies, technologist; every word must match; inclusive date range; status column; Open jumps to Specimens | Panel lot/manufacturer used in an investigation not yet searchable |
 | Workflow | Investigation status and next step | Partial | `InvestigationStatusService` derives five steps and a status (awaiting panel → testing → analysis needed → awaiting ID → completed / amended / reopened / inactive) from panels, grades, analysis time, final call, and audit; shown on Specimens and the worksheet; Worklist shares the completeness check | Optional supervisor review step (two-person, audited, invalidated by clear/re-confirm, Worklist queue); no cancel action or role-based permissions yet |
 | Patient | Permanent record and transfusion requirements | Partial | `patients` table (MRN, name, DOB, comments, requirements); audited add/update; Edit Patient on Specimens; reports print it; analysis raises REVIEW when a known antibody's antigen-negative requirement is not written | Structured requirement list instead of free text |
@@ -1007,12 +1008,31 @@ review queue. The worksheet prints the reviewer or *PENDING*.
 authenticated users), a Cancel action with reason, and a turnaround
 report for review time.
 
+## Iteration 58 (this change)
+
+**Deficiency:** Reconstructing an investigation meant reading the raw
+audit log, run records, and analysis snapshots separately. Attaching or
+removing a panel was not audited at all.
+
+**Bounded improvement:** Panel link and unlink are now audited with the
+panel name and lot, and an index on audit entity lookups was added.
+`InvestigationTimeline` builds one ordered list from receipt, runs
+(untreated or additional testing), reaction saves (grouped per run when
+less than 15 minutes apart, with save and cell counts), each analysis
+snapshot with operator and engine version, confirm, clear with reason,
+supervisor review, MRN, transfusion, and DAT edits, and the patient
+record's audit. Only this specimen's events appear. The Specimens tab
+has a Timeline expander, and the worksheet prints the timeline.
+
+**Not in this tick:** Report printing or export is not yet audited, so
+it does not appear. Panels linked before this change show only their
+run start date.
+
 ## Likely next tick
 
-Investigation timeline: one chronological view per specimen built from
-the audit log and record timestamps (received, panel linked, reactions
-saved, analyses run, identification confirmed/cleared, supervisor
-review, patient/MRN/transfusion/DAT edits), shown on the Specimens tab
-and printable. Authenticated vendor portals stay later
+Product review is due (iterations 53–58 since the last one). Candidates:
+audited report generation, eluate results as structured data, a Cancel
+action with reason, and turnaround metrics on Analytics built from the
+timeline (received → confirmed → reviewed). Authenticated vendor portals stay later
 and must not bypass auth, CAPTCHA, licensing, or terms.
 

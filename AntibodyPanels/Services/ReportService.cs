@@ -358,6 +358,12 @@ namespace AntibodyPanels.Services
             }
 
             sb.AppendLine();
+            sb.AppendLine("INVESTIGATION TIMELINE");
+            sb.AppendLine(new string('-', 40));
+            foreach (var e in InvestigationTimeline.Build(_db, s))
+                sb.AppendLine($"  {e.Display}");
+
+            sb.AppendLine();
             sb.AppendLine(new string('_', 78));
             sb.AppendLine("Technologist: ___________________________  Date: ______________");
             sb.AppendLine();

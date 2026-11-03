@@ -58,3 +58,15 @@ When Preferences requires supervisor review, a sixth step, **Supervisor reviewed
 - A specimen can be reviewed once. Clearing or re-confirming the identification removes the review, so the new call must be reviewed again.
 
 Each review is written to the audit log with the confirmed antibodies and who confirmed them. The worksheet prints *Supervisor reviewed by …* or *Supervisor review: PENDING*.
+
+## Timeline
+
+Expand **Timeline** to see the investigation in time order, with who did each step where it is known:
+
+- Specimen received, panel attached or removed, panel run started, and additional testing (ficin, papain, DTT, adsorption runs) started.
+- Reactions entered. Saves on the same run less than 15 minutes apart are combined, for example *3 save(s), 2 cell(s) on Panel A, Untreated*.
+- Each analysis run, with the rule-engine version.
+- Identification confirmed, cleared (with the reason), and supervisor review.
+- Changes to MRN, transfusion record, DAT, and the patient record.
+
+Receipt and run starts record only a date, so they show first on their day. The identification worksheet prints the same timeline. Panels attached before this version were not audited, so only their run start dates appear.

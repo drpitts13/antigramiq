@@ -132,6 +132,8 @@ namespace AntibodyPanels.ViewModels
             ApplyFilter(accessionNumber);
         }
 
+        public ObservableCollection<Services.TimelineEvent> Timeline { get; } = new();
+
         private Services.InvestigationStatus? _status;
         /// <summary>Derived investigation status for the selected specimen.</summary>
         public Services.InvestigationStatus? Status
@@ -211,6 +213,7 @@ namespace AntibodyPanels.ViewModels
             PatientHistoryText = string.Empty;
             PatientText = string.Empty;
             Status = null;
+            Timeline.Clear();
             LinkedPanels.Clear();
             Antibodies.Clear();
             Ruleouts.Clear();
@@ -224,6 +227,7 @@ namespace AntibodyPanels.ViewModels
 
             PatientText = FormatPatient(_db.GetPatient(_selectedSpecimen.Mrn), _selectedSpecimen.Mrn);
             Status = Services.InvestigationStatusService.Compute(_db, _selectedSpecimen);
+            foreach (var e in Services.InvestigationTimeline.Build(_db, _selectedSpecimen)) Timeline.Add(e);
             if (string.IsNullOrWhiteSpace(_selectedSpecimen.Mrn))
                 PatientHistoryText = "No MRN recorded; history from other specimens is not linked.";
             else

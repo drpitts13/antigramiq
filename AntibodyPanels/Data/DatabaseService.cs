@@ -41,6 +41,7 @@ namespace AntibodyPanels.Data
             MigrateReactionExtraPhases();
             MigrateAnalysisSnapshotRules();
             MigratePatients();
+            ExecNonQuery("CREATE INDEX IF NOT EXISTS ix_audit_entity ON audit_events(entity_type, entity_id)");
             DeactivateExpiredSpecimens();
             DeactivateExpiredPanels();
         }
@@ -1634,6 +1635,8 @@ namespace AntibodyPanels.Data
                 cmd.Parameters.AddWithValue("$sid", specimenId);
                 cmd.Parameters.AddWithValue("$pid", panelId);
                 cmd.ExecuteNonQuery();
+                AppendAudit("link_panel", "specimen", specimenId, null,
+                    afterJson: JsonSerializer.Serialize(new { panelId, panel = PanelAuditName(panelId) }));
             }
             catch (SqliteException) { /* already linked */ }
         }
@@ -1646,7 +1649,16 @@ namespace AntibodyPanels.Data
                 DELETE FROM specimen_panels WHERE specimen_id = $sid AND panel_id = $pid";
             cmd.Parameters.AddWithValue("$sid", specimenId);
             cmd.Parameters.AddWithValue("$pid", panelId);
-            cmd.ExecuteNonQuery();
+            if (cmd.ExecuteNonQuery() > 0)
+                AppendAudit("unlink_panel", "specimen", specimenId, null,
+                    beforeJson: JsonSerializer.Serialize(new { panelId, panel = PanelAuditName(panelId) }));
+        }
+
+        private string? PanelAuditName(int panelId)
+        {
+            var p = GetPanel(panelId);
+            if (p == null) return null;
+            return string.IsNullOrWhiteSpace(p.LotNumber) ? p.Name : $"{p.Name} (lot {p.LotNumber})";
         }
 
         public List<Panel> GetSpecimenPanels(string specimenId)
@@ -3001,6 +3013,35 @@ namespace AntibodyPanels.Data
             cmd.ExecuteNonQuery();
         }
 
+        /// <summary>Audit events for one entity, oldest first.</summary>
+        public List<AuditEvent> GetAuditEventsForEntity(string entityType, string entityId)
+        {
+            var list = new List<AuditEvent>();
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT id, occurred_at_utc, operator, action, entity_type, entity_id, reason, before_json, after_json
+                FROM audit_events
+                WHERE entity_type = $type AND entity_id = $id
+                ORDER BY id";
+            cmd.Parameters.AddWithValue("$type", entityType);
+            cmd.Parameters.AddWithValue("$id", entityId);
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+                list.Add(new AuditEvent
+                {
+                    Id = r.GetInt64(0),
+                    OccurredAtUtc = r.GetString(1),
+                    Operator = r.GetString(2),
+                    Action = r.GetString(3),
+                    EntityType = r.IsDBNull(4) ? null : r.GetString(4),
+                    EntityId = r.IsDBNull(5) ? null : r.GetString(5),
+                    Reason = r.IsDBNull(6) ? null : r.GetString(6),
+                    BeforeJson = r.IsDBNull(7) ? null : r.GetString(7),
+                    AfterJson = r.IsDBNull(8) ? null : r.GetString(8),
+                });
+            return list;
+        }
+
         public List<AuditEvent> GetAuditEvents(int limit = 500)
         {
             var list = new List<AuditEvent>();
@@ -3056,6 +3097,28 @@ namespace AntibodyPanels.Data
                 (object?)(string.IsNullOrWhiteSpace(analyzedBy) ? null : analyzedBy.Trim()) ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$abs", (object?)absorptionJson ?? DBNull.Value);
             cmd.ExecuteNonQuery();
+        }
+
+        /// <summary>All analysis runs for a specimen, oldest first (time, operator, engine version only).</summary>
+        public List<AnalysisSnapshot> GetAnalysisSnapshots(string specimenId)
+        {
+            var list = new List<AnalysisSnapshot>();
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT id, analyzed_at_utc, rule_engine_version, analyzed_by
+                FROM analysis_snapshots WHERE specimen_id = $sid ORDER BY id";
+            cmd.Parameters.AddWithValue("$sid", specimenId);
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+                list.Add(new AnalysisSnapshot
+                {
+                    Id = r.GetInt64(0),
+                    SpecimenId = specimenId,
+                    AnalyzedAtUtc = r.GetString(1),
+                    RuleEngineVersion = r.IsDBNull(2) ? null : r.GetString(2),
+                    AnalyzedBy = r.IsDBNull(3) ? null : r.GetString(3),
+                });
+            return list;
         }
 
         public AnalysisSnapshot? GetLatestAnalysisSnapshot(string specimenId)
