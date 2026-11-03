@@ -35,58 +35,10 @@ public class VendorLiveDownloadTests
             Assert.True(cells.Count >= 8, $"{row.Vendor} imported fewer than 8 cells");
             Assert.Contains(cells, c => c.GetAntigen("D") == "+" || c.GetAntigen("D") == "-");
             Assert.False(string.IsNullOrWhiteSpace(panel.ImportedAt));
+            _output.WriteLine($"{row.Vendor} {panel.LotNumber} display antigens: {string.Join(",", iso.Db.GetPanelDisplayAntigens(panel.PanelId))}");
         }
-
-        var livePaths = new[]
-        {
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "HemoIQ", "hemoiq.db"),
-            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
-                "HemoIQ", "bin", "Release", "net8.0-windows", "hemoiq.db")),
-        };
-
-        foreach (var path in livePaths.Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            using var live = new DatabaseService(path);
-            foreach (var row in persisted)
-            {
-                var source = iso.Db.GetPanel(row.PanelId!.Value)!;
-                var parsed = new VendorParseResult
-                {
-                    Vendor = source.Vendor ?? row.Vendor,
-                    Name = source.Name,
-                    LotNumber = source.LotNumber,
-                    ExpirationDate = source.ExpirationDate,
-                    CatalogNumber = source.CatalogNumber,
-                    ProductLine = source.ProductLine,
-                    EnzymeTreated = source.EnzymeTreated,
-                    SourceUrl = source.SourceUrl,
-                    SourceFormat = source.SourceFormat ?? "pdf",
-                    SpecialNotes = source.SpecialNotes
-                };
-                foreach (var cell in iso.Db.GetPanelCells(source.PanelId))
-                    parsed.Cells.Add(cell);
-                foreach (var ag in iso.Db.GetPanelAntigenOrder(source.PanelId))
-                    parsed.AntigenOrder.Add(ag);
-                new VendorPanelImportService(live).Persist(parsed, replaceExisting: true);
-                var stored = live.FindPanelByVendorLot(parsed.Vendor, parsed.LotNumber)!;
-                if (parsed.AntigenOrder.Count > 0)
-                {
-                    foreach (var other in live.GetAllPanels()
-                        .Where(p => p.PanelId != stored.PanelId
-                            && string.Equals(p.Vendor, parsed.Vendor, StringComparison.OrdinalIgnoreCase)
-                            && !string.IsNullOrWhiteSpace(p.ImportedAt)
-                            && live.GetPanelAntigenOrder(p.PanelId).Count == 0))
-                    {
-                        live.SetPanelAntigenOrder(other.PanelId, parsed.AntigenOrder);
-                    }
-                }
-                _output.WriteLine($"{parsed.Vendor} {parsed.LotNumber} display antigens: {string.Join(",", live.GetPanelDisplayAntigens(stored.PanelId))}");
-                Assert.NotNull(live.FindPanelByVendorLot(parsed.Vendor, parsed.LotNumber));
-            }
-            _output.WriteLine($"Persisted {persisted.Count} vendor panel(s) to {path}");
-        }
+        // Tests persist only to the isolated database. Real lots reach a user's database
+        // through Panels › Download from vendor, which shows the import review first.
     }
 
     [Fact]

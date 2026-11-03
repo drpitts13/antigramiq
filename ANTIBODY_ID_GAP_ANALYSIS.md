@@ -7,7 +7,7 @@ rule-outs are analytical evidence, not a diagnosis.
 Status: **Present** (usable), **Partial** (exists but incomplete or silent),
 **Missing**.
 
-Last updated: 2026-11-03 (iteration 58 — investigation timeline from audit, runs, and analyses).
+Last updated: 2026-11-03 (iteration 59 — product review; tests isolated from the user's real data).
 
 ## Capability matrix
 
@@ -31,6 +31,7 @@ Last updated: 2026-11-03 (iteration 58 — investigation timeline from audit, ru
 | Analysis | Configurable visible rule-out | Partial | `Rule.MinRuleoutCount` is now applied; lab default + explanation sentences | Watch seeded anti-D/anti-k rules; ACS remains separate |
 | Analysis | Single / multiple / dosage scoring | Partial | Fisher + pattern; pairwise combinations; dosage averages | Label as evidence, not diagnosis |
 | Audit | Investigation timeline | Present | `InvestigationTimeline` merges receipt, panel link/unlink (now audited), runs, grouped reaction saves, analysis snapshots, confirm/clear/review, MRN/transfusion/DAT/patient edits; Specimens Timeline expander and worksheet section | Report generation is not yet an audited event |
+| Tests | Isolation from user data | Present | `AppDataPaths.RootOverride` set by a test-module initializer to a temp folder; live vendor test persists only to its isolated database; full run verified to leave %AppData%\HemoIQ untouched | One intermittent failure seen once and not reproduced in two reruns |
 | Search | Investigation search | Present | Search tab › Investigations: accession, MRN, patient name/DOB, final/previous antibodies, technologist; every word must match; inclusive date range; status column; Open jumps to Specimens | Panel lot/manufacturer used in an investigation not yet searchable |
 | Workflow | Investigation status and next step | Partial | `InvestigationStatusService` derives five steps and a status (awaiting panel → testing → analysis needed → awaiting ID → completed / amended / reopened / inactive) from panels, grades, analysis time, final call, and audit; shown on Specimens and the worksheet; Worklist shares the completeness check | Optional supervisor review step (two-person, audited, invalidated by clear/re-confirm, Worklist queue); no cancel action or role-based permissions yet |
 | Patient | Permanent record and transfusion requirements | Partial | `patients` table (MRN, name, DOB, comments, requirements); audited add/update; Edit Patient on Specimens; reports print it; analysis raises REVIEW when a known antibody's antigen-negative requirement is not written | Structured requirement list instead of free text |
@@ -1028,11 +1029,46 @@ has a Timeline expander, and the worksheet prints the timeline.
 it does not appear. Panels linked before this change show only their
 run start date.
 
+## Iteration 59 — product review (this change)
+
+**Product review.** Iterations 50–58 moved the product from
+accession-only records to a patient-linked investigation workflow:
+structured transfusion and DAT data, MRN and patient record, derived
+status with supervisor review, investigation search, and a timeline.
+The app was renamed back to HemoIQ by merging the existing rename
+branch. While doing that, the review found the most serious open
+problem: **the test suite wrote to the user's real data.** The log
+was written on every run, and a live vendor-download test imported
+downloaded vendor lots into `%AppData%\HemoIQ\hemoiq.db` (and a
+database beside the Release exe) with `replaceExisting: true`. It also
+rewrote antigen order on other imported panels from the same vendor.
+On this machine that added vendor panels 17, 19, and 21–24 and deleted
+18 and 20, which were themselves earlier test imports. None were linked
+to a specimen or had runs.
+
+**Bounded improvement:** `AppDataPaths.RootOverride` lets the test
+project point the data root (default database, settings, logs,
+artifacts) at a per-run temp folder through a module initializer. The
+live vendor test persists only to its isolated database. New tests
+assert the root, log directory, settings path, and default database all
+resolve under the test folder. A full run was checked against the real
+%AppData% file timestamps and sizes, and nothing changed.
+
+**Not in this tick:** The six test-imported vendor panels remain in the
+user's database pending the user's decision. One intermittent test
+failure appeared once and could not be reproduced.
+
+## Roadmap after review
+
+1. Audited report generation (print/PDF) so reports appear on the timeline.
+2. Structured eluate results feeding analysis.
+3. Cancel action with reason, and turnaround metrics from the timeline.
+4. Role-based permissions (initials are not authenticated users).
+
 ## Likely next tick
 
-Product review is due (iterations 53–58 since the last one). Candidates:
-audited report generation, eluate results as structured data, a Cancel
-action with reason, and turnaround metrics on Analytics built from the
-timeline (received → confirmed → reviewed). Authenticated vendor portals stay later
+Roadmap item 1: record report print and PDF export as audited events
+with the report type and software version, and show them on the
+investigation timeline. Authenticated vendor portals stay later
 and must not bypass auth, CAPTCHA, licensing, or terms.
 

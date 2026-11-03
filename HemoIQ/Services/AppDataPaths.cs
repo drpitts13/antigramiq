@@ -20,7 +20,14 @@ namespace HemoIQ.Services
 
         private static readonly string[] SqliteSuffixes = { "", "-wal", "-shm" };
 
-        public static string Root =>
+        /// <summary>
+        /// Replaces <see cref="Root"/> for the whole process. The test project sets this to a
+        /// temporary folder before any test runs so tests never touch a user's database,
+        /// settings, logs, or import artifacts. The application never sets it.
+        /// </summary>
+        public static string? RootOverride { get; set; }
+
+        public static string Root => RootOverride ??
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), FolderName);
 
         /// <summary>
