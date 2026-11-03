@@ -29,6 +29,7 @@
                 <RowDefinition Height="36"/>
                 <RowDefinition Height="32"/>
                 <RowDefinition Height="32"/>
+                <RowDefinition Height="32"/>
             </Grid.RowDefinitions>
 
             <Label Content="Lab name:" Grid.Row="0" VerticalAlignment="Center"/>
@@ -109,6 +110,12 @@
                       VerticalAlignment="Center" Margin="4,0,0,0"
                       ToolTip="Adds serial-dilution columns. Last reactive tube is the titer endpoint. These grades are not IAT and do not rule out or identify an antibody."
                       Checked="SuggestedPhaseChanged" Unchecked="SuggestedPhaseChanged"/>
+
+            <CheckBox x:Name="RequireReviewCheck"
+                      Grid.Row="17" Grid.Column="0" Grid.ColumnSpan="2"
+                      Content="Require supervisor review before an investigation is Completed"
+                      VerticalAlignment="Center" Margin="4,0,0,0"
+                      ToolTip="A second person, not the one who confirmed the identification, records a review on the Specimens tab. Until then the investigation shows Awaiting supervisor review and is listed on the Worklist."/>
         </Grid>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">

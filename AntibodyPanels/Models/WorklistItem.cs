@@ -7,7 +7,8 @@ namespace AntibodyPanels.Models
         ExpiringSpecimen,
         ExpiringPanel,
         ExpiredSpecimen,
-        ExpiredPanel
+        ExpiredPanel,
+        AwaitingSupervisorReview
     }
 
     public class WorklistItem

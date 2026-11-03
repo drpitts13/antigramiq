@@ -31,6 +31,11 @@ namespace AntibodyPanels.Models
         /// serologic patient typing uninterpretable (possible donor cells).
         /// </summary>
         public int RecentTransfusionWindowDays { get; set; } = 90;
+        /// <summary>
+        /// When true, a confirmed identification counts as Completed only
+        /// after a second person records a supervisor review.
+        /// </summary>
+        public bool RequireSupervisorReview { get; set; }
         public int MaxDatabaseSizeMb { get; set; } = 500;
         public bool WorklistShowIncomplete { get; set; } = true;
         public bool WorklistShowStale { get; set; } = true;

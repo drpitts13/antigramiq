@@ -32,3 +32,5 @@ Click a card to show only that category. Click the same card again to show every
 Row colors match the category: amber for incomplete, orange for stale, yellow for expiring, and red for expired.
 
 The worklist does not include a confirmed identification as unfinished work. After you confirm an ID, incomplete and stale rows for that specimen drop off.
+
+**Supervisor review** items appear only when Preferences requires supervisor review. Each lists a confirmed identification that has not been reviewed yet. Open goes to the specimen, where **Supervisor Review…** records the review.

@@ -37,7 +37,10 @@ namespace AntibodyPanels.Models
         public string? FinalComment { get; set; }
         public string? IdentifiedBy { get; set; }
         public string? IdentifiedAt { get; set; }
+        public string? ReviewedBy { get; set; }
+        public string? ReviewedAt { get; set; }
         public bool HasFinalCall => !string.IsNullOrWhiteSpace(FinalAntibodies);
+        public bool IsReviewed => !string.IsNullOrWhiteSpace(ReviewedBy);
         public string FinalIdDisplay => HasFinalCall ? FinalAntibodies! : "";
 
         public string ListDisplay => FormatListDisplay(AccessionNumber, Type, FinalIdDisplay);

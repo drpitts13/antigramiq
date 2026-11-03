@@ -57,6 +57,7 @@ namespace AntibodyPanels.ViewModels
         public ICommand DetachPanelCommand { get; }
         public ICommand RefreshCommand { get; }
         public ICommand EditPatientCommand { get; }
+        public ICommand SupervisorReviewCommand { get; }
         public ICommand OpenReactionsCommand { get; }
         public ICommand OpenAnalysisCommand { get; }
         public ICommand OpenReportCommand { get; }
@@ -67,6 +68,8 @@ namespace AntibodyPanels.ViewModels
             _main = main;
 
             AddCommand = new RelayCommand(AddSpecimen);
+            SupervisorReviewCommand = new RelayCommand(SupervisorReview,
+                () => SelectedSpecimen is { HasFinalCall: true, IsReviewed: false });
             EditPatientCommand = new RelayCommand(EditPatient,
                 () => !string.IsNullOrWhiteSpace(SelectedSpecimen?.Mrn));
             EditCommand = new RelayCommand(EditSpecimen, () => SelectedSpecimen != null);
@@ -143,6 +146,26 @@ namespace AntibodyPanels.ViewModels
         {
             get => _patientText;
             private set => SetField(ref _patientText, value);
+        }
+
+        private void SupervisorReview()
+        {
+            var s = SelectedSpecimen;
+            if (s == null) return;
+            var dlg = new Views.Dialogs.ReasonDialog(
+                $"Supervisor review of {s.AccessionNumber}: confirmed {s.FinalAntibodies} by {s.IdentifiedBy ?? "—"}.\n" +
+                "Enter your initials. You must not be the person who confirmed the identification.");
+            if (dlg.ShowDialog() != true) return;
+            try
+            {
+                _db.SetSpecimenSupervisorReview(s.AccessionNumber, dlg.Reason);
+                _main.SetStatus($"Supervisor review recorded for {s.AccessionNumber}.");
+                NotifySpecimensChanged();
+            }
+            catch (System.Exception ex) when (ex is System.ArgumentException or System.InvalidOperationException)
+            {
+                MessageBox.Show(ex.Message, "Supervisor review", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
 
         private void EditPatient()

@@ -35,6 +35,7 @@ namespace AntibodyPanels.Views.Dialogs
             InitialsBox.Text = s.DefaultIdentifiedBy;
             ShowInactiveCheck.IsChecked = s.ShowInactiveByDefault;
             HideRuledOutCheck.IsChecked = s.HideRuledOutAntigenColumns;
+            RequireReviewCheck.IsChecked = s.RequireSupervisorReview;
             ExtraPhasesBox.Text = s.ExtraPhases;
             SyncSuggestedChecks();
         }
@@ -146,6 +147,7 @@ namespace AntibodyPanels.Views.Dialogs
             AppSettings.Current.DefaultIdentifiedBy = LabSettings.NormalizeInitials(InitialsBox.Text);
             AppSettings.Current.ShowInactiveByDefault = ShowInactiveCheck.IsChecked == true;
             AppSettings.Current.HideRuledOutAntigenColumns = HideRuledOutCheck.IsChecked == true;
+            AppSettings.Current.RequireSupervisorReview = RequireReviewCheck.IsChecked == true;
             AppSettings.Current.ExtraPhases = ExtraPhasesBox.Text;
             SettingsService.Save();
             var after = JsonSerializer.Serialize(AppSettings.Current.ClinicalSnapshot());

@@ -7,7 +7,7 @@ rule-outs are analytical evidence, not a diagnosis.
 Status: **Present** (usable), **Partial** (exists but incomplete or silent),
 **Missing**.
 
-Last updated: 2026-11-03 (iteration 56 — investigation search by MRN, patient, antibody, technologist, and date).
+Last updated: 2026-11-03 (iteration 57 — optional two-person supervisor review before Completed).
 
 ## Capability matrix
 
@@ -31,7 +31,7 @@ Last updated: 2026-11-03 (iteration 56 — investigation search by MRN, patient,
 | Analysis | Configurable visible rule-out | Partial | `Rule.MinRuleoutCount` is now applied; lab default + explanation sentences | Watch seeded anti-D/anti-k rules; ACS remains separate |
 | Analysis | Single / multiple / dosage scoring | Partial | Fisher + pattern; pairwise combinations; dosage averages | Label as evidence, not diagnosis |
 | Search | Investigation search | Present | Search tab › Investigations: accession, MRN, patient name/DOB, final/previous antibodies, technologist; every word must match; inclusive date range; status column; Open jumps to Specimens | Panel lot/manufacturer used in an investigation not yet searchable |
-| Workflow | Investigation status and next step | Partial | `InvestigationStatusService` derives five steps and a status (awaiting panel → testing → analysis needed → awaiting ID → completed / amended / reopened / inactive) from panels, grades, analysis time, final call, and audit; shown on Specimens and the worksheet; Worklist shares the completeness check | No technologist/supervisor review steps or cancel action yet; not shown as a column in the specimen list |
+| Workflow | Investigation status and next step | Partial | `InvestigationStatusService` derives five steps and a status (awaiting panel → testing → analysis needed → awaiting ID → completed / amended / reopened / inactive) from panels, grades, analysis time, final call, and audit; shown on Specimens and the worksheet; Worklist shares the completeness check | Optional supervisor review step (two-person, audited, invalidated by clear/re-confirm, Worklist queue); no cancel action or role-based permissions yet |
 | Patient | Permanent record and transfusion requirements | Partial | `patients` table (MRN, name, DOB, comments, requirements); audited add/update; Edit Patient on Specimens; reports print it; analysis raises REVIEW when a known antibody's antigen-negative requirement is not written | Structured requirement list instead of free text |
 | Patient | MRN and cross-specimen history | Partial | Indexed `specimens.mrn`; audited; confirmed final calls on the same MRN become Historical evidence citing the source accession; detail pane and reports list other specimens | Encounter, location, ordering provider, sex, pregnancy history |
 | Specimen | DAT polyspecific / IgG / C3 | Present | `DatProfile` on specimen; MF grade; audited IgG/C3; positive if any reactive, negative only if all recorded negative; C3-only caveat on autoantibody notes; MF DAT donor-cell note | Eluate results still free text |
@@ -987,11 +987,32 @@ unchanged to its own section.
 investigation. The specimen-list filter still matches MRN but not
 patient name.
 
+## Iteration 57 (this change)
+
+**Deficiency:** A confirmed identification was final the moment one
+person entered it. There was no second-person review, no queue of calls
+awaiting review, and nothing on the report showing sign-off.
+
+**Bounded improvement:** A Preferences option, *Require supervisor
+review*, adds a sixth status step. `SetSpecimenSupervisorReview` records
+reviewer initials and time on the specimen. It refuses a review when
+there is no confirmed call, when the call was already reviewed, when
+initials are blank, or when the reviewer is the person who confirmed the
+call. Each review is audited with the confirmed antibodies. Confirming
+or clearing the call removes any earlier review. Status shows *Awaiting
+supervisor review* until it is done. The Worklist adds a Supervisor
+review queue. The worksheet prints the reviewer or *PENDING*.
+
+**Not in this tick:** Role-based permissions (initials are not
+authenticated users), a Cancel action with reason, and a turnaround
+report for review time.
+
 ## Likely next tick
 
-Technologist and supervisor review steps (roadmap item 2 follow-up):
-record a technologist review and, where the lab requires it, a separate
-supervisor sign-off before an identification counts as Completed, with
-audit and a Worklist queue for items awaiting supervisor review. Authenticated vendor portals stay later
+Investigation timeline: one chronological view per specimen built from
+the audit log and record timestamps (received, panel linked, reactions
+saved, analyses run, identification confirmed/cleared, supervisor
+review, patient/MRN/transfusion/DAT edits), shown on the Specimens tab
+and printable. Authenticated vendor portals stay later
 and must not bypass auth, CAPTCHA, licensing, or terms.
 

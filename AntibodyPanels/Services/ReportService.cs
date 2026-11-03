@@ -261,6 +261,10 @@ namespace AntibodyPanels.Services
                 sb.AppendLine("FINAL IDENTIFICATION (confirmed)");
                 sb.AppendLine($"  {s.FinalAntibodies}");
                 sb.AppendLine($"  Confirmed by {s.IdentifiedBy ?? "—"} on {s.IdentifiedAt ?? "—"}");
+                if (s.IsReviewed)
+                    sb.AppendLine($"  Supervisor reviewed by {s.ReviewedBy} on {s.ReviewedAt ?? "—"}");
+                else if (AppSettings.Current.RequireSupervisorReview)
+                    sb.AppendLine("  Supervisor review: PENDING");
                 if (!string.IsNullOrWhiteSpace(s.FinalComment))
                     sb.AppendLine($"  Comment: {s.FinalComment}");
                 sb.AppendLine();

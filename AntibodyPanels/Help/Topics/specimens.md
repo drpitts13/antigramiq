@@ -48,3 +48,13 @@ The grey strip at the top of the detail pane shows where the investigation stand
 - **Next:** the specific next action, for example `Finish reactions: Panel A (1/2).`
 
 The identification worksheet prints the same status line.
+
+### Supervisor review
+
+When Preferences requires supervisor review, a sixth step, **Supervisor reviewed**, appears. Select **Supervisor Review…** and enter your initials. Rules:
+
+- There must be a confirmed identification.
+- The reviewer cannot be the person who confirmed it (initials are compared without regard to case).
+- A specimen can be reviewed once. Clearing or re-confirming the identification removes the review, so the new call must be reviewed again.
+
+Each review is written to the audit log with the confirmed antibodies and who confirmed them. The worksheet prints *Supervisor reviewed by …* or *Supervisor review: PENDING*.

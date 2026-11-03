@@ -94,6 +94,11 @@
                     </TextBlock>
                     <TextBlock Text="{Binding Status.StepsDisplay, Mode=OneWay}" Margin="0,2,0,0" FontFamily="Segoe UI Symbol"/>
                     <TextBlock Text="{Binding Status.NextAction, Mode=OneWay}" TextWrapping="Wrap" Margin="0,2,0,0" Foreground="#37474F"/>
+                    <TextBlock Margin="0,2,0,0" Foreground="#37474F"
+                               Text="{Binding SelectedSpecimen.ReviewedBy, StringFormat='Supervisor reviewed by {0}', Mode=OneWay}"/>
+                    <Button Content="Supervisor Review…" HorizontalAlignment="Left" Margin="0,4,0,0" Padding="8,2"
+                            Command="{Binding SupervisorReviewCommand}"
+                            ToolTip="Record a second-person review of the confirmed identification. Enabled when an identification is confirmed and not yet reviewed."/>
                 </StackPanel>
             </Border>
 

@@ -33,12 +33,16 @@ namespace AntibodyPanels.Services
         public const string TestingInProgress = "Testing in progress";
         public const string AnalysisNeeded = "Analysis needed";
         public const string AwaitingIdentification = "Awaiting identification";
+        public const string AwaitingSupervisorReview = "Awaiting supervisor review";
         public const string Completed = "Completed";
         public const string Amended = "Amended";
         public const string Reopened = "Reopened";
         public const string InactiveIncomplete = "Inactive – not completed";
 
-        public static InvestigationStatus Compute(DatabaseService db, Specimen s)
+        public static InvestigationStatus Compute(DatabaseService db, Specimen s) =>
+            Compute(db, s, AppSettings.Current.RequireSupervisorReview);
+
+        public static InvestigationStatus Compute(DatabaseService db, Specimen s, bool requireReview)
         {
             var panels = db.GetSpecimenPanels(s.AccessionNumber);
             var incomplete = panels.Count == 0
@@ -58,6 +62,16 @@ namespace AntibodyPanels.Services
                 new() { Name = "Analysis current", Done = analysisCurrent },
                 new() { Name = "ID confirmed", Done = s.HasFinalCall },
             };
+            if (requireReview)
+                steps.Add(new InvestigationStep { Name = "Supervisor reviewed", Done = s.HasFinalCall && s.IsReviewed });
+
+            if (s.HasFinalCall && requireReview && !s.IsReviewed)
+                return new InvestigationStatus
+                {
+                    Label = AwaitingSupervisorReview,
+                    NextAction = $"A supervisor other than {s.IdentifiedBy ?? "the confirming technologist"} reviews the identification (Supervisor Review on the Specimens tab).",
+                    Steps = steps,
+                };
 
             if (s.HasFinalCall)
                 return new InvestigationStatus

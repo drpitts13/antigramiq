@@ -256,6 +256,10 @@ namespace AntibodyPanels.Data
                 ExecNonQuery("ALTER TABLE specimens ADD COLUMN identified_by TEXT");
             if (!cols.Contains("identified_at"))
                 ExecNonQuery("ALTER TABLE specimens ADD COLUMN identified_at TEXT");
+            if (!cols.Contains("reviewed_by"))
+                ExecNonQuery("ALTER TABLE specimens ADD COLUMN reviewed_by TEXT");
+            if (!cols.Contains("reviewed_at"))
+                ExecNonQuery("ALTER TABLE specimens ADD COLUMN reviewed_at TEXT");
         }
 
         /// <summary>
@@ -764,7 +768,9 @@ namespace AntibodyPanels.Data
                     final_antibodies = $ab,
                     final_comment = $comment,
                     identified_by = $by,
-                    identified_at = $at
+                    identified_at = $at,
+                    reviewed_by = NULL,
+                    reviewed_at = NULL
                 WHERE accession_number = $acc";
             cmd.Parameters.AddWithValue("$ab", (object?)antibodies ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$comment", (object?)comment ?? DBNull.Value);
@@ -784,6 +790,45 @@ namespace AntibodyPanels.Data
                         identifiedBy
                     }));
             }
+        }
+
+        /// <summary>
+        /// Records a supervisor review of the confirmed identification. The
+        /// reviewer must differ from the person who confirmed it. Allowed on a
+        /// locked specimen because it signs off the locked record without
+        /// changing it. Audited.
+        /// </summary>
+        public void SetSpecimenSupervisorReview(string accessionNumber, string reviewer, string? comment = null)
+        {
+            var initials = LabSettings.NormalizeInitials(reviewer);
+            if (string.IsNullOrEmpty(initials))
+                throw new ArgumentException("Reviewer initials are required.", nameof(reviewer));
+            var s = GetSpecimen(accessionNumber)
+                    ?? throw new ArgumentException($"Specimen {accessionNumber} not found.");
+            if (!s.HasFinalCall)
+                throw new InvalidOperationException("There is no confirmed identification to review.");
+            if (s.IsReviewed)
+                throw new InvalidOperationException($"Already reviewed by {s.ReviewedBy} on {s.ReviewedAt}.");
+            if (string.Equals(initials, LabSettings.NormalizeInitials(s.IdentifiedBy), StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException(
+                    "The supervisor review must be recorded by someone other than the person who confirmed the identification.");
+
+            var at = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "UPDATE specimens SET reviewed_by = $by, reviewed_at = $at WHERE accession_number = $acc";
+            cmd.Parameters.AddWithValue("$by", initials);
+            cmd.Parameters.AddWithValue("$at", at);
+            cmd.Parameters.AddWithValue("$acc", accessionNumber);
+            cmd.ExecuteNonQuery();
+            AppendAudit("supervisor_review", "specimen", accessionNumber,
+                string.IsNullOrWhiteSpace(comment) ? null : comment.Trim(),
+                afterJson: JsonSerializer.Serialize(new
+                {
+                    reviewedBy = initials,
+                    reviewedAt = at,
+                    finalAntibodies = s.FinalAntibodies,
+                    identifiedBy = s.IdentifiedBy,
+                }));
         }
 
         public void ClearSpecimenFinalCall(string accessionNumber, string reason)
@@ -1976,6 +2021,21 @@ namespace AntibodyPanels.Data
                     }
                 }
 
+                if (s.HasFinalCall && !s.IsReviewed && Services.AppSettings.Current.RequireSupervisorReview)
+                {
+                    items.Add(new WorklistItem
+                    {
+                        Kind = WorklistKind.AwaitingSupervisorReview,
+                        KindLabel = "Supervisor review",
+                        Title = s.AccessionNumber,
+                        Detail = $"Confirmed {s.FinalAntibodies} by {s.IdentifiedBy ?? "—"} on {s.IdentifiedAt ?? "—"}; awaiting supervisor review.",
+                        UrgencyLabel = "Needs review",
+                        SortOrder = 3,
+                        AccessionNumber = s.AccessionNumber,
+                        TargetTab = "Specimens"
+                    });
+                }
+
                 AddExpirationWorklistItem(items, s.ExpirationDate, today, todayStr, horizon,
                     isPanel: false, title: s.AccessionNumber, accession: s.AccessionNumber,
                     panelId: null, lotNumber: null);
@@ -2303,6 +2363,8 @@ namespace AntibodyPanels.Data
             FinalComment = SafeGetString(r, "final_comment"),
             IdentifiedBy = SafeGetString(r, "identified_by"),
             IdentifiedAt = SafeGetString(r, "identified_at"),
+            ReviewedBy = SafeGetString(r, "reviewed_by"),
+            ReviewedAt = SafeGetString(r, "reviewed_at"),
         };
 
         private static Panel ReadPanel(SqliteDataReader r) => new Panel
