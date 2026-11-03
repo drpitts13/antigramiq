@@ -40,6 +40,7 @@ namespace AntibodyPanels.Data
             MigrateAuditAndSnapshots();
             MigrateReactionExtraPhases();
             MigrateAnalysisSnapshotRules();
+            MigratePatients();
             DeactivateExpiredSpecimens();
             DeactivateExpiredPanels();
         }
@@ -229,6 +230,19 @@ namespace AntibodyPanels.Data
             if (!cols.Contains("mrn"))
                 ExecNonQuery("ALTER TABLE specimens ADD COLUMN mrn TEXT");
             ExecNonQuery("CREATE INDEX IF NOT EXISTS ix_specimens_mrn ON specimens(mrn)");
+        }
+
+        private void MigratePatients()
+        {
+            ExecNonQuery(@"
+                CREATE TABLE IF NOT EXISTS patients (
+                    mrn TEXT PRIMARY KEY CHECK (length(mrn) BETWEEN 1 AND 64),
+                    name TEXT,
+                    date_of_birth TEXT,
+                    blood_bank_comments TEXT,
+                    transfusion_requirements TEXT,
+                    updated_at TEXT
+                )");
         }
 
         private void MigrateSpecimenFinalCall()
@@ -602,6 +616,83 @@ namespace AntibodyPanels.Data
             AppendAudit("update_dat", "specimen", accessionNumber, null,
                 JsonSerializer.Serialize(new { igg = before.DatIgg, c3 = before.DatC3 }),
                 JsonSerializer.Serialize(new { igg = newIgg, c3 = newC3 }));
+        }
+
+        public Patient? GetPatient(string? mrn)
+        {
+            var key = Services.PatientHistory.NormalizeMrn(mrn);
+            if (key == null) return null;
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "SELECT * FROM patients WHERE mrn = $mrn";
+            cmd.Parameters.AddWithValue("$mrn", key);
+            using var r = cmd.ExecuteReader();
+            if (!r.Read()) return null;
+            return new Patient
+            {
+                Mrn = r.GetString(r.GetOrdinal("mrn")),
+                Name = SafeGetString(r, "name"),
+                DateOfBirth = SafeGetString(r, "date_of_birth"),
+                BloodBankComments = SafeGetString(r, "blood_bank_comments"),
+                TransfusionRequirements = SafeGetString(r, "transfusion_requirements"),
+                UpdatedAt = SafeGetString(r, "updated_at"),
+            };
+        }
+
+        /// <summary>
+        /// Creates or updates the permanent patient record for an MRN.
+        /// Audited with before and after values; not locked by a specimen's
+        /// final call because it spans the patient's specimens.
+        /// </summary>
+        public void SavePatient(Patient patient)
+        {
+            var key = Services.PatientHistory.NormalizeMrn(patient.Mrn)
+                      ?? throw new ArgumentException("MRN is required for a patient record.");
+            if (key.Length > 64) throw new ArgumentException("MRN cannot be longer than 64 characters.");
+            string? dob = null;
+            if (!string.IsNullOrWhiteSpace(patient.DateOfBirth))
+            {
+                if (!DateTime.TryParse(patient.DateOfBirth.Trim(), System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.None, out var d))
+                    throw new ArgumentException($"Date of birth '{patient.DateOfBirth}' is not a valid date.");
+                if (d.Date > DateTime.Today) throw new ArgumentException("Date of birth cannot be in the future.");
+                dob = d.ToString("yyyy-MM-dd");
+            }
+            static string? Clean(string? v) => string.IsNullOrWhiteSpace(v) ? null : v.Trim();
+            var after = new Patient
+            {
+                Mrn = key,
+                Name = Clean(patient.Name),
+                DateOfBirth = dob,
+                BloodBankComments = Clean(patient.BloodBankComments),
+                TransfusionRequirements = Clean(patient.TransfusionRequirements),
+            };
+            var before = GetPatient(key);
+            if (before != null && before.Name == after.Name && before.DateOfBirth == after.DateOfBirth &&
+                before.BloodBankComments == after.BloodBankComments &&
+                before.TransfusionRequirements == after.TransfusionRequirements)
+                return;
+
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO patients (mrn, name, date_of_birth, blood_bank_comments, transfusion_requirements, updated_at)
+                VALUES ($mrn, $name, $dob, $comments, $req, $at)
+                ON CONFLICT(mrn) DO UPDATE SET name = $name, date_of_birth = $dob,
+                    blood_bank_comments = $comments, transfusion_requirements = $req, updated_at = $at";
+            cmd.Parameters.AddWithValue("$mrn", key);
+            cmd.Parameters.AddWithValue("$name", (object?)after.Name ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$dob", (object?)after.DateOfBirth ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$comments", (object?)after.BloodBankComments ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$req", (object?)after.TransfusionRequirements ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$at", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+            cmd.ExecuteNonQuery();
+            object? Snap(Patient? p) => p == null ? null : new
+            {
+                name = p.Name, dateOfBirth = p.DateOfBirth,
+                bloodBankComments = p.BloodBankComments, transfusionRequirements = p.TransfusionRequirements,
+            };
+            AppendAudit(before == null ? "add_patient" : "update_patient", "patient", key, null,
+                before == null ? null : JsonSerializer.Serialize(Snap(before)),
+                JsonSerializer.Serialize(Snap(after)));
         }
 
         public List<Specimen> GetSpecimensByMrn(string mrn)

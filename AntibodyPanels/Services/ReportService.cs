@@ -50,8 +50,24 @@ namespace AntibodyPanels.Services
             return SoftwareIdentity.ReportPreamble() + body;
         }
 
+        private void AppendPatientRecord(StringBuilder sb, Specimen s)
+        {
+            if (string.IsNullOrWhiteSpace(s.Mrn)) return;
+            var p = _db.GetPatient(s.Mrn);
+            if (p == null)
+            {
+                sb.AppendLine($"Patient: no patient record for MRN {s.Mrn}");
+                return;
+            }
+            sb.AppendLine($"Patient: {p.Display}");
+            sb.AppendLine($"Transfusion requirements: {p.TransfusionRequirements ?? "None recorded"}");
+            if (!string.IsNullOrWhiteSpace(p.BloodBankComments))
+                sb.AppendLine($"Blood bank comments: {p.BloodBankComments}");
+        }
+
         private void AppendPatientHistory(StringBuilder sb, Specimen s)
         {
+            AppendPatientRecord(sb, s);
             if (string.IsNullOrWhiteSpace(s.Mrn)) return;
             var lines = PatientHistory.Describe(PatientHistory.OtherSpecimens(_db, s));
             sb.AppendLine($"Patient history (other specimens, MRN {s.Mrn}):");

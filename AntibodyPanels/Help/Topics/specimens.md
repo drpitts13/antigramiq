@@ -32,3 +32,9 @@ The right pane follows the selected specimen.
 ## Patient history
 
 When the specimen has an MRN, the detail pane lists the patient's other specimens, newest first. Each line shows the confirmed identification, DAT, and transfusion status. Specimen Summary and the identification worksheet print the same list. Search and the specimen filter match MRN.
+
+## Patient record
+
+The **Patient (permanent, shared by MRN)** box shows information that belongs to the patient rather than to this specimen: name, date of birth, special transfusion requirements, and permanent blood bank comments. Select **Edit Patient** to change it. The button needs an MRN on the specimen. Every change is written to the audit log with the old and new values. A confirmed identification on one specimen does not lock the patient record, because the record spans all of the patient's specimens.
+
+Write antigen-negative requirements so analysis can read them, for example `K-negative`, `E neg`, or `Fy(a-)`. Capital and lower-case letters are different antigens (C is not c). When an antibody is known for the MRN (Previous antibodies, a confirmed call on this specimen, or a confirmed call on another specimen with the same MRN) and its antigen-negative requirement is not written on the patient record, analysis lists a **REVIEW** suggestion at the top. It is a prompt to check the record, not a transfusion order.

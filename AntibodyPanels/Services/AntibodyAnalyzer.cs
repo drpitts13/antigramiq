@@ -1219,6 +1219,9 @@ namespace AntibodyPanels.Services
             foreach (var note in result.SpecialReactionNotes)
                 important.Add(note);
 
+            foreach (var note in result.TransfusionRequirementNotes)
+                critical.Add($"REVIEW: {note}");
+
             foreach (var pattern in result.ReactionPatterns)
                 important.Add(pattern.Explanation);
 
@@ -1311,7 +1314,13 @@ namespace AntibodyPanels.Services
             result.PatientPhenotypeUnreliable = typing.PhenotypeUnreliable;
             result.TransfusionContextNote = transfusion.Explanation;
             result.PatientTypingConsiderations = PatientTypingParser.Evaluate(typing);
-            foreach (var prior in PatientHistory.ConfirmedAntibodies(PatientHistory.OtherSpecimens(_db, specimen)))
+            var priorConfirmed = PatientHistory.ConfirmedAntibodies(PatientHistory.OtherSpecimens(_db, specimen));
+            var known = typing.HistoricalAntibodies
+                .Concat(priorConfirmed.Select(p => p.Antibody))
+                .Concat(FinalAntibodyParser.Split(specimen.FinalAntibodies));
+            result.TransfusionRequirementNotes = TransfusionRequirementCheck.MissingAntigenNegative(
+                known, _db.GetPatient(specimen.Mrn), specimen.Mrn);
+            foreach (var prior in priorConfirmed)
             {
                 if (typing.HistoricalAntibodies.Contains(prior.Antibody, StringComparer.OrdinalIgnoreCase))
                     continue;

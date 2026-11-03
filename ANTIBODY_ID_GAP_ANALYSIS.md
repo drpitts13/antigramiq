@@ -7,7 +7,7 @@ rule-outs are analytical evidence, not a diagnosis.
 Status: **Present** (usable), **Partial** (exists but incomplete or silent),
 **Missing**.
 
-Last updated: 2026-11-03 (iteration 53 — product review; MRN links specimens and carries confirmed antibodies forward).
+Last updated: 2026-11-03 (iteration 54 — patient record with transfusion requirements checked against known antibodies).
 
 ## Capability matrix
 
@@ -30,7 +30,8 @@ Last updated: 2026-11-03 (iteration 53 — product review; MRN links specimens a
 | Analysis | Transparent candidate evidence | Partial | Explain Analysis lists suspected, in-progress, historical, untypeable, pattern, enzyme, DTT, and cell-level adsorption comparisons. Adsorbed aliquots do not rule out or enter ordinary scores for specificities they are expected to remove. A panreactive untreated run paired with autoadsorption or rr/R1R1/R2R2 adsorption is omitted from ordinary scores. Unpaired ficin, papain, and DTT runs are named and are not compared with another panel | Cross-panel enzyme and DTT pairing stays out of scope |
 | Analysis | Configurable visible rule-out | Partial | `Rule.MinRuleoutCount` is now applied; lab default + explanation sentences | Watch seeded anti-D/anti-k rules; ACS remains separate |
 | Analysis | Single / multiple / dosage scoring | Partial | Fisher + pattern; pairwise combinations; dosage averages | Label as evidence, not diagnosis |
-| Patient | MRN and cross-specimen history | Partial | Indexed `specimens.mrn`; audited; confirmed final calls on the same MRN become Historical evidence citing the source accession; detail pane and reports list other specimens | No patient table (name, DOB, permanent comments, special requirements) yet |
+| Patient | Permanent record and transfusion requirements | Partial | `patients` table (MRN, name, DOB, comments, requirements); audited add/update; Edit Patient on Specimens; reports print it; analysis raises REVIEW when a known antibody's antigen-negative requirement is not written | Structured requirement list instead of free text |
+| Patient | MRN and cross-specimen history | Partial | Indexed `specimens.mrn`; audited; confirmed final calls on the same MRN become Historical evidence citing the source accession; detail pane and reports list other specimens | Encounter, location, ordering provider, sex, pregnancy history |
 | Specimen | DAT polyspecific / IgG / C3 | Present | `DatProfile` on specimen; MF grade; audited IgG/C3; positive if any reactive, negative only if all recorded negative; C3-only caveat on autoantibody notes; MF DAT donor-cell note | Eluate results still free text |
 | Analysis | Panreactive / cold / warm / HTLA / auto / HFA / LFA models | Partial | DAT scores; named LFA/pan cells; enzyme lost/gained/resistant; DTT lost/resistant vs untreated. Unpaired runs, comparisons with fewer than 3 paired cells, and comparisons that meet no threshold are each named | Cells tested on only one of the paired runs stay unnamed |
 | Analysis | Selected-cell recommendations with “why” | Partial | Unused in-date vials preferred; P1−/Ch−/Sd(a−) selected cells ranked when neutralization favors soluble substance | More ISBT alleles later |
@@ -921,10 +922,34 @@ specimens share an MRN but disagree on ABO/Rh or phenotype.
 4. Product counts and types, pregnancy, HSCT/BMT on the transfusion record.
 5. Enzyme/DTT: name cells tested on only one run.
 
+## Iteration 54 (this change)
+
+**Deficiency:** The MRN linked specimens, but there was nowhere to keep
+permanent patient information. Nothing checked whether a known
+antibody's antigen-negative requirement was recorded.
+
+**Bounded improvement:** A `patients` table keyed by MRN holds name,
+date of birth, permanent blood bank comments, and special transfusion
+requirements. Add and update are audited with before and after values.
+Future or invalid dates of birth are refused. The Specimens tab shows
+the patient in its own box, separate from specimen context, with Edit
+Patient. Specimen Summary and the worksheet print it. Analysis collects
+antibodies known for the MRN (Previous antibodies, this specimen's
+confirmed call, confirmed calls on other specimens). Each one whose
+antigen-negative requirement is not written on the patient record
+gives a REVIEW suggestion. Requirement matching is case-sensitive
+(C vs c) and accepts `K-negative`, `K neg`, `K−`, and `Fy(a-)`.
+
+**Not in this tick:** Requirements are free text, not a structured
+list. Encounter, location, ordering provider, sex, and pregnancy history
+are not recorded. There is no patient search screen beyond the
+specimen filter.
+
 ## Likely next tick
 
-Roadmap item 1: add a patient record keyed by MRN with permanent
-blood-bank comments and special transfusion requirements, shown on
-every specimen with that MRN and on the worksheet. Authenticated vendor portals stay later
+Roadmap item 2: an investigation status per specimen (created, testing,
+analysis available, review, completed, amended, cancelled), derived from
+recorded work where possible and shown as a step indicator on the
+Specimens tab and Worklist. Authenticated vendor portals stay later
 and must not bypass auth, CAPTCHA, licensing, or terms.
 

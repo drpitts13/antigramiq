@@ -56,6 +56,7 @@ namespace AntibodyPanels.ViewModels
         public ICommand AttachPanelCommand { get; }
         public ICommand DetachPanelCommand { get; }
         public ICommand RefreshCommand { get; }
+        public ICommand EditPatientCommand { get; }
         public ICommand OpenReactionsCommand { get; }
         public ICommand OpenAnalysisCommand { get; }
         public ICommand OpenReportCommand { get; }
@@ -66,6 +67,8 @@ namespace AntibodyPanels.ViewModels
             _main = main;
 
             AddCommand = new RelayCommand(AddSpecimen);
+            EditPatientCommand = new RelayCommand(EditPatient,
+                () => !string.IsNullOrWhiteSpace(SelectedSpecimen?.Mrn));
             EditCommand = new RelayCommand(EditSpecimen, () => SelectedSpecimen != null);
             DeleteCommand = new RelayCommand(DeleteSpecimen, () => SelectedSpecimen != null);
             AttachPanelCommand = new RelayCommand(AttachPanel, () => SelectedSpecimen != null);
@@ -126,6 +129,44 @@ namespace AntibodyPanels.ViewModels
             ApplyFilter(accessionNumber);
         }
 
+        private string _patientText = string.Empty;
+        /// <summary>Permanent patient information for the selected specimen's MRN.</summary>
+        public string PatientText
+        {
+            get => _patientText;
+            private set => SetField(ref _patientText, value);
+        }
+
+        private void EditPatient()
+        {
+            var mrn = SelectedSpecimen?.Mrn;
+            if (string.IsNullOrWhiteSpace(mrn)) return;
+            var dlg = new Views.Dialogs.PatientDialog(mrn, _db.GetPatient(mrn));
+            if (dlg.ShowDialog() != true) return;
+            try
+            {
+                _db.SavePatient(dlg.Result);
+                _main.SetStatus($"Patient {mrn} saved.");
+                LoadSpecimenDetails();
+            }
+            catch (System.Exception ex)
+            {
+                MessageBox.Show($"Error saving patient: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        public static string FormatPatient(Patient? p, string? mrn)
+        {
+            if (string.IsNullOrWhiteSpace(mrn)) return "No MRN recorded.";
+            if (p == null) return $"No patient record for MRN {mrn}. Use Edit Patient to add one.";
+            var lines = new System.Collections.Generic.List<string> { p.Display };
+            lines.Add($"Transfusion requirements: {p.TransfusionRequirements ?? "None recorded"}");
+            if (!string.IsNullOrWhiteSpace(p.BloodBankComments))
+                lines.Add($"Blood bank comments: {p.BloodBankComments}");
+            return string.Join(System.Environment.NewLine, lines);
+        }
+
         private string _patientHistoryText = string.Empty;
         /// <summary>Other specimens with the same MRN, newest first.</summary>
         public string PatientHistoryText
@@ -137,6 +178,7 @@ namespace AntibodyPanels.ViewModels
         private void LoadSpecimenDetails()
         {
             PatientHistoryText = string.Empty;
+            PatientText = string.Empty;
             LinkedPanels.Clear();
             Antibodies.Clear();
             Ruleouts.Clear();
@@ -148,6 +190,7 @@ namespace AntibodyPanels.ViewModels
             foreach (var a in _db.GetSpecimenAntibodies(sid)) Antibodies.Add(a);
             foreach (var r in _db.GetSpecimenRuleouts(sid)) Ruleouts.Add(r);
 
+            PatientText = FormatPatient(_db.GetPatient(_selectedSpecimen.Mrn), _selectedSpecimen.Mrn);
             if (string.IsNullOrWhiteSpace(_selectedSpecimen.Mrn))
                 PatientHistoryText = "No MRN recorded; history from other specimens is not linked.";
             else
