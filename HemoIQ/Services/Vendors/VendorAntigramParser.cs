@@ -1,0 +1,648 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using HemoIQ.Models;
+using HemoIQ.Services;
+using UglyToad.PdfPig;
+using UglyToad.PdfPig.Content;
+
+namespace HemoIQ.Services.Vendors
+{
+    public static class VendorAntigramParser
+    {
+        private static readonly Regex LotRegex = new(
+            @"\b(?:LOT|Lot|lot)\s*(?:No\.?|Number|#)?\s*[:#]?\s*([A-Z0-9][A-Z0-9.\-/]{2,})",
+            RegexOptions.Compiled);
+        private static readonly Regex BioRadLotRegex = new(
+            @"\b((?:45161|45171)(?:\.\d+){1,2}(?:\.[0-9xX]+)?)\b",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex QuotientLotRegex = new(
+            @"(?<![A-Za-z0-9])(V\d{6})(?![0-9])",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex OrthoLotRegex = new(
+            @"\b((?:RA|RB|RC)\d{3})\b",
+            RegexOptions.Compiled);
+        private static readonly Regex ExpRegex = new(
+            @"\b(?:Exp(?:\.|ir(?:y|ation))?|Vencimento|Valid(?:ity)?)\s*(?:date)?\s*[:.]?\s*(\d{4}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex BareIsoDateRegex = new(
+            @"\b(20\d{2}[./-]\d{1,2}[./-]\d{1,2})\b",
+            RegexOptions.Compiled);
+
+        public static VendorParseResult Parse(Stream stream, string vendor, string? fileNameHint,
+            VendorLotListing? listing)
+        {
+            using var ms = new MemoryStream();
+            stream.CopyTo(ms);
+            var bytes = ms.ToArray();
+            var name = fileNameHint ?? listing?.LotNumber ?? "vendor-panel";
+            if (LooksLikePdf(bytes, name))
+                return ParsePdf(bytes, vendor, name, listing);
+            if (LooksLikeJson(bytes, name))
+                return StructuredPanelParser.ParseJson(bytes, vendor, name, listing);
+            if (LooksLikeXml(bytes, name))
+                return StructuredPanelParser.ParseXml(bytes, vendor, name, listing);
+            if (LooksLikeXlsx(bytes, name))
+                return ParseXlsx(bytes, vendor, name, listing);
+            return ParseCsv(bytes, vendor, name, listing);
+        }
+
+        public static VendorParseResult ParseXlsx(byte[] bytes, string vendor, string fileName,
+            VendorLotListing? listing)
+        {
+            try
+            {
+                var rows = XlsxGridReader.ReadFirstSheet(bytes);
+                return ParseGrid(rows, vendor, fileName, listing, fileName);
+            }
+            catch (Exception ex)
+            {
+                return Fail(vendor, listing, fileName, "Could not read XLSX: " + ex.Message);
+            }
+        }
+
+        public static VendorParseResult ParseCsv(byte[] bytes, string vendor, string fileName,
+            VendorLotListing? listing)
+        {
+            var text = DecodeText(bytes);
+            using var reader = new StringReader(text);
+            var rows = new List<string[]>();
+            string? line;
+            while ((line = reader.ReadLine()) != null)
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                rows.Add(SplitCsvLine(line));
+            }
+            return ParseGrid(rows, vendor, fileName, listing, text);
+        }
+
+        public static VendorParseResult ParseGrid(IReadOnlyList<string[]> rows, string vendor,
+            string fileName, VendorLotListing? listing, string? text = null)
+        {
+            if (rows.Count < 2)
+            {
+                return Fail(vendor, listing, fileName, "Grid has no data rows.");
+            }
+
+            var header = rows[0];
+            var cellIdx = FindCellColumn(header);
+            if (cellIdx < 0)
+                return Fail(vendor, listing, fileName, "CSV must include a Cell, Cell #, or Donor column.");
+
+            var antigenCols = new List<(int Index, string Antigen)>();
+            var order = new List<string>();
+            var unknown = new List<string>();
+            for (int i = 0; i < header.Length; i++)
+            {
+                if (i == cellIdx) continue;
+                var ag = VendorAntigenAliases.Resolve(header[i]);
+                if (ag == null)
+                {
+                    PanelTypingInspector.TryRecordUnknownHeader(header[i], unknown);
+                    continue;
+                }
+                if (antigenCols.Any(c => c.Antigen == ag)) continue;
+                antigenCols.Add((i, ag));
+                order.Add(ag);
+            }
+            if (antigenCols.Count == 0)
+                return Fail(vendor, listing, fileName, "CSV has no recognized antigen columns.");
+
+            var result = SeedResult(vendor, listing, fileName, text ?? fileName);
+            result.UnknownAntigens.AddRange(unknown);
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            for (int r = 1; r < rows.Count; r++)
+            {
+                var row = rows[r];
+                if (cellIdx >= row.Length) continue;
+                var cellNumber = row[cellIdx].Trim();
+                if (string.IsNullOrWhiteSpace(cellNumber)) continue;
+                if (!seen.Add(cellNumber))
+                {
+                    result.Errors.Add($"Duplicate cell '{cellNumber}'.");
+                    continue;
+                }
+                var cell = new PanelCell { CellNumber = NormalizeCellNumber(cellNumber) };
+                TryFillDonor(cell, header, row);
+                foreach (var (idx, ag) in antigenCols)
+                {
+                    var raw = idx < row.Length ? row[idx] : "";
+                    var required = AntigenConstants.IsStandard(ag);
+                    var value = VendorAntigenAliases.NormalizeValue(raw, required);
+                    if (value == null)
+                    {
+                        if (required && !string.IsNullOrWhiteSpace(raw))
+                            result.Errors.Add($"Cell {cell.CellNumber}: invalid value '{raw}' for {ag}.");
+                        continue;
+                    }
+                    cell.SetAntigen(ag, value);
+                }
+                result.Cells.Add(cell);
+            }
+            result.AntigenOrder.AddRange(order);
+            if (result.Cells.Count == 0 && result.Errors.Count == 0)
+                result.Errors.Add("CSV contains no panel cells.");
+            return result;
+        }
+
+        public static VendorParseResult ParsePdf(byte[] bytes, string vendor, string fileName,
+            VendorLotListing? listing)
+        {
+            string fullText;
+            List<PdfWord> words;
+            try
+            {
+                using var doc = PdfDocument.Open(bytes);
+                words = ExtractWords(doc);
+                fullText = string.Join("\n", doc.GetPages().Select(p => p.Text));
+            }
+            catch (Exception ex)
+            {
+                return Fail(vendor, listing, fileName, "Could not read PDF: " + ex.Message);
+            }
+
+            var result = SeedResult(vendor, listing, fileName, fullText);
+            var rows = ClusterRows(words);
+            var header = rows
+                .Select((row, idx) => new { row, idx, hits = CountAntigenHits(row) })
+                .Where(x => x.hits >= 6)
+                .OrderByDescending(x => x.hits)
+                .FirstOrDefault();
+            if (header == null)
+            {
+                result.Errors.Add("PDF does not contain a recognizable antigen header row.");
+                return result;
+            }
+
+            var nearby = rows
+                .Where((_, i) => i != header.idx && Math.Abs(i - header.idx) <= 2)
+                .ToList();
+            var columns = BuildAntigenColumns(header.row, nearby);
+            if (columns.Count < 6)
+            {
+                result.Errors.Add("PDF antigen header could not be mapped.");
+                return result;
+            }
+
+            result.AntigenOrder.AddRange(columns.Select(c => c.Antigen).Distinct());
+            var onPanel = new HashSet<string>(result.AntigenOrder, StringComparer.Ordinal);
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var row in rows.Skip(header.idx + 1))
+            {
+                var cellNumber = GuessCellNumber(row);
+                if (cellNumber == null) continue;
+                if (!seen.Add(cellNumber)) continue;
+
+                var cell = new PanelCell { CellNumber = cellNumber };
+                cell.RhPhenotype = GuessRhPhenotype(row);
+                cell.DonorId = GuessDonorId(row, cellNumber);
+                var leftovers = new List<string>();
+                foreach (var word in row)
+                {
+                    if (IsCellToken(word.Text, cellNumber)) continue;
+                    var nearest = columns.OrderBy(c => Math.Abs(c.X - word.X)).First();
+                    if (Math.Abs(nearest.X - word.X) > 18) continue;
+                    var required = AntigenConstants.IsStandard(nearest.Antigen);
+                    var value = VendorAntigenAliases.NormalizeValue(word.Text, required);
+                    if (value == null)
+                    {
+                        if (LooksLikeNote(word.Text))
+                            leftovers.Add(word.Text);
+                        continue;
+                    }
+                    if (!cell.HasTypedAntigen(nearest.Antigen))
+                        cell.SetAntigen(nearest.Antigen, value);
+                }
+                foreach (var ag in onPanel)
+                {
+                    if (!cell.Antigens.ContainsKey(ag))
+                        cell.SetAntigen(ag, "-");
+                }
+                if (leftovers.Count > 0)
+                    cell.SpecialTypes = string.Join(" ", leftovers);
+                result.Cells.Add(cell);
+            }
+
+            if (result.Cells.Count == 0)
+                result.Errors.Add("PDF antigen table had a header but no cell rows.");
+            return result;
+        }
+
+        private static VendorParseResult SeedResult(string vendor, VendorLotListing? listing,
+            string fileName, string text)
+        {
+            var lot = listing?.LotNumber ?? ExtractLot(text) ?? ExtractLot(fileName);
+            var exp = listing?.ExpirationDate ?? ExtractExpiration(text);
+            var product = listing?.ProductLine
+                ?? GuessProductLine(vendor, text, fileName);
+            return new VendorParseResult
+            {
+                Vendor = vendor,
+                Name = BuildName(vendor, product, lot),
+                LotNumber = lot,
+                ExpirationDate = exp,
+                CatalogNumber = listing?.CatalogNumber ?? ExtractCatalog(vendor, text),
+                ProductLine = product,
+                EnzymeTreated = listing?.EnzymeTreated == true ||
+                    text.Contains("papain", StringComparison.OrdinalIgnoreCase) ||
+                    text.Contains("ficin", StringComparison.OrdinalIgnoreCase) ||
+                    fileName.Contains("-P", StringComparison.OrdinalIgnoreCase),
+                SourceUrl = listing?.DownloadUrl,
+                SourceFormat = listing?.SourceFormat ?? GuessFormat(fileName),
+                SpecialNotes = listing?.Notes
+            };
+        }
+
+        private static VendorParseResult Fail(string vendor, VendorLotListing? listing,
+            string fileName, string error)
+        {
+            var result = SeedResult(vendor, listing, fileName, fileName);
+            result.Errors.Add(error);
+            return result;
+        }
+
+        private static string BuildName(string vendor, string? product, string? lot)
+        {
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(product)) parts.Add(product.Trim());
+            else parts.Add(vendor + " panel");
+            if (!string.IsNullOrWhiteSpace(lot)) parts.Add(lot.Trim());
+            return string.Join(" ", parts);
+        }
+
+        private static string GuessFormat(string fileName)
+        {
+            if (fileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)) return "csv";
+            if (fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) return "json";
+            if (fileName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)) return "xml";
+            if (fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)) return "xlsx";
+            return "pdf";
+        }
+
+        private static bool LooksLikePdf(byte[] bytes, string fileName)
+        {
+            if (fileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)) return true;
+            return bytes.Length >= 5 && bytes[0] == (byte)'%' && bytes[1] == (byte)'P'
+                && bytes[2] == (byte)'D' && bytes[3] == (byte)'F';
+        }
+
+        private static bool LooksLikeJson(byte[] bytes, string fileName)
+        {
+            if (fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) return true;
+            var text = DecodeText(bytes).TrimStart();
+            return text.StartsWith("{") || text.StartsWith("[");
+        }
+
+        private static bool LooksLikeXml(byte[] bytes, string fileName)
+        {
+            if (fileName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)) return true;
+            var text = DecodeText(bytes).TrimStart();
+            return text.StartsWith("<") && !LooksLikePdf(bytes, fileName);
+        }
+
+        private static bool LooksLikeXlsx(byte[] bytes, string fileName)
+        {
+            if (fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)) return true;
+            return bytes.Length >= 4 && bytes[0] == (byte)'P' && bytes[1] == (byte)'K'
+                && bytes[2] == 3 && bytes[3] == 4;
+        }
+
+        private static string DecodeText(byte[] bytes)
+        {
+            if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
+                return Encoding.UTF8.GetString(bytes, 3, bytes.Length - 3);
+            return Encoding.UTF8.GetString(bytes);
+        }
+
+        private static string[] SplitCsvLine(string line)
+        {
+            var list = new List<string>();
+            var sb = new StringBuilder();
+            bool quoted = false;
+            for (int i = 0; i < line.Length; i++)
+            {
+                var ch = line[i];
+                if (ch == '"')
+                {
+                    if (quoted && i + 1 < line.Length && line[i + 1] == '"')
+                    {
+                        sb.Append('"');
+                        i++;
+                    }
+                    else quoted = !quoted;
+                    continue;
+                }
+                if (ch == ',' && !quoted)
+                {
+                    list.Add(sb.ToString());
+                    sb.Clear();
+                    continue;
+                }
+                sb.Append(ch);
+            }
+            list.Add(sb.ToString());
+            return list.ToArray();
+        }
+
+        private static int FindCellColumn(string[] header)
+        {
+            for (int i = 0; i < header.Length; i++)
+            {
+                var key = VendorAntigenAliases.NormalizeKey(header[i]);
+                if (key is "CELL" or "CELLNUMBER" or "CELLNO" or "NO" or "NUMBER"
+                    or "DONOR" or "DONORID" or "DONORNO" or "VIAL")
+                    return i;
+            }
+            return -1;
+        }
+
+        private static void TryFillDonor(PanelCell cell, string[] header, string[] row)
+        {
+            for (int i = 0; i < header.Length && i < row.Length; i++)
+            {
+                var key = VendorAntigenAliases.NormalizeKey(header[i]);
+                if (key is "DONOR" or "DONORID" or "DONORNO")
+                    cell.DonorId = row[i].Trim();
+                else if (key is "RH" or "RHHR" or "PHENOTYPE" or "RHPHENOTYPE")
+                    cell.RhPhenotype = row[i].Trim();
+                else if (key is "SPECIALTYPES" or "NOTES" or "SPECIAL")
+                    cell.SpecialTypes = row[i].Trim();
+            }
+        }
+
+        private static string NormalizeCellNumber(string raw)
+        {
+            if (string.Equals(raw, "AC", StringComparison.OrdinalIgnoreCase) ||
+                raw.Contains("auto", StringComparison.OrdinalIgnoreCase))
+                return "AC";
+            var digits = new string(raw.Where(char.IsDigit).ToArray());
+            return digits.Length > 0 ? digits.TrimStart('0').PadLeft(1, '0') : raw.Trim();
+        }
+
+        private sealed class PdfWord
+        {
+            public string Text { get; init; } = "";
+            public double X { get; init; }
+            public double Y { get; init; }
+        }
+
+        private sealed class AntigenColumn
+        {
+            public string Antigen { get; init; } = "";
+            public double X { get; init; }
+        }
+
+        private static List<PdfWord> ExtractWords(PdfDocument doc)
+        {
+            var list = new List<PdfWord>();
+            foreach (var page in doc.GetPages())
+            {
+                foreach (var word in page.GetWords())
+                {
+                    var text = word.Text.Trim();
+                    if (text.Length == 0) continue;
+                    list.Add(new PdfWord
+                    {
+                        Text = text,
+                        X = word.BoundingBox.Left,
+                        Y = Math.Round(word.BoundingBox.Bottom, 1)
+                    });
+                }
+            }
+            return list;
+        }
+
+        private static List<List<PdfWord>> ClusterRows(List<PdfWord> words)
+        {
+            var rows = new List<List<PdfWord>>();
+            foreach (var word in words.OrderByDescending(w => w.Y).ThenBy(w => w.X))
+            {
+                var row = rows.LastOrDefault();
+                if (row == null || Math.Abs(row[0].Y - word.Y) > 3.5)
+                {
+                    row = new List<PdfWord>();
+                    rows.Add(row);
+                }
+                row.Add(word);
+            }
+            return rows;
+        }
+
+        private static int CountAntigenHits(List<PdfWord> row) =>
+            row.Select(w => VendorAntigenAliases.Resolve(w.Text)).Count(a => a != null);
+
+        private static List<AntigenColumn> BuildAntigenColumns(
+            List<PdfWord> header, IReadOnlyList<List<PdfWord>>? nearbyRows = null)
+        {
+            var cols = new List<AntigenColumn>();
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var modifiers = new List<PdfWord>();
+            if (nearbyRows != null)
+            {
+                foreach (var row in nearbyRows)
+                {
+                    foreach (var word in row)
+                    {
+                        if (IsHeaderModifier(word.Text))
+                            modifiers.Add(word);
+                    }
+                }
+            }
+
+            var words = header.OrderBy(w => w.X).ToList();
+            for (int i = 0; i < words.Count; i++)
+            {
+                var word = words[i];
+                string? ag = null;
+                var x = word.X;
+
+                if (i + 1 < words.Count && words[i + 1].X - word.X < 16)
+                {
+                    var combined = ResolveCombinedHeader(word.Text, words[i + 1].Text);
+                    if (combined != null)
+                    {
+                        ag = combined;
+                        x = (word.X + words[i + 1].X) / 2;
+                        i++;
+                    }
+                }
+
+                if (ag == null && modifiers.Count > 0)
+                {
+                    var nearbyMod = modifiers
+                        .OrderBy(m => Math.Abs(m.X - word.X))
+                        .FirstOrDefault(m => Math.Abs(m.X - word.X) < 14);
+                    if (nearbyMod != null)
+                        ag = ResolveCombinedHeader(word.Text, nearbyMod.Text);
+                }
+
+                ag ??= VendorAntigenAliases.Resolve(word.Text);
+                if (ag == null || !seen.Add(ag)) continue;
+                cols.Add(new AntigenColumn { Antigen = ag, X = x });
+            }
+            return cols;
+        }
+
+        private static bool IsHeaderModifier(string text)
+        {
+            var t = text.Trim();
+            return t.Length == 1 && "abwABW".Contains(t, StringComparison.Ordinal);
+        }
+
+        private static string? ResolveCombinedHeader(string stem, string modifier) =>
+            VendorAntigenAliases.Resolve(stem + modifier)
+            ?? VendorAntigenAliases.Resolve(stem + "^" + modifier);
+
+        private static string? GuessCellNumber(List<PdfWord> row)
+        {
+            foreach (var word in row.OrderBy(w => w.X))
+            {
+                var t = word.Text.Trim();
+                if (Regex.IsMatch(t, @"^(?:AC|A\.C\.)$", RegexOptions.IgnoreCase))
+                    return "AC";
+                if (Regex.IsMatch(t, @"^\d{1,2}$"))
+                {
+                    var n = int.Parse(t, CultureInfo.InvariantCulture);
+                    if (n is >= 1 and <= 40) return n.ToString(CultureInfo.InvariantCulture);
+                }
+                if (Regex.IsMatch(t, @"^\d{1,2}[A-Za-z]?$") && char.IsDigit(t[0]))
+                {
+                    var digits = new string(t.TakeWhile(char.IsDigit).ToArray());
+                    if (int.TryParse(digits, out var n) && n is >= 1 and <= 40)
+                        return n.ToString(CultureInfo.InvariantCulture);
+                }
+            }
+            return null;
+        }
+
+        private static bool IsCellToken(string text, string cellNumber) =>
+            string.Equals(NormalizeCellNumber(text), cellNumber, StringComparison.OrdinalIgnoreCase);
+
+        private static string? GuessRhPhenotype(List<PdfWord> row)
+        {
+            foreach (var word in row)
+            {
+                var t = word.Text.Trim();
+                if (Regex.IsMatch(t, @"^(R[012]R[012]|R[012]r|r[''″]?r|rr)$", RegexOptions.IgnoreCase))
+                    return t;
+            }
+            return null;
+        }
+
+        private static string? GuessDonorId(List<PdfWord> row, string cellNumber)
+        {
+            foreach (var word in row.OrderBy(w => w.X))
+            {
+                var t = word.Text.Trim();
+                if (t == cellNumber) continue;
+                if (Regex.IsMatch(t, @"^\d{5,}$"))
+                    return t;
+            }
+            return null;
+        }
+
+        private static bool LooksLikeNote(string text) =>
+            text.Length > 2 && !Regex.IsMatch(text, @"^[+\-0]$");
+
+        public static string? ExtractLot(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return null;
+
+            var labeled = LotRegex.Match(text);
+            if (labeled.Success)
+            {
+                var value = labeled.Groups[1].Value.Trim().TrimEnd('.');
+                if (value.Length >= 3 &&
+                    !value.Equals("No", StringComparison.OrdinalIgnoreCase) &&
+                    !value.Equals("Number", StringComparison.OrdinalIgnoreCase))
+                    return value;
+            }
+
+            var bioRad = BioRadLotRegex.Match(text);
+            if (bioRad.Success)
+                return bioRad.Groups[1].Value.Trim();
+
+            var quotient = QuotientLotRegex.Match(text);
+            if (quotient.Success)
+                return quotient.Groups[1].Value.Trim().ToUpperInvariant();
+
+            var ortho = OrthoLotRegex.Match(text);
+            if (ortho.Success)
+                return ortho.Groups[1].Value.Trim().ToUpperInvariant();
+
+            return null;
+        }
+
+        public static string? ExtractExpiration(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return null;
+            var m = ExpRegex.Match(text);
+            if (m.Success)
+                return NormalizeDate(m.Groups[1].Value);
+            m = BareIsoDateRegex.Match(text);
+            return m.Success ? NormalizeDate(m.Groups[1].Value) : null;
+        }
+
+        public static string? NormalizeDate(string raw)
+        {
+            var parts = raw.Split('.', '/', '-');
+            if (parts.Length != 3) return raw;
+            if (parts[0].Length == 4 &&
+                int.TryParse(parts[1], out var m) && int.TryParse(parts[2], out var d))
+                return $"{parts[0]}-{m:00}-{d:00}";
+            if (parts[2].Length >= 2 &&
+                int.TryParse(parts[0], out var d2) && int.TryParse(parts[1], out var m2))
+            {
+                var y = parts[2].Length == 2 ? "20" + parts[2] : parts[2];
+                return $"{y}-{m2:00}-{d2:00}";
+            }
+            return raw;
+        }
+
+        private static string? ExtractCatalog(string vendor, string text)
+        {
+            if (vendor == VendorIds.BioRad)
+            {
+                var m = Regex.Match(text, @"\b(45161|45171|45241)\b");
+                return m.Success ? m.Value : null;
+            }
+            if (vendor == VendorIds.Quotient)
+            {
+                var m = Regex.Match(text, @"\b(Z47[123]U?)\b", RegexOptions.IgnoreCase);
+                return m.Success ? m.Value.ToUpperInvariant() : null;
+            }
+            return null;
+        }
+
+        private static string? GuessProductLine(string vendor, string text, string fileName)
+        {
+            var hay = text + " " + fileName;
+            if (hay.Contains("ID-DiaPanel-P", StringComparison.OrdinalIgnoreCase)) return "ID-DiaPanel-P";
+            if (hay.Contains("ID-DiaPanel", StringComparison.OrdinalIgnoreCase)) return "ID-DiaPanel";
+            if (hay.Contains("Resolve Panel A", StringComparison.OrdinalIgnoreCase) ||
+                Regex.IsMatch(hay, @"\bRA\d{3}\b")) return "Resolve Panel A";
+            if (hay.Contains("Resolve Panel B", StringComparison.OrdinalIgnoreCase) ||
+                Regex.IsMatch(hay, @"\bRB\d{3}\b")) return "Resolve Panel B";
+            if (hay.Contains("Resolve Panel C", StringComparison.OrdinalIgnoreCase) ||
+                Regex.IsMatch(hay, @"\bRC\d{3}\b")) return "Resolve Panel C";
+            if (hay.Contains("Panocell", StringComparison.OrdinalIgnoreCase)) return "Panocell";
+            if (hay.Contains("Data-Cyte", StringComparison.OrdinalIgnoreCase)) return "Data-Cyte Plus";
+            if (hay.Contains("Identisera", StringComparison.OrdinalIgnoreCase)) return "Identisera Diana";
+            if (hay.Contains("ALBAcyte", StringComparison.OrdinalIgnoreCase)) return "ALBAcyte Antibody ID";
+            return vendor switch
+            {
+                VendorIds.BioRad => "ID-DiaPanel",
+                VendorIds.Ortho => "Resolve Panel",
+                VendorIds.Immucor => "Panocell",
+                VendorIds.Grifols => "Data-Cyte Plus",
+                VendorIds.Medion => "Data-Cyte Plus",
+                VendorIds.Quotient => "ALBAcyte Antibody ID",
+                _ => null
+            };
+        }
+    }
+}

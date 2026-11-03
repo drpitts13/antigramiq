@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="HemoIQ.Tests/HemoIQ.Tests.csproj" />
+  <Project Path="HemoIQ/HemoIQ.csproj" />
+</Solution>

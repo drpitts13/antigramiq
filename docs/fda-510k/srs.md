@@ -13,5 +13,5 @@
 | SRS-LOCK-02 | Clearing a confirmed identification shall require a non-empty reason and shall be audited. |
 | SRS-SNAP-01 | Each persisted analysis shall store software version, clinical settings JSON, input fingerprint, rule-out, suspected, and ACS summaries. |
 | SRS-SNAP-02 | Analysis and clinical reports shall print version, settings, and input fingerprint. |
-| SRS-LOG-01 | Unhandled exceptions shall be written to `%AppData%\AntibodyPanels\logs` with software version and without reaction grades. |
+| SRS-LOG-01 | Unhandled exceptions shall be written to `%AppData%\HemoIQ\logs` with software version and without reaction grades. |
 | SRS-CYB-01 | Operator identity on audit events shall be the Windows user name. Access control relies on the Windows login and NTFS ACLs. |

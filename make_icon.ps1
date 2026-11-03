@@ -4,18 +4,18 @@ param(
 
 Add-Type -AssemblyName System.Drawing
 
-$pngPath  = Join-Path $RepoRoot "AntibodyPanels\blood_bag_icon.png"
-$icoPath  = Join-Path $RepoRoot "AntibodyPanels\app.ico"
-$exePath  = Join-Path $RepoRoot "AntibodyPanels\bin\Release\net8.0-windows\AntibodyPanels.exe"
+$pngPath  = Join-Path $RepoRoot "HemoIQ\blood_bag_icon.png"
+$icoPath  = Join-Path $RepoRoot "HemoIQ\app.ico"
+$exePath  = Join-Path $RepoRoot "HemoIQ\bin\Release\net8.0-windows\HemoIQ.exe"
 $desktopPath = [System.Environment]::GetFolderPath('Desktop')
-$shortcutPath = Join-Path $desktopPath "Antibody Panel Management System.lnk"
+$shortcutPath = Join-Path $desktopPath "HemoIQ.lnk"
 
 if (-not (Test-Path $pngPath)) {
     throw "Blood bag icon not found: $pngPath"
 }
 if (-not (Test-Path $exePath)) {
     Write-Host "Building application..."
-    dotnet build (Join-Path $RepoRoot "AntibodyPanels\AntibodyPanels.csproj") -c Release | Out-Host
+    dotnet build (Join-Path $RepoRoot "HemoIQ\HemoIQ.csproj") -c Release | Out-Host
     if (-not (Test-Path $exePath)) {
         throw "Executable not found after build: $exePath"
     }
@@ -63,7 +63,7 @@ $src.Dispose()
 Write-Host "ICO written: $icoPath"
 
 Write-Host "Rebuilding with embedded icon..."
-dotnet build (Join-Path $RepoRoot "AntibodyPanels\AntibodyPanels.csproj") -c Release | Out-Host
+dotnet build (Join-Path $RepoRoot "HemoIQ\HemoIQ.csproj") -c Release | Out-Host
 
 # ── Create desktop shortcut ──────────────────────────────────────────────────
 $wsh = New-Object -ComObject WScript.Shell
@@ -71,7 +71,7 @@ $lnk = $wsh.CreateShortcut($shortcutPath)
 $lnk.TargetPath       = $exePath
 $lnk.WorkingDirectory = (Split-Path $exePath)
 $lnk.IconLocation     = "$icoPath,0"
-$lnk.Description      = "Antibody Panel Management System"
+$lnk.Description      = "HemoIQ"
 $lnk.WindowStyle      = 1   # Normal window
 $lnk.Save()
 Write-Host "Shortcut created: $shortcutPath"

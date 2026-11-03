@@ -7,8 +7,8 @@ using System.IO;
 using System.Runtime.InteropServices;
 
 var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, ".."));
-var pngPath = Path.Combine(repoRoot, "AntibodyPanels", "blood_bag_icon.png");
-var icoPath = Path.Combine(repoRoot, "AntibodyPanels", "app.ico");
+var pngPath = Path.Combine(repoRoot, "HemoIQ", "blood_bag_icon.png");
+var icoPath = Path.Combine(repoRoot, "HemoIQ", "app.ico");
 
 // Create ICO with multiple sizes
 using var src = new Bitmap(pngPath);
