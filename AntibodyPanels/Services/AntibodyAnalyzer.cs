@@ -1311,6 +1311,18 @@ namespace AntibodyPanels.Services
             result.PatientPhenotypeUnreliable = typing.PhenotypeUnreliable;
             result.TransfusionContextNote = transfusion.Explanation;
             result.PatientTypingConsiderations = PatientTypingParser.Evaluate(typing);
+            foreach (var prior in PatientHistory.ConfirmedAntibodies(PatientHistory.OtherSpecimens(_db, specimen)))
+            {
+                if (typing.HistoricalAntibodies.Contains(prior.Antibody, StringComparer.OrdinalIgnoreCase))
+                    continue;
+                result.PatientTypingConsiderations.Add(new PatientTypingConsideration
+                {
+                    Antibody = prior.Antibody,
+                    Antigen = prior.Antibody[5..],
+                    Kind = PatientTypingKind.Historical,
+                    Explanation = prior.Explanation,
+                });
+            }
             return transfusion;
         }
 

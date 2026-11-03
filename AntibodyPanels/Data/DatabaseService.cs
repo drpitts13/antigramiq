@@ -226,6 +226,9 @@ namespace AntibodyPanels.Data
                 ExecNonQuery("ALTER TABLE specimens ADD COLUMN dat_igg TEXT");
             if (!cols.Contains("dat_c3"))
                 ExecNonQuery("ALTER TABLE specimens ADD COLUMN dat_c3 TEXT");
+            if (!cols.Contains("mrn"))
+                ExecNonQuery("ALTER TABLE specimens ADD COLUMN mrn TEXT");
+            ExecNonQuery("CREATE INDEX IF NOT EXISTS ix_specimens_mrn ON specimens(mrn)");
         }
 
         private void MigrateSpecimenFinalCall()
@@ -599,6 +602,43 @@ namespace AntibodyPanels.Data
             AppendAudit("update_dat", "specimen", accessionNumber, null,
                 JsonSerializer.Serialize(new { igg = before.DatIgg, c3 = before.DatC3 }),
                 JsonSerializer.Serialize(new { igg = newIgg, c3 = newC3 }));
+        }
+
+        public List<Specimen> GetSpecimensByMrn(string mrn)
+        {
+            var list = new List<Specimen>();
+            var key = Services.PatientHistory.NormalizeMrn(mrn);
+            if (key == null) return list;
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "SELECT * FROM specimens WHERE mrn = $mrn ORDER BY created_date DESC";
+            cmd.Parameters.AddWithValue("$mrn", key);
+            using var r = cmd.ExecuteReader();
+            while (r.Read()) list.Add(ReadSpecimen(r));
+            return list;
+        }
+
+        /// <summary>
+        /// Sets the MRN that links this specimen to the patient's other
+        /// specimens. Audited because it changes which history analysis uses.
+        /// </summary>
+        public void UpdateSpecimenMrn(string accessionNumber, string? mrn)
+        {
+            var key = Services.PatientHistory.NormalizeMrn(mrn);
+            if (key != null && key.Length > 64)
+                throw new ArgumentException("MRN cannot be longer than 64 characters.");
+            var before = GetSpecimen(accessionNumber)
+                         ?? throw new ArgumentException($"Specimen {accessionNumber} not found.");
+            if (before.Mrn == key) return;
+            EnsureSpecimenUnlocked(accessionNumber);
+
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "UPDATE specimens SET mrn = $mrn WHERE accession_number = $acc";
+            cmd.Parameters.AddWithValue("$mrn", (object?)key ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$acc", accessionNumber);
+            cmd.ExecuteNonQuery();
+            AppendAudit("update_mrn", "specimen", accessionNumber, null,
+                JsonSerializer.Serialize(new { mrn = before.Mrn }),
+                JsonSerializer.Serialize(new { mrn = key }));
         }
 
         public void SetSpecimenActive(string accessionNumber, bool active)
@@ -2138,6 +2178,7 @@ namespace AntibodyPanels.Data
             TransfusionStatus = TransfusionStatus.Normalize(SafeGetString(r, "transfusion_status")),
             LastTransfusionDate = SafeGetString(r, "last_transfusion_date"),
             DatIgg = SafeGetString(r, "dat_igg"),
+            Mrn = SafeGetString(r, "mrn"),
             DatC3 = SafeGetString(r, "dat_c3"),
             FinalAntibodies = SafeGetString(r, "final_antibodies"),
             FinalComment = SafeGetString(r, "final_comment"),

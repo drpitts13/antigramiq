@@ -6,6 +6,8 @@ namespace AntibodyPanels.Models
     public class Specimen
     {
         public string AccessionNumber { get; set; } = string.Empty;
+        /// <summary>Medical record number; links specimens of the same patient. Stored upper-case.</summary>
+        public string? Mrn { get; set; }
         public string Type { get; set; } = "serum";
         public string? ExpirationDate { get; set; }
         public string CreatedDate { get; set; } = string.Empty;
@@ -65,7 +67,7 @@ namespace AntibodyPanels.Models
             (LastAnalyzedAt == null || string.Compare(ReactionsUpdatedAt, LastAnalyzedAt) > 0);
 
         public bool MatchesFilter(string? query) =>
-            TextFilter.Matches(query, AccessionNumber, Type, Phenotype, Genotype, PreviousAntibodies,
+            TextFilter.Matches(query, AccessionNumber, Mrn, Type, Phenotype, Genotype, PreviousAntibodies,
                 Notes, FinalAntibodies, DatResult, DatIgg, DatC3, ExpirationDate);
     }
 }

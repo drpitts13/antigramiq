@@ -126,8 +126,17 @@ namespace AntibodyPanels.ViewModels
             ApplyFilter(accessionNumber);
         }
 
+        private string _patientHistoryText = string.Empty;
+        /// <summary>Other specimens with the same MRN, newest first.</summary>
+        public string PatientHistoryText
+        {
+            get => _patientHistoryText;
+            private set => SetField(ref _patientHistoryText, value);
+        }
+
         private void LoadSpecimenDetails()
         {
+            PatientHistoryText = string.Empty;
             LinkedPanels.Clear();
             Antibodies.Clear();
             Ruleouts.Clear();
@@ -138,6 +147,17 @@ namespace AntibodyPanels.ViewModels
             foreach (var p in _db.GetSpecimenPanels(sid)) LinkedPanels.Add(p);
             foreach (var a in _db.GetSpecimenAntibodies(sid)) Antibodies.Add(a);
             foreach (var r in _db.GetSpecimenRuleouts(sid)) Ruleouts.Add(r);
+
+            if (string.IsNullOrWhiteSpace(_selectedSpecimen.Mrn))
+                PatientHistoryText = "No MRN recorded; history from other specimens is not linked.";
+            else
+            {
+                var lines = Services.PatientHistory.Describe(
+                    Services.PatientHistory.OtherSpecimens(_db, _selectedSpecimen));
+                PatientHistoryText = lines.Count == 0
+                    ? $"No other specimens for MRN {_selectedSpecimen.Mrn}."
+                    : string.Join(System.Environment.NewLine, lines);
+            }
         }
 
         /// <summary>
@@ -172,6 +192,7 @@ namespace AntibodyPanels.ViewModels
                     dlg.Notes, dlg.Phenotype, dlg.PreviousAntibodies, dlg.DatResult, genotype: dlg.Genotype);
                 _db.UpdateSpecimenTransfusion(dlg.AccessionNumber, dlg.TransfusionStatusCode, dlg.LastTransfusionDate);
                 _db.UpdateSpecimenDatSplit(dlg.AccessionNumber, dlg.DatIgg, dlg.DatC3);
+                _db.UpdateSpecimenMrn(dlg.AccessionNumber, dlg.Mrn);
                 _main.SetStatus($"Specimen {dlg.AccessionNumber} added.");
                 NotifySpecimensChanged();
                 SelectedSpecimen = Specimens.FirstOrDefault(s => s.AccessionNumber == dlg.AccessionNumber);
@@ -195,6 +216,7 @@ namespace AntibodyPanels.ViewModels
                 _db.UpdateSpecimenTransfusion(SelectedSpecimen.AccessionNumber, dlg.TransfusionStatusCode,
                     dlg.LastTransfusionDate);
                 _db.UpdateSpecimenDatSplit(SelectedSpecimen.AccessionNumber, dlg.DatIgg, dlg.DatC3);
+                _db.UpdateSpecimenMrn(SelectedSpecimen.AccessionNumber, dlg.Mrn);
                 _main.SetStatus($"Specimen {SelectedSpecimen.AccessionNumber} updated.");
                 NotifySpecimensChanged();
             }

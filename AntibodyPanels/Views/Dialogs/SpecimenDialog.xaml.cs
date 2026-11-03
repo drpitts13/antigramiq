@@ -9,6 +9,7 @@ namespace AntibodyPanels.Views.Dialogs
     public partial class SpecimenDialog : Window
     {
         public string AccessionNumber => AccessionBox.Text.Trim();
+        public string? Mrn => Services.PatientHistory.NormalizeMrn(MrnBox.Text);
         public string SpecimenType => TypeBox.SelectedItem?.ToString() ?? TypeBox.Text;
         public string? ExpirationDate => ExpirationPicker.SelectedDate?.ToString("yyyy-MM-dd");
         public bool ItemIsActive => ActiveCheck.IsChecked == true;
@@ -75,6 +76,7 @@ namespace AntibodyPanels.Views.Dialogs
                     ExpirationPicker.SelectedDate = d;
 
                 ActiveCheck.IsChecked = existing.IsActive;
+                MrnBox.Text = existing.Mrn ?? "";
                 PhenotypeBox.Text = existing.Phenotype ?? "";
                 GenotypeBox.Text = existing.Genotype ?? "";
                 PreviousAbsBox.Text = existing.PreviousAntibodies ?? "";

@@ -7,7 +7,7 @@ rule-outs are analytical evidence, not a diagnosis.
 Status: **Present** (usable), **Partial** (exists but incomplete or silent),
 **Missing**.
 
-Last updated: 2026-11-03 (iteration 52 — DAT recorded as polyspecific, IgG, and C3 with mixed field).
+Last updated: 2026-11-03 (iteration 53 — product review; MRN links specimens and carries confirmed antibodies forward).
 
 ## Capability matrix
 
@@ -30,6 +30,7 @@ Last updated: 2026-11-03 (iteration 52 — DAT recorded as polyspecific, IgG, an
 | Analysis | Transparent candidate evidence | Partial | Explain Analysis lists suspected, in-progress, historical, untypeable, pattern, enzyme, DTT, and cell-level adsorption comparisons. Adsorbed aliquots do not rule out or enter ordinary scores for specificities they are expected to remove. A panreactive untreated run paired with autoadsorption or rr/R1R1/R2R2 adsorption is omitted from ordinary scores. Unpaired ficin, papain, and DTT runs are named and are not compared with another panel | Cross-panel enzyme and DTT pairing stays out of scope |
 | Analysis | Configurable visible rule-out | Partial | `Rule.MinRuleoutCount` is now applied; lab default + explanation sentences | Watch seeded anti-D/anti-k rules; ACS remains separate |
 | Analysis | Single / multiple / dosage scoring | Partial | Fisher + pattern; pairwise combinations; dosage averages | Label as evidence, not diagnosis |
+| Patient | MRN and cross-specimen history | Partial | Indexed `specimens.mrn`; audited; confirmed final calls on the same MRN become Historical evidence citing the source accession; detail pane and reports list other specimens | No patient table (name, DOB, permanent comments, special requirements) yet |
 | Specimen | DAT polyspecific / IgG / C3 | Present | `DatProfile` on specimen; MF grade; audited IgG/C3; positive if any reactive, negative only if all recorded negative; C3-only caveat on autoantibody notes; MF DAT donor-cell note | Eluate results still free text |
 | Analysis | Panreactive / cold / warm / HTLA / auto / HFA / LFA models | Partial | DAT scores; named LFA/pan cells; enzyme lost/gained/resistant; DTT lost/resistant vs untreated. Unpaired runs, comparisons with fewer than 3 paired cells, and comparisons that meet no threshold are each named | Cells tested on only one of the paired runs stay unnamed |
 | Analysis | Selected-cell recommendations with “why” | Partial | Unused in-date vials preferred; P1−/Ch−/Sd(a−) selected cells ranked when neutralization favors soluble substance | More ISBT alleles later |
@@ -882,13 +883,48 @@ Polyspecific-only wording is unchanged.
 across specimens is not tracked by patient (there is no patient entity
 yet).
 
+## Iteration 53 — product review and patient link (this change)
+
+**Product review.** Complete: panel import with review, reaction entry,
+transparent analysis with Explain Analysis, final call with audit and
+lock, structured transfusion and DAT context. Fragmented: everything is
+keyed by accession, with no patient identity, so history does not carry
+between specimens. No investigation object or status workflow exists
+beyond the Worklist categories. Analysis explanations are strong, but
+iterations 44–49 went deep on one niche (enzyme/DTT) while patient and
+specimen basics lagged. The roadmap below re-weights toward patient and
+investigation workflow.
+
+**Deficiency:** A confirmed antibody (for example an evanescent anti-Jka)
+did not reach the patient's next specimen unless someone retyped it into
+Previous antibodies.
+
+**Bounded improvement:** Specimens carry an indexed, audited MRN, locked
+after a final call. Analysis adds each antibody confirmed on another
+specimen with the same MRN as Historical evidence, citing the earliest
+accession and date, without duplicating Previous antibodies. Unconfirmed
+suspected lists are not carried. The detail pane, Specimen Summary, and
+worksheet list the patient's other specimens. The filter matches MRN.
+
+**Not in this tick:** A patient table (name, DOB, permanent blood-bank
+comments, special transfusion requirements) and warning when two
+specimens share an MRN but disagree on ABO/Rh or phenotype.
+
+## Roadmap after review
+
+1. Patient record: name, DOB, permanent comments, special transfusion
+   requirements (antigen-negative, irradiated), shown on every specimen
+   with that MRN.
+2. Investigation status workflow (created → testing → analysis → review
+   → completed/amended) with a visible step indicator per specimen.
+3. Eluate results as structured data feeding analysis.
+4. Product counts and types, pregnancy, HSCT/BMT on the transfusion record.
+5. Enzyme/DTT: name cells tested on only one run.
+
 ## Likely next tick
 
-Product review is due next tick. Specimen context (transfusion, DAT) is
-now structured, but there is still no patient entity: MRN, name, and
-history are not shared across specimens. Assess whether a minimal
-patient record (MRN plus linked specimens, with history surfaced on new
-specimens) is the next cohesive slice. Naming enzyme or DTT cells tested
-on only one run stays queued. Authenticated vendor portals stay later
+Roadmap item 1: add a patient record keyed by MRN with permanent
+blood-bank comments and special transfusion requirements, shown on
+every specimen with that MRN and on the worksheet. Authenticated vendor portals stay later
 and must not bypass auth, CAPTCHA, licensing, or terms.
 

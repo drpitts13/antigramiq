@@ -50,6 +50,15 @@ namespace AntibodyPanels.Services
             return SoftwareIdentity.ReportPreamble() + body;
         }
 
+        private void AppendPatientHistory(StringBuilder sb, Specimen s)
+        {
+            if (string.IsNullOrWhiteSpace(s.Mrn)) return;
+            var lines = PatientHistory.Describe(PatientHistory.OtherSpecimens(_db, s));
+            sb.AppendLine($"Patient history (other specimens, MRN {s.Mrn}):");
+            if (lines.Count == 0) sb.AppendLine("  None recorded.");
+            foreach (var line in lines) sb.AppendLine($"  {line}");
+        }
+
         private string SpecimenSummaryText(string? specimenId)
         {
             if (specimenId == null) return "No specimen selected.";
@@ -58,6 +67,7 @@ namespace AntibodyPanels.Services
             var sb = new StringBuilder();
             sb.AppendLine($"SPECIMEN SUMMARY — {s.AccessionNumber}");
             sb.AppendLine(new string('=', 50));
+            sb.AppendLine($"MRN:             {s.Mrn ?? "Not recorded"}");
             sb.AppendLine($"Type:            {s.Type}");
             sb.AppendLine($"Created:         {s.CreatedDate}");
             sb.AppendLine($"Expiration:      {s.ExpirationDate ?? "N/A"}");
@@ -73,6 +83,7 @@ namespace AntibodyPanels.Services
                 sb.AppendLine($"DAT:             {s.DatDisplay}");
             if (!string.IsNullOrWhiteSpace(s.Notes))
                 sb.AppendLine($"Notes:           {s.Notes}");
+            AppendPatientHistory(sb, s);
             sb.AppendLine();
 
             var panels = _db.GetSpecimenPanels(specimenId);
@@ -183,6 +194,7 @@ namespace AntibodyPanels.Services
             sb.AppendLine(new string('=', 78));
             sb.AppendLine(AnalysisTraceLine(specimenId));
             sb.AppendLine($"Accession: {s.AccessionNumber,-16} Type: {s.Type,-10} Date: {DateTime.Now:yyyy-MM-dd}");
+            sb.AppendLine($"MRN: {s.Mrn ?? "Not recorded"}");
             sb.AppendLine($"Phenotype: {s.Phenotype ?? "N/A"}");
             sb.AppendLine($"Genotype: {s.Genotype ?? "N/A"}");
             sb.AppendLine($"Previous antibodies: {s.PreviousAntibodies ?? "N/A"}");
@@ -190,6 +202,7 @@ namespace AntibodyPanels.Services
             sb.AppendLine($"DAT: {s.DatDisplay}");
             if (!string.IsNullOrWhiteSpace(s.Notes))
                 sb.AppendLine($"Notes: {s.Notes}");
+            AppendPatientHistory(sb, s);
             sb.AppendLine();
 
             foreach (var run in runs)

@@ -88,6 +88,10 @@
             <GroupBox DockPanel.Dock="Top" Header="Clinical Context" Margin="0,0,0,8" Padding="6">
                 <StackPanel>
                     <TextBlock TextWrapping="Wrap" Margin="0,0,0,2">
+                        <Run FontWeight="SemiBold" Text="MRN: "/>
+                        <Run Text="{Binding SelectedSpecimen.Mrn, TargetNullValue='Not recorded'}"/>
+                    </TextBlock>
+                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,2">
                         <Run FontWeight="SemiBold" Text="Phenotype: "/>
                         <Run Text="{Binding SelectedSpecimen.Phenotype, TargetNullValue=N/A}"/>
                     </TextBlock>
@@ -115,6 +119,9 @@
                         <Run FontWeight="SemiBold" Text="Final ID: "/>
                         <Run Text="{Binding SelectedSpecimen.FinalAntibodies, TargetNullValue='Not confirmed'}"/>
                     </TextBlock>
+                    <TextBlock FontWeight="SemiBold" Margin="0,6,0,0" Text="Patient history (same MRN):"
+                               ToolTip="Other specimens with this MRN. Confirmed antibodies are carried into analysis as historical evidence."/>
+                    <TextBlock TextWrapping="Wrap" Text="{Binding PatientHistoryText}"/>
                 </StackPanel>
             </GroupBox>
 

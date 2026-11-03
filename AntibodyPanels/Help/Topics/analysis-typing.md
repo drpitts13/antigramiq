@@ -11,6 +11,8 @@ Columns:
 - **Patient** — the value on the specimen, such as antigen-negative or a historical antibody name.
 - **Explanation** — how that value supports or argues against the candidate.
 
+Historical rows also come from other specimens with the same MRN. Each antibody confirmed there is listed once, citing the earliest accession that confirmed it. An antibody already typed into Previous antibodies is not listed twice.
+
 Genotype remains available for review after transfusion because it is a molecular prediction, not a fresh serologic type. It is still evidence for you to accept or set aside.
 
 Edit phenotype, genotype, previous antibodies, and notes on the specimen record. Then run analysis again so this tab uses the updated context.
