@@ -149,16 +149,36 @@ namespace HemoIQ.Services.Vendors
             return result;
         }
 
+        /// <summary>
+        /// Explains why no antigen header was found. Barcode/QR sheets (such as Ortho
+        /// Quick Antigram PDFs) and scanned pages hold the data in images, which cannot be read.
+        /// </summary>
+        public static string DescribeMissingHeader(string fullText, int imageCount)
+        {
+            var text = fullText ?? string.Empty;
+            if (text.Contains("Quick Antigram", StringComparison.OrdinalIgnoreCase) ||
+                text.Contains("ﾊﾞｰｺｰﾄﾞ") || text.Contains("QRｺｰﾄﾞ") || text.Contains("QRコード"))
+                return "This PDF is an Ortho Quick Antigram barcode or QR-code sheet for scanning into Ortho's software. " +
+                       "It lists lot numbers and expiry dates, but the antigen results are inside the barcode images and cannot be read. " +
+                       "Import the e-Antigram PDF or CSV from your QuidelOrtho technical documents instead.";
+            if (imageCount >= 5)
+                return $"PDF does not contain a recognizable antigen header row. It contains {imageCount} images, so the antigen table " +
+                       "may be a scanned image or barcodes rather than text, which HemoIQ cannot read. Use the vendor's text PDF, CSV, or XLSX.";
+            return "PDF does not contain a recognizable antigen header row.";
+        }
+
         public static VendorParseResult ParsePdf(byte[] bytes, string vendor, string fileName,
             VendorLotListing? listing)
         {
             string fullText;
             List<PdfWord> words;
+            int imageCount;
             try
             {
                 using var doc = PdfDocument.Open(bytes);
                 words = ExtractWords(doc);
                 fullText = string.Join("\n", doc.GetPages().Select(p => p.Text));
+                imageCount = doc.GetPages().Sum(p => p.GetImages().Count());
             }
             catch (Exception ex)
             {
@@ -174,7 +194,7 @@ namespace HemoIQ.Services.Vendors
                 .FirstOrDefault();
             if (header == null)
             {
-                result.Errors.Add("PDF does not contain a recognizable antigen header row.");
+                result.Errors.Add(DescribeMissingHeader(fullText, imageCount));
                 return result;
             }
 

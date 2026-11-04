@@ -14,7 +14,7 @@ Last updated: 2026-11-03 (iteration 66 — local users and roles enforcing revie
 | Area | Capability | Status | Current evidence | Next action |
 |---|---|---|---|---|
 | Gap file | Living capability matrix | Present | This file | Update every iteration |
-| Import | Provider adapter framework | Partial | `IVendorPanelSource` + Bio-Rad/Ortho/Quotient public catalogs; Immucor/Grifols/Medion file-only | Authenticated portals only with vendor permission |
+| Import | Provider adapter framework | Partial | `IVendorPanelSource` + Bio-Rad/Quotient public catalogs; Ortho/Immucor/Grifols/Medion file-only (Ortho's public Quick Antigram PDFs are barcode/QR sheets with no readable antigen table) | Authenticated portals only with vendor permission |
 | Import | CSV | Present | Lab CSV + vendor CSV parser; lab import now reviews before activation | — |
 | Import | PDF | Partial | PdfPig positional grid; layout-fragile | Harden after schema work |
 | Import | XLSX / XML / JSON panels | Present | JSON/XML structured schema; first-sheet XLSX via zip/shared strings; same inactive+artifact review | Multi-sheet XLSX later |

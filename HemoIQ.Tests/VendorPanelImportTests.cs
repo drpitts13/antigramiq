@@ -151,14 +151,28 @@ public class VendorPanelImportTests
     }
 
     [Fact]
-    public void OrthoHtml_ListsResolveLots()
+    public void Ortho_IsFileImportOnly_BecauseQuickAntigramPdfsAreBarcodeSheets()
     {
-        using var http = new VendorHttpClient();
-        var lots = new OrthoEAntigramSource(http).ParseQuickAntigramHtml(
-            File.ReadAllText(Fixture("ortho-quick.html")));
-        Assert.Contains(lots, l => l.LotNumber == "RA301" && l.ProductLine == "Resolve Panel A");
-        Assert.Contains(lots, l => l.LotNumber == "RB715");
-        Assert.Contains(lots, l => l.LotNumber == "RC438");
+        using var catalog = new VendorCatalogService();
+        var ortho = catalog.GetSource(VendorIds.Ortho);
+        Assert.False(ortho.CanListLots);
+        Assert.Contains("barcode and QR-code sheets", ortho.ListLotsUnavailableReason);
+        Assert.Contains("Import the e-Antigram PDF or CSV", ortho.ListLotsUnavailableReason);
+    }
+
+    [Fact]
+    public void MissingHeader_ExplainsOrthoBarcodeSheets_ImageOnlyPdfs_AndPlainCase()
+    {
+        // Text as read from a QuidelOrtho Quick Antigram barcode PDF (lots and expiry only).
+        var ortho = VendorAntigramParser.DescribeMissingHeader(
+            "® Quick Antigram 抗原情報ﾊﾞｰｺｰﾄﾞPDF 2025/11/04 ﾘｿﾞﾙﾌﾞﾊﾟﾈﾙ A RA279 Exp:2025/12/09", 45);
+        Assert.Contains("Ortho Quick Antigram barcode or QR-code sheet", ortho);
+
+        var scanned = VendorAntigramParser.DescribeMissingHeader("Lot 123", 12);
+        Assert.Contains("12 images", scanned);
+
+        Assert.Equal("PDF does not contain a recognizable antigen header row.",
+            VendorAntigramParser.DescribeMissingHeader("plain text", 0));
     }
 
     [Fact]
@@ -177,6 +191,7 @@ public class VendorPanelImportTests
         Assert.False(catalog.GetSource(VendorIds.Immucor).CanListLots);
         Assert.False(catalog.GetSource(VendorIds.Grifols).CanListLots);
         Assert.False(catalog.GetSource(VendorIds.Medion).CanListLots);
+        Assert.False(catalog.GetSource(VendorIds.Ortho).CanListLots);
         Assert.True(catalog.GetSource(VendorIds.BioRad).CanListLots);
     }
 
