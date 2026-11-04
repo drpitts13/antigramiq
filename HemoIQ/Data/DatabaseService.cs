@@ -42,6 +42,14 @@ namespace HemoIQ.Data
             MigrateReactionExtraPhases();
             MigrateAnalysisSnapshotRules();
             MigratePatients();
+            ExecNonQuery(@"
+                CREATE TABLE IF NOT EXISTS users (
+                    login TEXT PRIMARY KEY COLLATE NOCASE CHECK (length(login) BETWEEN 1 AND 128),
+                    initials TEXT NOT NULL CHECK (length(initials) BETWEEN 1 AND 12),
+                    name TEXT,
+                    role TEXT NOT NULL CHECK (role IN ('technologist','supervisor','administrator')),
+                    active INTEGER NOT NULL DEFAULT 1
+                )");
             ExecNonQuery("CREATE INDEX IF NOT EXISTS ix_audit_entity ON audit_events(entity_type, entity_id)");
             DeactivateExpiredSpecimens();
             DeactivateExpiredPanels();
@@ -646,6 +654,66 @@ namespace HemoIQ.Data
                 JsonSerializer.Serialize(new { igg = newIgg, c3 = newC3 }));
         }
 
+        public List<AppUser> GetUsers()
+        {
+            var list = new List<AppUser>();
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "SELECT login, initials, name, role, active FROM users ORDER BY active DESC, login";
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+                list.Add(new AppUser
+                {
+                    Login = r.GetString(0),
+                    Initials = r.GetString(1),
+                    Name = r.IsDBNull(2) ? string.Empty : r.GetString(2),
+                    Role = r.GetString(3),
+                    Active = r.GetInt32(4) != 0,
+                });
+            return list;
+        }
+
+        /// <summary>
+        /// Adds or updates a registered user. Requires Manage users (always allowed while
+        /// no user exists). The first active user must be an Administrator, and the last
+        /// active Administrator cannot be demoted or deactivated. Audited.
+        /// </summary>
+        public void SaveUser(AppUser user)
+        {
+            Services.AccessControl.Demand(this, Services.Permission.ManageUsers);
+            var login = (user.Login ?? string.Empty).Trim();
+            var initials = LabSettings.NormalizeInitials(user.Initials);
+            if (login.Length == 0) throw new ArgumentException("Windows login is required.");
+            if (initials.Length == 0) throw new ArgumentException("Initials are required.");
+            if (!UserRole.IsValid(user.Role)) throw new ArgumentException($"Unknown role '{user.Role}'.");
+
+            var users = GetUsers();
+            var before = users.FirstOrDefault(u => string.Equals(u.Login, login, StringComparison.OrdinalIgnoreCase));
+            var otherActiveAdmins = users.Count(u => u.Active && u.Role == UserRole.Administrator &&
+                !string.Equals(u.Login, login, StringComparison.OrdinalIgnoreCase));
+            var willBeActiveAdmin = user.Active && user.Role == UserRole.Administrator;
+            if (otherActiveAdmins == 0 && !willBeActiveAdmin)
+                throw new InvalidOperationException(before == null && !users.Any(u => u.Active)
+                    ? "The first user must be an active Administrator."
+                    : "At least one active Administrator is required; this change would leave none.");
+            if (users.Any(u => u.Active && string.Equals(u.Initials, initials, StringComparison.OrdinalIgnoreCase) &&
+                               !string.Equals(u.Login, login, StringComparison.OrdinalIgnoreCase)))
+                throw new ArgumentException($"Initials {initials} already belong to another active user.");
+
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO users (login, initials, name, role, active) VALUES ($l, $i, $n, $r, $a)
+                ON CONFLICT(login) DO UPDATE SET initials = $i, name = $n, role = $r, active = $a";
+            cmd.Parameters.AddWithValue("$l", login);
+            cmd.Parameters.AddWithValue("$i", initials);
+            cmd.Parameters.AddWithValue("$n", (object?)(string.IsNullOrWhiteSpace(user.Name) ? null : user.Name.Trim()) ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$r", user.Role);
+            cmd.Parameters.AddWithValue("$a", user.Active ? 1 : 0);
+            cmd.ExecuteNonQuery();
+            AppendAudit(before == null ? "add_user" : "update_user", "user", login, null,
+                before == null ? null : JsonSerializer.Serialize(new { before.Initials, before.Name, before.Role, before.Active }),
+                JsonSerializer.Serialize(new { Initials = initials, user.Name, user.Role, user.Active }));
+        }
+
         public List<Patient> GetAllPatients()
         {
             var list = new List<Patient>();
@@ -941,9 +1009,14 @@ namespace HemoIQ.Data
         /// </summary>
         public void SetSpecimenSupervisorReview(string accessionNumber, string reviewer, string? comment = null)
         {
+            Services.AccessControl.Demand(this, Services.Permission.SupervisorReview);
             var initials = LabSettings.NormalizeInitials(reviewer);
             if (string.IsNullOrEmpty(initials))
                 throw new ArgumentException("Reviewer initials are required.", nameof(reviewer));
+            if (Services.AccessControl.CurrentUser(this) is AppUser me &&
+                !string.Equals(me.Initials, initials, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException(
+                    $"Enter your own initials ({me.Initials}); the review is recorded under the signed-in user.");
             var s = GetSpecimen(accessionNumber)
                     ?? throw new ArgumentException($"Specimen {accessionNumber} not found.");
             if (!s.HasFinalCall)
@@ -1004,6 +1077,7 @@ namespace HemoIQ.Data
         {
             if (string.IsNullOrWhiteSpace(reason))
                 throw new ArgumentException("A reason is required to reinstate an investigation.", nameof(reason));
+            Services.AccessControl.Demand(this, Services.Permission.ReinstateInvestigation);
             var s = GetSpecimen(accessionNumber)
                     ?? throw new ArgumentException($"Specimen {accessionNumber} not found.");
             if (!s.IsCancelled)
@@ -1020,6 +1094,7 @@ namespace HemoIQ.Data
         {
             if (string.IsNullOrWhiteSpace(reason))
                 throw new ArgumentException("A reason is required to clear a confirmed identification.", nameof(reason));
+            Services.AccessControl.Demand(this, Services.Permission.ClearIdentification);
 
             var before = GetSpecimen(accessionNumber);
             SetSpecimenFinalCall(accessionNumber, null, null, null);
@@ -3198,7 +3273,7 @@ namespace HemoIQ.Data
                     (occurred_at_utc, operator, action, entity_type, entity_id, reason, before_json, after_json)
                 VALUES ($at, $op, $action, $type, $id, $reason, $before, $after)";
             cmd.Parameters.AddWithValue("$at", DateTime.UtcNow.ToString("o"));
-            cmd.Parameters.AddWithValue("$op", Environment.UserName ?? "");
+            cmd.Parameters.AddWithValue("$op", Services.AccessControl.CurrentLogin ?? "");
             cmd.Parameters.AddWithValue("$action", action);
             cmd.Parameters.AddWithValue("$type", (object?)entityType ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$id", (object?)entityId ?? DBNull.Value);

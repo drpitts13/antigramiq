@@ -575,7 +575,15 @@ namespace HemoIQ.ViewModels
             var reasonDlg = new ReasonDialog(
                 "Enter the reason for clearing the confirmed identification. This is recorded in the audit log.");
             if (reasonDlg.ShowDialog() != true) return;
-            _db.ClearSpecimenFinalCall(SelectedSpecimen.AccessionNumber, reasonDlg.Reason);
+            try
+            {
+                _db.ClearSpecimenFinalCall(SelectedSpecimen.AccessionNumber, reasonDlg.Reason);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                MessageBox.Show(ex.Message, "Clear identification", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
             FinalComment = string.Empty;
             LoadFinalCall(SelectedSpecimen);
             _main.SpecimensVM.Refresh();

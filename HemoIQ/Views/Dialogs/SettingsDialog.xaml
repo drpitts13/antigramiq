@@ -134,6 +134,8 @@
         </Grid>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button Content="Users &amp; roles…" Width="110" Margin="0,0,8,0" Click="UsersClick"
+                    ToolTip="Register users by Windows login and assign Technologist, Supervisor, or Administrator roles."/>
             <Button Content="Help" Width="84" Margin="0,0,8,0"
                     Command="{x:Static help:HelpCommands.ShowContext}"
                     CommandParameter="{Binding RelativeSource={RelativeSource Self}}"

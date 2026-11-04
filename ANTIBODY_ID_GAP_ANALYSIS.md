@@ -7,7 +7,7 @@ rule-outs are analytical evidence, not a diagnosis.
 Status: **Present** (usable), **Partial** (exists but incomplete or silent),
 **Missing**.
 
-Last updated: 2026-11-03 (iteration 65 — pregnancy and RhIG context: dating trigger and passive anti-D review).
+Last updated: 2026-11-03 (iteration 66 — local users and roles enforcing review, clear, reinstate, Preferences).
 
 ## Capability matrix
 
@@ -35,7 +35,7 @@ Last updated: 2026-11-03 (iteration 65 — pregnancy and RhIG context: dating tr
 | Specimen | Collection/receipt time and dating check | Present | Audited `collected_at`/`received_at`; expiration defaults from collection; `SpecimenDating` REVIEW when transfused within the look-back and expiration exceeds collection + dating days, or cannot be checked | Pregnancy (current or within look-back) is a dating trigger; RhIG date flags possible passive anti-D |
 | Tests | Isolation from user data | Present | `AppDataPaths.RootOverride` set by a test-module initializer to a temp folder; live vendor test persists only to its isolated database; full run verified to leave %AppData%\HemoIQ untouched | One intermittent failure seen once and not reproduced in two reruns |
 | Search | Investigation search | Present | Search tab › Investigations: accession, MRN, patient name/DOB, final/previous antibodies, technologist; every word must match; inclusive date range; status column; Open jumps to Specimens | Panel lot/manufacturer used in an investigation not yet searchable |
-| Workflow | Investigation status and next step | Partial | `InvestigationStatusService` derives five steps and a status (awaiting panel → testing → analysis needed → awaiting ID → completed / amended / reopened / inactive) from panels, grades, analysis time, final call, and audit; shown on Specimens and the worksheet; Worklist shares the completeness check | Optional supervisor review step (two-person, audited, invalidated by clear/re-confirm, Worklist queue); audited Cancel/Reinstate with reason, locked and off work queues; no role-based permissions yet |
+| Workflow | Investigation status and next step | Partial | `InvestigationStatusService` derives five steps and a status (awaiting panel → testing → analysis needed → awaiting ID → completed / amended / reopened / inactive) from panels, grades, analysis time, final call, and audit; shown on Specimens and the worksheet; Worklist shares the completeness check | Optional supervisor review step (two-person, audited, invalidated by clear/re-confirm, Worklist queue); audited Cancel/Reinstate with reason, locked and off work queues; local users/roles enforce review, clear, reinstate, Preferences, user management |
 | Patient | Permanent record and transfusion requirements | Partial | `patients` table (MRN, name, DOB, comments, requirements); audited add/update; Edit Patient on Specimens; reports print it; analysis raises REVIEW when a known antibody's antigen-negative requirement is not written | Structured requirement list instead of free text |
 | Patient | MRN and cross-specimen history | Partial | Indexed `specimens.mrn`; audited; confirmed final calls on the same MRN become Historical evidence citing the source accession; detail pane and reports list other specimens | Encounter, location, ordering provider, sex, pregnancy history |
 | Specimen | DAT polyspecific / IgG / C3 | Present | `DatProfile` on specimen; MF grade; audited IgG/C3; positive if any reactive, negative only if all recorded negative; C3-only caveat on autoantibody notes; MF DAT donor-cell note | Eluate specimens link to their source; `EluateEvidence` reads specificity, panreactivity, and nonreactivity against DAT and transfusion |
@@ -1203,11 +1203,33 @@ and worksheet show pregnancy and RhIG.
 **Not in this tick:** Gravida/para counts, anti-D titer tracking across
 pregnancies, and HSCT/BMT context.
 
+## Iteration 66 (this change)
+
+**Deficiency:** Anyone at the workstation could record a supervisor
+review under any initials, change analysis Preferences, clear a
+confirmed identification, or reinstate a cancelled investigation.
+
+**Bounded improvement:** A `users` table keyed by Windows login holds
+initials, name, and role (Technologist, Supervisor, Administrator), with
+CHECK constraints. `AccessControl` gates actions in the service layer:
+supervisor review, clearing an identification, and reinstating require
+Supervisor or Administrator; Preferences and user management require
+Administrator. While no user is registered, everything stays allowed,
+so existing installs keep working. With users registered, review
+initials must be the signed-in user's own, unregistered logins are
+refused protected actions with a clear message, the first user must be
+an Administrator, the last active Administrator is protected, and
+initials are unique. User changes are audited, and every audit entry
+records the signed-in login. Preferences has **Users & roles…**.
+
+**Not in this tick:** A read-only role, per-lab configurable
+permissions, and password or second-factor sign-in (identity is the
+Windows login).
+
 ## Likely next tick
 
-Roadmap item 2: role-based permissions. Start with named users and
-roles (technologist, supervisor, administrator) stored locally, with
-supervisor review and Preferences changes restricted by role and audited
-under the signed-in user rather than typed initials. Authenticated vendor portals stay later
+Roadmap item 3: workload by technologist on Analytics (confirmations,
+reviews, and reaction-entry sessions per user over the date range),
+built from the audit log and the user registry. Authenticated vendor portals stay later
 and must not bypass auth, CAPTCHA, licensing, or terms.
 

@@ -77,8 +77,23 @@ namespace HemoIQ.Views.Dialogs
             _syncingPhases = false;
         }
 
+        private void UsersClick(object sender, RoutedEventArgs e)
+        {
+            if (_db == null) return;
+            new UsersDialog(_db) { Owner = this }.ShowDialog();
+        }
+
         private void SaveClick(object sender, RoutedEventArgs e)
         {
+            if (_db != null && !AccessControl.Can(_db, Permission.ConfigurePreferences))
+            {
+                try { AccessControl.Demand(_db, Permission.ConfigurePreferences); }
+                catch (UnauthorizedAccessException ex)
+                {
+                    MessageBox.Show(ex.Message, "Preferences", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+            }
             if (!double.TryParse(ThresholdBox.Text.Trim(), NumberStyles.Float,
                     CultureInfo.InvariantCulture, out var threshold) ||
                 threshold < 0.3 || threshold > 0.95)

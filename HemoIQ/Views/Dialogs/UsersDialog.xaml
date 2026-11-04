@@ -1,0 +1,54 @@
+<Window x:Class="HemoIQ.Views.Dialogs.UsersDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:help="clr-namespace:HemoIQ.Help"
+        help:Help.Topic="preferences"
+        Title="Users and Roles" Width="640" Height="460"
+        WindowStartupLocation="CenterOwner">
+    <DockPanel Margin="12">
+        <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Foreground="DimGray" Margin="0,0,0,8"
+                   Text="Users are matched by Windows login. While no user is registered, everyone may do everything. The first user must be an Administrator, and the last active Administrator cannot be removed or demoted. Changes are audited."/>
+        <TextBlock DockPanel.Dock="Top" x:Name="CurrentUserText" Margin="0,0,0,8" FontWeight="SemiBold"/>
+
+        <Grid DockPanel.Dock="Bottom" Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="32"/>
+                <RowDefinition Height="32"/>
+                <RowDefinition Height="40"/>
+            </Grid.RowDefinitions>
+            <Label Content="Windows login:" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center"/>
+            <TextBox x:Name="LoginBox" Grid.Row="0" Grid.Column="1" Margin="0,2,8,2" VerticalContentAlignment="Center"/>
+            <Label Content="Initials:" Grid.Row="0" Grid.Column="2" VerticalAlignment="Center"/>
+            <TextBox x:Name="InitialsBox" Grid.Row="0" Grid.Column="3" Margin="0,2" MaxLength="12" VerticalContentAlignment="Center"/>
+            <Label Content="Name:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center"/>
+            <TextBox x:Name="NameBox" Grid.Row="1" Grid.Column="1" Margin="0,2,8,2" VerticalContentAlignment="Center"/>
+            <Label Content="Role:" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center"/>
+            <StackPanel Grid.Row="1" Grid.Column="3" Orientation="Horizontal">
+                <ComboBox x:Name="RoleBox" Width="140" Margin="0,2" DisplayMemberPath="Label"/>
+                <CheckBox x:Name="ActiveCheck" Content="Active" IsChecked="True" Margin="10,0,0,0" VerticalAlignment="Center"/>
+            </StackPanel>
+            <StackPanel Grid.Row="2" Grid.ColumnSpan="4" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                <Button Content="Use my login" Width="100" Margin="0,0,8,0" Click="UseMyLogin_Click"/>
+                <Button Content="Save user" Width="90" Margin="0,0,8,0" Click="Save_Click" IsDefault="True"/>
+                <Button Content="Close" Width="80" IsCancel="True"/>
+            </StackPanel>
+        </Grid>
+
+        <DataGrid x:Name="UsersGrid" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
+                  SelectionChanged="UsersGrid_SelectionChanged">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Login" Binding="{Binding Login}" Width="140"/>
+                <DataGridTextColumn Header="Initials" Binding="{Binding Initials}" Width="70"/>
+                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+                <DataGridTextColumn Header="Role" Binding="{Binding RoleLabel}" Width="110"/>
+                <DataGridTextColumn Header="Status" Binding="{Binding ActiveLabel}" Width="70"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</Window>

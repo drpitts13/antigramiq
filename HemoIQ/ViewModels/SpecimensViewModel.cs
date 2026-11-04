@@ -170,7 +170,7 @@ namespace HemoIQ.ViewModels
                 _main.SetStatus($"Investigation {s.AccessionNumber} cancelled.");
                 NotifySpecimensChanged();
             }
-            catch (System.Exception ex) when (ex is System.ArgumentException or System.InvalidOperationException)
+            catch (System.Exception ex) when (ex is System.ArgumentException or System.InvalidOperationException or System.UnauthorizedAccessException)
             {
                 MessageBox.Show(ex.Message, "Cancel investigation", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
@@ -189,7 +189,7 @@ namespace HemoIQ.ViewModels
                 _main.SetStatus($"Investigation {s.AccessionNumber} reinstated.");
                 NotifySpecimensChanged();
             }
-            catch (System.Exception ex) when (ex is System.ArgumentException or System.InvalidOperationException)
+            catch (System.Exception ex) when (ex is System.ArgumentException or System.InvalidOperationException or System.UnauthorizedAccessException)
             {
                 MessageBox.Show(ex.Message, "Reinstate investigation", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
@@ -209,7 +209,7 @@ namespace HemoIQ.ViewModels
                 _main.SetStatus($"Supervisor review recorded for {s.AccessionNumber}.");
                 NotifySpecimensChanged();
             }
-            catch (System.Exception ex) when (ex is System.ArgumentException or System.InvalidOperationException)
+            catch (System.Exception ex) when (ex is System.ArgumentException or System.InvalidOperationException or System.UnauthorizedAccessException)
             {
                 MessageBox.Show(ex.Message, "Supervisor review", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
