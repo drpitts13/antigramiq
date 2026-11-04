@@ -43,6 +43,8 @@ namespace HemoIQ.Models
         /// to collection + <see cref="DefaultSpecimenDatingDays"/>.
         /// </summary>
         public int DatingTransfusionLookbackDays { get; set; } = 90;
+        /// <summary>Anti-D within this many days of RhIG is flagged as possibly passive.</summary>
+        public int RhigPassiveWindowDays { get; set; } = 84;
         public int MaxDatabaseSizeMb { get; set; } = 500;
         public bool WorklistShowIncomplete { get; set; } = true;
         public bool WorklistShowStale { get; set; } = true;
@@ -76,6 +78,8 @@ namespace HemoIQ.Models
             if (ExpirationWarningDays > 90) ExpirationWarningDays = 90;
             if (DefaultSpecimenDatingDays < 0) DefaultSpecimenDatingDays = 0;
             if (DefaultSpecimenDatingDays > 14) DefaultSpecimenDatingDays = 14;
+            if (RhigPassiveWindowDays < 1) RhigPassiveWindowDays = 1;
+            if (RhigPassiveWindowDays > 365) RhigPassiveWindowDays = 365;
             if (DatingTransfusionLookbackDays < 1) DatingTransfusionLookbackDays = 1;
             if (DatingTransfusionLookbackDays > 365) DatingTransfusionLookbackDays = 365;
             if (TurnaroundThresholdDays < 1) TurnaroundThresholdDays = 1;

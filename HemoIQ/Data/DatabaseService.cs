@@ -235,6 +235,13 @@ namespace HemoIQ.Data
                 ExecNonQuery("ALTER TABLE specimens ADD COLUMN dat_c3 TEXT");
             if (!cols.Contains("mrn"))
                 ExecNonQuery("ALTER TABLE specimens ADD COLUMN mrn TEXT");
+            if (!cols.Contains("pregnancy_status"))
+                ExecNonQuery("ALTER TABLE specimens ADD COLUMN pregnancy_status TEXT NOT NULL DEFAULT 'unknown' " +
+                    "CHECK (pregnancy_status IN ('unknown','none','pregnant','recent'))");
+            if (!cols.Contains("pregnancy_end_date"))
+                ExecNonQuery("ALTER TABLE specimens ADD COLUMN pregnancy_end_date TEXT");
+            if (!cols.Contains("rhig_date"))
+                ExecNonQuery("ALTER TABLE specimens ADD COLUMN rhig_date TEXT");
             if (!cols.Contains("collected_at"))
                 ExecNonQuery("ALTER TABLE specimens ADD COLUMN collected_at TEXT");
             if (!cols.Contains("received_at"))
@@ -802,6 +809,46 @@ namespace HemoIQ.Data
             AppendAudit("update_collection", "specimen", accessionNumber, null,
                 JsonSerializer.Serialize(new { collectedAt = before.CollectedAt, receivedAt = before.ReceivedAt }),
                 JsonSerializer.Serialize(new { collectedAt = collected, receivedAt = received }));
+        }
+
+        /// <summary>
+        /// Records pregnancy context and Rh immune globulin. A recent pregnancy requires an
+        /// end date; other statuses drop it. Dates may not be in the future. Audited; locked
+        /// after a final call.
+        /// </summary>
+        public void UpdateSpecimenPregnancy(string accessionNumber, string? status, string? endDate, string? rhigDate)
+        {
+            static string? Day(string? text, string label)
+            {
+                if (string.IsNullOrWhiteSpace(text)) return null;
+                if (!DateTime.TryParse(text.Trim(), System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.None, out var d))
+                    throw new ArgumentException($"{label} '{text}' is not a valid date.");
+                if (d.Date > DateTime.Today) throw new ArgumentException($"{label} cannot be in the future.");
+                return d.ToString("yyyy-MM-dd");
+            }
+            var code = PregnancyStatus.Normalize(status);
+            var end = code == PregnancyStatus.Recent ? Day(endDate, "Pregnancy end date") : null;
+            if (code == PregnancyStatus.Recent && end == null)
+                throw new ArgumentException("Enter the date the recent pregnancy ended.");
+            var rhig = Day(rhigDate, "RhIG date");
+
+            var before = GetSpecimen(accessionNumber)
+                         ?? throw new ArgumentException($"Specimen {accessionNumber} not found.");
+            if (before.PregnancyStatus == code && before.PregnancyEndDate == end && before.RhigDate == rhig) return;
+            EnsureSpecimenUnlocked(accessionNumber);
+
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"UPDATE specimens SET pregnancy_status = $s, pregnancy_end_date = $e, rhig_date = $r
+                WHERE accession_number = $acc";
+            cmd.Parameters.AddWithValue("$s", code);
+            cmd.Parameters.AddWithValue("$e", (object?)end ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$r", (object?)rhig ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$acc", accessionNumber);
+            cmd.ExecuteNonQuery();
+            AppendAudit("update_pregnancy", "specimen", accessionNumber, null,
+                JsonSerializer.Serialize(new { status = before.PregnancyStatus, endDate = before.PregnancyEndDate, rhigDate = before.RhigDate }),
+                JsonSerializer.Serialize(new { status = code, endDate = end, rhigDate = rhig }));
         }
 
         public List<Specimen> GetSpecimensByMrn(string mrn)
@@ -2509,6 +2556,9 @@ namespace HemoIQ.Data
             Mrn = SafeGetString(r, "mrn"),
             SourceAccession = SafeGetString(r, "source_accession"),
             CollectedAt = SafeGetString(r, "collected_at"),
+            PregnancyStatus = PregnancyStatus.Normalize(SafeGetString(r, "pregnancy_status")),
+            PregnancyEndDate = SafeGetString(r, "pregnancy_end_date"),
+            RhigDate = SafeGetString(r, "rhig_date"),
             ReceivedAt = SafeGetString(r, "received_at"),
             DatC3 = SafeGetString(r, "dat_c3"),
             FinalAntibodies = SafeGetString(r, "final_antibodies"),

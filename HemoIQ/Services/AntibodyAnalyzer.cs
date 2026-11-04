@@ -1326,6 +1326,10 @@ namespace HemoIQ.Services
             if (SpecimenDating.Check(specimen, AppSettings.Current.DefaultSpecimenDatingDays,
                     AppSettings.Current.DatingTransfusionLookbackDays) is string dating)
                 result.TransfusionRequirementNotes.Insert(0, dating);
+            var antiD = result.Suspected.ContainsKey("anti-D") ||
+                        FinalAntibodyParser.Split(specimen.FinalAntibodies).Contains("anti-D", StringComparer.OrdinalIgnoreCase);
+            if (SpecimenDating.PassiveAntiD(specimen, antiD, AppSettings.Current.RhigPassiveWindowDays) is string passive)
+                result.TransfusionRequirementNotes.Insert(0, passive);
             foreach (var prior in priorConfirmed)
             {
                 if (typing.HistoricalAntibodies.Contains(prior.Antibody, StringComparer.OrdinalIgnoreCase))

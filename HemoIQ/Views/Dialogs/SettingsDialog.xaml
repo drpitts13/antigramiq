@@ -32,6 +32,7 @@
                 <RowDefinition Height="32"/>
                 <RowDefinition Height="36"/>
                 <RowDefinition Height="36"/>
+                <RowDefinition Height="36"/>
             </Grid.RowDefinitions>
 
             <Label Content="Lab name:" Grid.Row="0" VerticalAlignment="Center"/>
@@ -126,6 +127,10 @@
             <Label Content="Dating look-back (days):" Grid.Row="19" VerticalAlignment="Center"
                    ToolTip="If the patient was transfused this many days or fewer before collection, specimen dating is checked against collection + Specimen dating days (1–365, default 90)."/>
             <TextBox x:Name="DatingLookbackBox" Grid.Row="19" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
+
+            <Label Content="RhIG passive window (days):" Grid.Row="20" VerticalAlignment="Center"
+                   ToolTip="Anti-D found within this many days after Rh immune globulin is flagged as possibly passive (1–365, default 84 = 12 weeks)."/>
+            <TextBox x:Name="RhigWindowBox" Grid.Row="20" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
         </Grid>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">

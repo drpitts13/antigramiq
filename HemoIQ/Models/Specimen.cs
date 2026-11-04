@@ -14,6 +14,22 @@ namespace HemoIQ.Models
         public string? CollectedAt { get; set; }
         /// <summary>Received in the laboratory, "yyyy-MM-dd HH:mm".</summary>
         public string? ReceivedAt { get; set; }
+        /// <summary>Normalized <see cref="Models.PregnancyStatus"/> code.</summary>
+        public string PregnancyStatus { get; set; } = Models.PregnancyStatus.Unknown;
+        /// <summary>Date a recent pregnancy ended (delivery or loss), yyyy-MM-dd.</summary>
+        public string? PregnancyEndDate { get; set; }
+        /// <summary>Date Rh immune globulin was last given, yyyy-MM-dd.</summary>
+        public string? RhigDate { get; set; }
+        public string PregnancyDisplay
+        {
+            get
+            {
+                var label = Models.PregnancyStatus.Label(PregnancyStatus);
+                if (Models.PregnancyStatus.Normalize(PregnancyStatus) == Models.PregnancyStatus.Recent)
+                    label += $" (ended {PregnancyEndDate ?? "date not recorded"})";
+                return RhigDate == null ? label : $"{label}; RhIG {RhigDate}";
+            }
+        }
         public bool IsEluate => string.Equals(Type, "eluate", StringComparison.OrdinalIgnoreCase);
         public string Type { get; set; } = "serum";
         public string? ExpirationDate { get; set; }

@@ -31,7 +31,7 @@ The right pane follows the selected specimen.
 
 ## Specimen dating
 
-**Collection** in Clinical Context shows the collection and receipt times. When the transfusion record shows a transfusion within the Preferences **Dating look-back** (default 90 days), the specimen should not be used after collection date + **Specimen dating** days. A **REVIEW** note appears here, at the top of the analysis suggestions, and on the worksheet when:
+**Collection** in Clinical Context shows the collection and receipt times. When the transfusion record shows a transfusion within the Preferences **Dating look-back** (default 90 days), or the patient is pregnant or was pregnant within that look-back, the specimen should not be used after collection date + **Specimen dating** days. A **REVIEW** note appears here, at the top of the analysis suggestions, and on the worksheet when:
 
 - the recorded expiration is later than that date,
 - no expiration is recorded, or

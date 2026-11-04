@@ -345,6 +345,7 @@ namespace HemoIQ.ViewModels
                 _db.UpdateSpecimenMrn(dlg.AccessionNumber, dlg.Mrn);
                 _db.SetEluateSource(dlg.AccessionNumber, dlg.SourceAccession);
                 _db.UpdateSpecimenCollection(dlg.AccessionNumber, dlg.CollectedAt, dlg.ReceivedAt);
+                _db.UpdateSpecimenPregnancy(dlg.AccessionNumber, dlg.PregnancyStatusCode, dlg.PregnancyEndDate, dlg.RhigDate);
                 _main.SetStatus($"Specimen {dlg.AccessionNumber} added.");
                 NotifySpecimensChanged();
                 SelectedSpecimen = Specimens.FirstOrDefault(s => s.AccessionNumber == dlg.AccessionNumber);
@@ -371,6 +372,8 @@ namespace HemoIQ.ViewModels
                 _db.UpdateSpecimenMrn(SelectedSpecimen.AccessionNumber, dlg.Mrn);
                 _db.SetEluateSource(SelectedSpecimen.AccessionNumber, dlg.SourceAccession);
                 _db.UpdateSpecimenCollection(SelectedSpecimen.AccessionNumber, dlg.CollectedAt, dlg.ReceivedAt);
+                _db.UpdateSpecimenPregnancy(SelectedSpecimen.AccessionNumber, dlg.PregnancyStatusCode,
+                    dlg.PregnancyEndDate, dlg.RhigDate);
                 _main.SetStatus($"Specimen {SelectedSpecimen.AccessionNumber} updated.");
                 NotifySpecimensChanged();
             }

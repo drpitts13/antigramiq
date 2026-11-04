@@ -29,6 +29,8 @@
                 <RowDefinition Height="36"/>
                 <RowDefinition Height="36"/>
                 <RowDefinition Height="36"/>
+                <RowDefinition Height="36"/>
+                <RowDefinition Height="36"/>
                 <RowDefinition Height="80"/>
             </Grid.RowDefinitions>
 
@@ -94,26 +96,39 @@
                         VerticalAlignment="Center" Margin="0,2"
                         ToolTip="Date of the most recent red-cell transfusion. Leave blank if unknown; the phenotype is then treated as uninterpretable."/>
 
-            <Label Content="Phenotype:" Grid.Row="12" VerticalAlignment="Center"/>
-            <TextBox x:Name="PhenotypeBox" Grid.Row="12" Grid.Column="1"
+            <Label Content="Pregnancy:" Grid.Row="12" VerticalAlignment="Center"/>
+            <StackPanel Grid.Row="12" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <ComboBox x:Name="PregnancyBox" Width="150" DisplayMemberPath="Label"
+                          SelectionChanged="PregnancyBox_SelectionChanged"
+                          ToolTip="Pregnant, or pregnant within the Preferences dating look-back, applies the specimen-dating check like a recent transfusion."/>
+                <DatePicker x:Name="PregnancyEndPicker" Width="140" Margin="6,0,0,0"
+                            ToolTip="Date a recent pregnancy ended (delivery or loss). Required for Recently pregnant."/>
+            </StackPanel>
+
+            <Label Content="RhIG given:" Grid.Row="13" VerticalAlignment="Center"/>
+            <DatePicker x:Name="RhigPicker" Grid.Row="13" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"
+                        ToolTip="Date Rh immune globulin was last given. Anti-D within the Preferences RhIG window is flagged as possibly passive."/>
+
+            <Label Content="Phenotype:" Grid.Row="14" VerticalAlignment="Center"/>
+            <TextBox x:Name="PhenotypeBox" Grid.Row="14" Grid.Column="1"
                      VerticalAlignment="Center" Margin="0,2"
                      ToolTip="e.g. R1r, K−, Fy(a−b+). Record recent transfusion in Transfusion status so analysis will not use typing to exclude alloantibodies."/>
 
-            <Label Content="Genotype:" Grid.Row="13" VerticalAlignment="Center"/>
-            <TextBox x:Name="GenotypeBox" Grid.Row="13" Grid.Column="1"
+            <Label Content="Genotype:" Grid.Row="15" VerticalAlignment="Center"/>
+            <TextBox x:Name="GenotypeBox" Grid.Row="15" Grid.Column="1"
                      VerticalAlignment="Center" Margin="0,2"
                      ToolTip="Predicted type from molecular results, e.g. RHCE*ce/ce; FY*02/FY*02. Remains reviewable after transfusion. Not a diagnosis."/>
 
-            <Label Content="Previous antibodies:" Grid.Row="14" VerticalAlignment="Center"/>
-            <TextBox x:Name="PreviousAbsBox" Grid.Row="14" Grid.Column="1"
+            <Label Content="Previous antibodies:" Grid.Row="16" VerticalAlignment="Center"/>
+            <TextBox x:Name="PreviousAbsBox" Grid.Row="16" Grid.Column="1"
                      VerticalAlignment="Center" Margin="0,2"/>
 
-            <Label Content="Active:" Grid.Row="15" VerticalAlignment="Center"/>
-            <CheckBox x:Name="ActiveCheck" Grid.Row="15" Grid.Column="1"
+            <Label Content="Active:" Grid.Row="17" VerticalAlignment="Center"/>
+            <CheckBox x:Name="ActiveCheck" Grid.Row="17" Grid.Column="1"
                       VerticalAlignment="Center" Margin="0,2" IsChecked="True"/>
 
-            <Label Content="Notes:" Grid.Row="16" VerticalAlignment="Top" Margin="0,4,0,0"/>
-            <TextBox x:Name="NotesBox" Grid.Row="16" Grid.Column="1"
+            <Label Content="Notes:" Grid.Row="18" VerticalAlignment="Top" Margin="0,4,0,0"/>
+            <TextBox x:Name="NotesBox" Grid.Row="18" Grid.Column="1"
                      AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
                      Height="70" Margin="0,2"/>
         </Grid>

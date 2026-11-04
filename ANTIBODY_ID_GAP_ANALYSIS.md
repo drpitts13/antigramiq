@@ -7,7 +7,7 @@ rule-outs are analytical evidence, not a diagnosis.
 Status: **Present** (usable), **Partial** (exists but incomplete or silent),
 **Missing**.
 
-Last updated: 2026-11-03 (iteration 64 — product review; collection/receipt times and specimen dating after transfusion).
+Last updated: 2026-11-03 (iteration 65 — pregnancy and RhIG context: dating trigger and passive anti-D review).
 
 ## Capability matrix
 
@@ -32,7 +32,7 @@ Last updated: 2026-11-03 (iteration 64 — product review; collection/receipt ti
 | Analysis | Single / multiple / dosage scoring | Partial | Fisher + pattern; pairwise combinations; dosage averages | Label as evidence, not diagnosis |
 | Audit | Investigation timeline | Present | `InvestigationTimeline` merges receipt, panel link/unlink (now audited), runs, grouped reaction saves, analysis snapshots, confirm/clear/review, MRN/transfusion/DAT/patient edits; Specimens Timeline expander and worksheet section | Report print/PDF/CSV audited with SHA-256 and shown on the timeline |
 | Reporting | Turnaround metrics | Present | `TurnaroundService`: received→confirmed (days) and confirmed→reviewed (hours) median and nearest-rank 90th percentile by received date, cancelled excluded; overdue open list with status and Open; configurable threshold; CSV | Uses recorded received time when present; no workload-by-technologist yet |
-| Specimen | Collection/receipt time and dating check | Present | Audited `collected_at`/`received_at`; expiration defaults from collection; `SpecimenDating` REVIEW when transfused within the look-back and expiration exceeds collection + dating days, or cannot be checked | Pregnancy history not yet a dating trigger |
+| Specimen | Collection/receipt time and dating check | Present | Audited `collected_at`/`received_at`; expiration defaults from collection; `SpecimenDating` REVIEW when transfused within the look-back and expiration exceeds collection + dating days, or cannot be checked | Pregnancy (current or within look-back) is a dating trigger; RhIG date flags possible passive anti-D |
 | Tests | Isolation from user data | Present | `AppDataPaths.RootOverride` set by a test-module initializer to a temp folder; live vendor test persists only to its isolated database; full run verified to leave %AppData%\HemoIQ untouched | One intermittent failure seen once and not reproduced in two reruns |
 | Search | Investigation search | Present | Search tab › Investigations: accession, MRN, patient name/DOB, final/previous antibodies, technologist; every word must match; inclusive date range; status column; Open jumps to Specimens | Panel lot/manufacturer used in an investigation not yet searchable |
 | Workflow | Investigation status and next step | Partial | `InvestigationStatusService` derives five steps and a status (awaiting panel → testing → analysis needed → awaiting ID → completed / amended / reopened / inactive) from panels, grades, analysis time, final call, and audit; shown on Specimens and the worksheet; Worklist shares the completeness check | Optional supervisor review step (two-person, audited, invalidated by clear/re-confirm, Worklist queue); audited Cancel/Reinstate with reason, locked and off work queues; no role-based permissions yet |
@@ -1181,10 +1181,33 @@ missing. Turnaround uses the recorded receipt time.
 2. Role-based permissions (initials are not authenticated users).
 3. Workload by technologist on Analytics.
 
+## Iteration 65 (this change)
+
+**Deficiency:** Pregnancy could only be written in notes. It did not
+trigger the specimen-dating check, although pregnancy within 3 months
+triggers that rule just as transfusion does. RhIG was not recorded, so
+anti-D in a recently treated patient looked the same as an immune
+alloantibody.
+
+**Bounded improvement:** Specimens carry pregnancy status (Unknown,
+Not pregnant, Pregnant, Recently pregnant with a required end date) and
+an RhIG date. The status column has a CHECK constraint, and changes are
+validated (no future dates), audited, locked after a final call, and on
+the timeline. `SpecimenDating` now applies when the patient is
+pregnant, or the pregnancy ended within the look-back, and names every
+reason. When anti-D is suspected or confirmed and RhIG was given within
+the configurable window (default 84 days) before collection, analysis
+raises a REVIEW for possible passive anti-D. The dialog, detail pane,
+and worksheet show pregnancy and RhIG.
+
+**Not in this tick:** Gravida/para counts, anti-D titer tracking across
+pregnancies, and HSCT/BMT context.
+
 ## Likely next tick
 
-Roadmap item 1: structured pregnancy history (recently pregnant / date
-of delivery) on the patient or specimen, used as a specimen-dating
-trigger alongside transfusion and shown in analysis context. Authenticated vendor portals stay later
+Roadmap item 2: role-based permissions. Start with named users and
+roles (technologist, supervisor, administrator) stored locally, with
+supervisor review and Preferences changes restricted by role and audited
+under the signed-in user rather than typed initials. Authenticated vendor portals stay later
 and must not bypass auth, CAPTCHA, licensing, or terms.
 

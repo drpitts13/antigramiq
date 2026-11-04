@@ -38,6 +38,7 @@ namespace HemoIQ.Views.Dialogs
             RequireReviewCheck.IsChecked = s.RequireSupervisorReview;
             TurnaroundBox.Text = s.TurnaroundThresholdDays.ToString();
             DatingLookbackBox.Text = s.DatingTransfusionLookbackDays.ToString();
+            RhigWindowBox.Text = s.RhigPassiveWindowDays.ToString();
             ExtraPhasesBox.Text = s.ExtraPhases;
             SyncSuggestedChecks();
         }
@@ -139,6 +140,13 @@ namespace HemoIQ.Views.Dialogs
                 DatingLookbackBox.Focus();
                 return;
             }
+            if (!int.TryParse(RhigWindowBox.Text.Trim(), out var rhigDays) || rhigDays < 1 || rhigDays > 365)
+            {
+                MessageBox.Show("RhIG passive window must be between 1 and 365 days.",
+                    "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                RhigWindowBox.Focus();
+                return;
+            }
             if (!int.TryParse(MaxDbSizeBox.Text.Trim(), out var maxMb) || maxMb < 50 || maxMb > 10240)
             {
                 MessageBox.Show("Maximum database size must be between 50 and 10240 MB.",
@@ -167,6 +175,7 @@ namespace HemoIQ.Views.Dialogs
             AppSettings.Current.RequireSupervisorReview = RequireReviewCheck.IsChecked == true;
             AppSettings.Current.TurnaroundThresholdDays = turnaroundDays;
             AppSettings.Current.DatingTransfusionLookbackDays = lookback;
+            AppSettings.Current.RhigPassiveWindowDays = rhigDays;
             AppSettings.Current.ExtraPhases = ExtraPhasesBox.Text;
             SettingsService.Save();
             var after = JsonSerializer.Serialize(AppSettings.Current.ClinicalSnapshot());

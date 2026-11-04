@@ -219,6 +219,7 @@ namespace HemoIQ.Services
             sb.AppendLine($"Genotype: {s.Genotype ?? "N/A"}");
             sb.AppendLine($"Previous antibodies: {s.PreviousAntibodies ?? "N/A"}");
             sb.AppendLine($"Transfusion: {s.TransfusionDisplay}");
+            sb.AppendLine($"Pregnancy: {s.PregnancyDisplay}");
             sb.AppendLine($"DAT: {s.DatDisplay}");
             if (!string.IsNullOrWhiteSpace(s.Notes))
                 sb.AppendLine($"Notes: {s.Notes}");

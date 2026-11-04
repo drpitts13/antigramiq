@@ -54,6 +54,14 @@ namespace HemoIQ.Views.Dialogs
 
         private sealed record TransfusionOption(string Code, string Label);
 
+        public string PregnancyStatusCode =>
+            (PregnancyBox.SelectedItem as TransfusionOption)?.Code ?? Models.PregnancyStatus.Unknown;
+        public string? PregnancyEndDate =>
+            PregnancyStatusCode == Models.PregnancyStatus.Recent
+                ? PregnancyEndPicker.SelectedDate?.ToString("yyyy-MM-dd")
+                : null;
+        public string? RhigDate => RhigPicker.SelectedDate?.ToString("yyyy-MM-dd");
+
         public SpecimenDialog(Specimen? existing = null)
         {
             InitializeComponent();
@@ -69,6 +77,13 @@ namespace HemoIQ.Views.Dialogs
                 transfusionOptions.Add(new TransfusionOption(code, label));
             TransfusionBox.ItemsSource = transfusionOptions;
             TransfusionBox.SelectedIndex = 0;
+            var pregnancyOptions = new System.Collections.Generic.List<TransfusionOption>();
+            foreach (var (code, label) in Models.PregnancyStatus.Options)
+                pregnancyOptions.Add(new TransfusionOption(code, label));
+            PregnancyBox.ItemsSource = pregnancyOptions;
+            PregnancyBox.SelectedIndex = 0;
+            PregnancyEndPicker.DisplayDateEnd = DateTime.Today;
+            RhigPicker.DisplayDateEnd = DateTime.Today;
             LastTransfusionPicker.DisplayDateEnd = DateTime.Today;
 
             if (existing == null)
@@ -123,6 +138,11 @@ namespace HemoIQ.Views.Dialogs
                 var status = Models.TransfusionStatus.Normalize(existing.TransfusionStatus);
                 for (int i = 0; i < transfusionOptions.Count; i++)
                     if (transfusionOptions[i].Code == status) { TransfusionBox.SelectedIndex = i; break; }
+                var preg = Models.PregnancyStatus.Normalize(existing.PregnancyStatus);
+                for (int i = 0; i < pregnancyOptions.Count; i++)
+                    if (pregnancyOptions[i].Code == preg) { PregnancyBox.SelectedIndex = i; break; }
+                if (DateTime.TryParse(existing.PregnancyEndDate, out var pe)) PregnancyEndPicker.SelectedDate = pe;
+                if (DateTime.TryParse(existing.RhigDate, out var rg)) RhigPicker.SelectedDate = rg;
                 if (existing.LastTransfusionDate != null &&
                     DateTime.TryParse(existing.LastTransfusionDate, out var td))
                     LastTransfusionPicker.SelectedDate = td;
@@ -152,6 +172,12 @@ namespace HemoIQ.Views.Dialogs
             for (int i = 0; i < AntigenConstants.DatResults.Count; i++)
                 if (string.Equals(AntigenConstants.DatResults[i], value, StringComparison.OrdinalIgnoreCase))
                 { box.SelectedIndex = i; break; }
+        }
+
+        private void PregnancyBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (PregnancyEndPicker == null) return;
+            PregnancyEndPicker.IsEnabled = PregnancyStatusCode == Models.PregnancyStatus.Recent;
         }
 
         private void TransfusionBox_SelectionChanged(object sender, SelectionChangedEventArgs e) =>
@@ -187,6 +213,19 @@ namespace HemoIQ.Views.Dialogs
                 MessageBox.Show("Last transfusion date cannot be in the future.", "Validation",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 LastTransfusionPicker.Focus();
+                return;
+            }
+            if (PregnancyStatusCode == Models.PregnancyStatus.Recent && PregnancyEndPicker.SelectedDate == null)
+            {
+                MessageBox.Show("Enter the date the recent pregnancy ended.", "Validation",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                PregnancyEndPicker.Focus();
+                return;
+            }
+            if (PregnancyEndPicker.SelectedDate?.Date > DateTime.Today || RhigPicker.SelectedDate?.Date > DateTime.Today)
+            {
+                MessageBox.Show("Pregnancy and RhIG dates cannot be in the future.", "Validation",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             if (!ValidTime(CollectedTimeBox.Text) || !ValidTime(ReceivedTimeBox.Text))
