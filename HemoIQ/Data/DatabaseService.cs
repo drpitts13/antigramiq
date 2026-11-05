@@ -274,6 +274,8 @@ namespace HemoIQ.Data
                     transfusion_requirements TEXT,
                     updated_at TEXT
                 )");
+            if (!GetColumnNames("patients").Contains("antigen_negative"))
+                ExecNonQuery("ALTER TABLE patients ADD COLUMN antigen_negative TEXT");
         }
 
         private void MigrateSpecimenFinalCall()
@@ -746,6 +748,7 @@ namespace HemoIQ.Data
                 DateOfBirth = SafeGetString(r, "date_of_birth"),
                 BloodBankComments = SafeGetString(r, "blood_bank_comments"),
                 TransfusionRequirements = SafeGetString(r, "transfusion_requirements"),
+                AntigenNegative = SafeGetString(r, "antigen_negative"),
                 UpdatedAt = SafeGetString(r, "updated_at"),
             };
         }
@@ -770,6 +773,11 @@ namespace HemoIQ.Data
                 dob = d.ToString("yyyy-MM-dd");
             }
             static string? Clean(string? v) => string.IsNullOrWhiteSpace(v) ? null : v.Trim();
+            var antigenNegative = Services.AntigenNegativeRequirement.Parse(patient.AntigenNegative);
+            if (antigenNegative.Unrecognized.Count > 0)
+                throw new ArgumentException(
+                    $"Antigen-negative requirement: {string.Join(", ", antigenNegative.Unrecognized)} is not a recognized antigen. " +
+                    "Enter antigen codes such as E, K, Fya; write other requirements under Transfusion requirements.");
             var after = new Patient
             {
                 Mrn = key,
@@ -777,30 +785,34 @@ namespace HemoIQ.Data
                 DateOfBirth = dob,
                 BloodBankComments = Clean(patient.BloodBankComments),
                 TransfusionRequirements = Clean(patient.TransfusionRequirements),
+                AntigenNegative = antigenNegative.Canonical,
             };
             var before = GetPatient(key);
             if (before != null && before.Name == after.Name && before.DateOfBirth == after.DateOfBirth &&
                 before.BloodBankComments == after.BloodBankComments &&
-                before.TransfusionRequirements == after.TransfusionRequirements)
+                before.TransfusionRequirements == after.TransfusionRequirements &&
+                before.AntigenNegative == after.AntigenNegative)
                 return;
 
             using var cmd = _conn.CreateCommand();
             cmd.CommandText = @"
-                INSERT INTO patients (mrn, name, date_of_birth, blood_bank_comments, transfusion_requirements, updated_at)
-                VALUES ($mrn, $name, $dob, $comments, $req, $at)
+                INSERT INTO patients (mrn, name, date_of_birth, blood_bank_comments, transfusion_requirements, antigen_negative, updated_at)
+                VALUES ($mrn, $name, $dob, $comments, $req, $neg, $at)
                 ON CONFLICT(mrn) DO UPDATE SET name = $name, date_of_birth = $dob,
-                    blood_bank_comments = $comments, transfusion_requirements = $req, updated_at = $at";
+                    blood_bank_comments = $comments, transfusion_requirements = $req, antigen_negative = $neg, updated_at = $at";
             cmd.Parameters.AddWithValue("$mrn", key);
             cmd.Parameters.AddWithValue("$name", (object?)after.Name ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$dob", (object?)after.DateOfBirth ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$comments", (object?)after.BloodBankComments ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$req", (object?)after.TransfusionRequirements ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$neg", (object?)after.AntigenNegative ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$at", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
             cmd.ExecuteNonQuery();
             object? Snap(Patient? p) => p == null ? null : new
             {
                 name = p.Name, dateOfBirth = p.DateOfBirth,
                 bloodBankComments = p.BloodBankComments, transfusionRequirements = p.TransfusionRequirements,
+                antigenNegative = p.AntigenNegative,
             };
             AppendAudit(before == null ? "add_patient" : "update_patient", "patient", key, null,
                 before == null ? null : JsonSerializer.Serialize(Snap(before)),

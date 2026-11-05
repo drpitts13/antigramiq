@@ -17,6 +17,7 @@
                 <RowDefinition Height="36"/>
                 <RowDefinition Height="36"/>
                 <RowDefinition Height="36"/>
+                <RowDefinition Height="36"/>
                 <RowDefinition Height="80"/>
                 <RowDefinition Height="80"/>
             </Grid.RowDefinitions>
@@ -33,14 +34,19 @@
             <DatePicker x:Name="DobPicker" Grid.Row="2" Grid.Column="1"
                         VerticalAlignment="Center" Margin="0,2"/>
 
-            <Label Content="Transfusion requirements:" Grid.Row="3" VerticalAlignment="Top" Margin="0,4,0,0"/>
-            <TextBox x:Name="RequirementsBox" Grid.Row="3" Grid.Column="1"
+            <Label Content="Antigen-negative units:" Grid.Row="3" VerticalAlignment="Center"/>
+            <TextBox x:Name="AntigenNegativeBox" Grid.Row="3" Grid.Column="1" MaxLength="200"
+                     VerticalAlignment="Center" Margin="0,2"
+                     ToolTip="Antigens the patient's red cell units must lack, e.g. E, K, Fya or Fy(a-). Case matters for C/c, E/e, K/k, S/s. Analysis checks known antibodies against this list."/>
+
+            <Label Content="Transfusion requirements:" Grid.Row="4" VerticalAlignment="Top" Margin="0,4,0,0"/>
+            <TextBox x:Name="RequirementsBox" Grid.Row="4" Grid.Column="1"
                      AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
                      Height="70" Margin="0,2"
-                     ToolTip="Standing requirements, e.g. K-negative, E-negative, Fy(a-); irradiated. Analysis names known antibodies whose antigen-negative requirement is not written here."/>
+                     ToolTip="Other standing requirements, e.g. irradiated, CMV-safe, washed. Put antigen-negative requirements in Antigen-negative units."/>
 
-            <Label Content="Blood bank comments:" Grid.Row="4" VerticalAlignment="Top" Margin="0,4,0,0"/>
-            <TextBox x:Name="CommentsBox" Grid.Row="4" Grid.Column="1"
+            <Label Content="Blood bank comments:" Grid.Row="5" VerticalAlignment="Top" Margin="0,4,0,0"/>
+            <TextBox x:Name="CommentsBox" Grid.Row="5" Grid.Column="1"
                      AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
                      Height="70" Margin="0,2"/>
         </Grid>

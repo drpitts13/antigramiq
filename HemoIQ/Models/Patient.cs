@@ -14,6 +14,11 @@ namespace HemoIQ.Models
         public string? BloodBankComments { get; set; }
         /// <summary>Special transfusion requirements, e.g. "K-negative, E-negative; irradiated".</summary>
         public string? TransfusionRequirements { get; set; }
+        /// <summary>
+        /// Structured antigen-negative unit requirement as canonical antigen codes,
+        /// e.g. "E, K, Fya". See <see cref="Services.AntigenNegativeRequirement"/>.
+        /// </summary>
+        public string? AntigenNegative { get; set; }
         public string? UpdatedAt { get; set; }
 
         public string Display =>

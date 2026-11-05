@@ -80,7 +80,7 @@ public class PatientRecordTests
     [Fact]
     public void MissingAntigenNegative_NamesOnlyUnlistedKnownAntibodies()
     {
-        var patient = new Patient { Mrn = "M", TransfusionRequirements = "K-negative" };
+        var patient = new Patient { Mrn = "M", AntigenNegative = "K" };
         var notes = TransfusionRequirementCheck.MissingAntigenNegative(
             new[] { "anti-K", "anti-Jka", "warm autoantibody", "anti-Jka" }, patient, "M");
         var note = Assert.Single(notes);
@@ -121,7 +121,7 @@ public class PatientRecordTests
         var before = iso.Analyzer.AnalyzeSpecimen("PR-NEW", updateDb: false);
         Assert.Contains(before.Suggestions, s => s.StartsWith("REVIEW:") && s.Contains("Jka-negative"));
 
-        iso.Db.SavePatient(new Patient { Mrn = "MRN-P", TransfusionRequirements = "Jk(a-) units; irradiated" });
+        iso.Db.SavePatient(new Patient { Mrn = "MRN-P", TransfusionRequirements = "irradiated", AntigenNegative = "Jk(a-)" });
         var after = iso.Analyzer.AnalyzeSpecimen("PR-NEW", updateDb: false);
         Assert.Empty(after.TransfusionRequirementNotes);
         Assert.DoesNotContain(after.Suggestions, s => s.StartsWith("REVIEW:"));

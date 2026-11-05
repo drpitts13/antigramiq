@@ -239,6 +239,7 @@ namespace HemoIQ.ViewModels
             if (string.IsNullOrWhiteSpace(mrn)) return "No MRN recorded.";
             if (p == null) return $"No patient record for MRN {mrn}. Use Edit Patient to add one.";
             var lines = new System.Collections.Generic.List<string> { p.Display };
+            lines.Add($"Antigen-negative units: {Services.AntigenNegativeRequirement.Display(p.AntigenNegative)}");
             lines.Add($"Transfusion requirements: {p.TransfusionRequirements ?? "None recorded"}");
             if (!string.IsNullOrWhiteSpace(p.BloodBankComments))
                 lines.Add($"Blood bank comments: {p.BloodBankComments}");

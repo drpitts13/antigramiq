@@ -7,9 +7,10 @@ using HemoIQ.Models;
 namespace HemoIQ.Services
 {
     /// <summary>
-    /// Compares known antibodies with the patient's recorded special
-    /// transfusion requirements and names antigen-negative requirements that
-    /// are not written down. A review prompt, not an order.
+    /// Compares known antibodies with the patient's structured antigen-negative
+    /// requirement and names antigens that are missing from it. A requirement
+    /// written only in the free-text requirements still raises a prompt to add it
+    /// to the structured list. A review prompt, not an order.
     /// </summary>
     public static class TransfusionRequirementCheck
     {
@@ -19,19 +20,26 @@ namespace HemoIQ.Services
             var notes = new List<string>();
             if (string.IsNullOrWhiteSpace(mrn)) return notes;
             var requirements = patient?.TransfusionRequirements ?? string.Empty;
+            var structured = AntigenNegativeRequirement.Antigens(patient?.AntigenNegative);
 
             foreach (var ab in knownAntibodies.Distinct(StringComparer.Ordinal))
             {
                 if (!ab.StartsWith("anti-", StringComparison.OrdinalIgnoreCase)) continue;
                 var antigen = ab[5..].Trim();
                 if (!AntigenConstants.IsKnown(antigen)) continue;
-                if (MentionsAntigenNegative(requirements, antigen)) continue;
+                if (structured.Contains(antigen, StringComparer.Ordinal)) continue;
+                if (MentionsAntigenNegative(requirements, antigen))
+                {
+                    notes.Add($"{ab} is known for MRN {mrn}. The free-text transfusion requirements mention {antigen}-negative units, " +
+                              $"but {antigen} is not in the patient's structured Antigen-negative list. Add it so the requirement is explicit. Not an order.");
+                    continue;
+                }
 
                 notes.Add(patient == null
                     ? $"{ab} is known for MRN {mrn}, but no patient record exists to hold special transfusion requirements. " +
                       $"Review whether {antigen}-negative units are required and record it on the patient. Not an order."
-                    : $"{ab} is known for MRN {mrn}, but the patient's special transfusion requirements do not mention {antigen}-negative units. " +
-                      "Review and update the patient record. Not an order.");
+                    : $"{ab} is known for MRN {mrn}, but the patient record does not require {antigen}-negative units. " +
+                      $"Review and add {antigen} to Antigen-negative on the patient record. Not an order.");
             }
             return notes;
         }

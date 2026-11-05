@@ -38,7 +38,7 @@ Last updated: 2026-11-03 (iteration 66 — local users and roles enforcing revie
 | Tests | Isolation from user data | Present | `AppDataPaths.RootOverride` set by a test-module initializer to a temp folder; live vendor test persists only to its isolated database; full run verified to leave %AppData%\HemoIQ untouched | One intermittent failure seen once and not reproduced in two reruns |
 | Search | Investigation search | Present | Search tab › Investigations: accession, MRN, patient name/DOB, final/previous antibodies, technologist; every word must match; inclusive date range; status column; Open jumps to Specimens | Panel lot/manufacturer used in an investigation not yet searchable |
 | Workflow | Investigation status and next step | Partial | `InvestigationStatusService` derives five steps and a status (awaiting panel → testing → analysis needed → awaiting ID → completed / amended / reopened / inactive) from panels, grades, analysis time, final call, and audit; shown on Specimens and the worksheet; Worklist shares the completeness check | Optional supervisor review step (two-person, audited, invalidated by clear/re-confirm, Worklist queue); audited Cancel/Reinstate with reason, locked and off work queues; local users/roles enforce review, clear, reinstate, Preferences, user management |
-| Patient | Permanent record and transfusion requirements | Partial | `patients` table (MRN, name, DOB, comments, requirements); audited add/update; Edit Patient on Specimens; reports print it; analysis raises REVIEW when a known antibody's antigen-negative requirement is not written | Structured requirement list instead of free text |
+| Patient | Permanent record and transfusion requirements | Present | `patients` table (MRN, name, DOB, comments, free-text requirements, structured `antigen_negative`); `AntigenNegativeRequirement` parses codes (case-sensitive C/c, E/e, K/k, S/s; Fy(a-) notation) and refuses non-antigens; audited add/update; Edit Patient on Specimens; reports and detail pane print E−, K−, Fy(a−); analysis raises REVIEW when a known antibody's antigen is not in the structured list, and asks to add it when only free text mentions it | Expiry or source of each requirement; product-level requirements (irradiated, CMV-safe) remain free text |
 | Patient | MRN and cross-specimen history | Partial | Indexed `specimens.mrn`; audited; confirmed final calls on the same MRN become Historical evidence citing the source accession; detail pane and reports list other specimens | Encounter, location, ordering provider, sex, pregnancy history |
 | Specimen | DAT polyspecific / IgG / C3 | Present | `DatProfile` on specimen; MF grade; audited IgG/C3; positive if any reactive, negative only if all recorded negative; C3-only caveat on autoantibody notes; MF DAT donor-cell note | Eluate specimens link to their source; `EluateEvidence` reads specificity, panreactivity, and nonreactivity against DAT and transfusion |
 | Analysis | Panreactive / cold / warm / HTLA / auto / HFA / LFA models | Partial | DAT scores; named LFA/pan cells; enzyme lost/gained/resistant; DTT lost/resistant vs untreated. Unpaired runs, comparisons with fewer than 3 paired cells, and comparisons that meet no threshold are each named | Cells tested on only one of the paired runs stay unnamed |
@@ -1305,10 +1305,34 @@ last), included in Export CSV.
 text, so spelling variants count separately), and location on the
 patient record.
 
+## Iteration 69 (this change)
+
+**Deficiency:** Antigen-negative requirements lived only in free text,
+and the requirement check found them with a keyword pattern. A typo,
+an unusual phrasing, or C written for c could make the check pass or
+fail silently.
+
+**Bounded improvement:** Patients carry a structured **Antigen-negative
+units** list (`patients.antigen_negative`), stored as canonical codes
+in panel order. Entry accepts commas, semicolons or spaces, a trailing
+-, neg or negative, and Fy(a-) notation; case decides C/c, E/e, K/k,
+S/s, and other antigens match case-insensitively only when one fits.
+Anything that is not a known antigen is refused by the dialog and by
+`SavePatient`, so the list never holds an unreadable entry. Saves are
+audited (re-entering the same set differently is not a change). The
+requirement check uses the structured list exactly. A requirement
+written only in the free text still raises a REVIEW asking the user to
+add it to the list; existing records are never rewritten
+automatically. The detail pane and worksheet print E−, K−, Fy(a−).
+
+**Not in this tick:** A one-click "add to patient record" action from
+the REVIEW note, requirement source and date, and product-level
+requirements (irradiated, CMV-safe) as structured fields.
+
 ## Likely next tick
 
-Roadmap item 2: structured antigen-negative transfusion requirements on
-the patient record, used exactly by the requirement check. Authenticated
-vendor portals stay later and must not bypass auth, CAPTCHA, licensing,
-or terms.
+Roadmap item 3: split the Specimen dialog into sections (identity and
+origin, transfusion and pregnancy context, serology history) so the
+21-row form is easier to scan. Authenticated vendor portals stay later
+and must not bypass auth, CAPTCHA, licensing, or terms.
 

@@ -45,9 +45,11 @@ When the specimen has an MRN, the detail pane lists the patient's other specimen
 
 ## Patient record
 
-The **Patient (permanent, shared by MRN)** box shows information that belongs to the patient rather than to this specimen: name, date of birth, special transfusion requirements, and permanent blood bank comments. Select **Edit Patient** to change it. The button needs an MRN on the specimen. Every change is written to the audit log with the old and new values. A confirmed identification on one specimen does not lock the patient record, because the record spans all of the patient's specimens.
+The **Patient (permanent, shared by MRN)** box shows information that belongs to the patient rather than to this specimen: name, date of birth, antigen-negative units, other transfusion requirements, and permanent blood bank comments. Select **Edit Patient** to change it. The button needs an MRN on the specimen. Every change is written to the audit log with the old and new values. A confirmed identification on one specimen does not lock the patient record, because the record spans all of the patient's specimens.
 
-Write antigen-negative requirements so analysis can read them, for example `K-negative`, `E neg`, or `Fy(a-)`. Capital and lower-case letters are different antigens (C is not c). When an antibody is known for the MRN (Previous antibodies, a confirmed call on this specimen, or a confirmed call on another specimen with the same MRN) and its antigen-negative requirement is not written on the patient record, analysis lists a **REVIEW** suggestion at the top. It is a prompt to check the record, not a transfusion order.
+Enter antigen-negative requirements in **Antigen-negative units** as antigen codes, for example `E, K, Fya` or `Fy(a-)`. A trailing `-`, `neg`, or `negative` is accepted. Capital and lower-case letters are different antigens (C is not c, K is not k). HemoIQ stores the list in panel order and prints it as, for example, E−, K−, Fy(a−). A word that is not an antigen, such as `irradiated`, is refused; write other requirements such as irradiated, CMV-safe, or washed in **Transfusion requirements**.
+
+When an antibody is known for the MRN (Previous antibodies, a confirmed call on this specimen, or a confirmed call on another specimen with the same MRN) and its antigen is not in **Antigen-negative units**, analysis lists a **REVIEW** suggestion at the top. If the requirement is written only in the free-text **Transfusion requirements** (for example from before this field existed), the suggestion asks you to add it to **Antigen-negative units** so it is explicit. HemoIQ never copies it for you. It is a prompt to check the record, not a transfusion order.
 
 ## Investigation status
 
