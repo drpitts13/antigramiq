@@ -9,7 +9,8 @@ namespace HemoIQ.Models
         ExpiredSpecimen,
         ExpiredPanel,
         AwaitingSupervisorReview,
-        ExtraAntigenReview
+        ExtraAntigenReview,
+        ExpiredReagentUse
     }
 
     public class WorklistItem

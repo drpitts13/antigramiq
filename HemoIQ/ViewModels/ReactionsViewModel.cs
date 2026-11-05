@@ -726,6 +726,18 @@ namespace HemoIQ.ViewModels
                 return false;
             }
 
+            if (SelectedPanel?.IsExpired == true && Rows.Any(r => r.HasEnteredGrade) &&
+                MessageBox.Show(
+                    $"Panel lot {SelectedPanel.LotNumber} expired {SelectedPanel.ExpirationDate}. Results from expired reagent " +
+                    "red cells will be flagged for review in analysis and on the Worklist.\n\nRecord these reactions anyway?",
+                    "Expired panel", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            {
+                const string notSaved = "Not saved: the panel lot has expired.";
+                _main.SetStatus(notSaved);
+                SetSaveStatus(false, notSaved);
+                return false;
+            }
+
             try
             {
                 var inputs = Rows.Select(r => new ReactionInput(r.CellNumber, r.IS, r.C37, r.AHG, r.CC, r.ExtraPhaseValues))

@@ -1603,10 +1603,29 @@ Edit also clears it. Nothing is rewritten automatically.
 Worklist header, and other data-quality checks (duplicate lots, panels
 with no typed antigens).
 
+## Iteration 81 (this change)
+
+**Deficiency:** Reactions could be recorded on a panel lot after its
+expiration date with no warning, and analysis and reports used them
+like any other results. Testing with expired reagent red cells is a
+quality-system nonconformance that should be visible and reviewed.
+
+**Bounded improvement:** `ExpiredReagentCheck` finds runs with graded
+results whose last recorded save (from the audit log, or the run date)
+is after the lot's expiration date. Analysis adds a REVIEW note per run
+("recorded 2026-11-05, after the lot expired 2026-11-04 … Not an
+exclusion"). The Worklist lists open or unreviewed investigations as
+**Expired reagent** (checked only for specimens linked to a lot that
+has expired, to keep the Worklist fast). The Reactions tab asks for
+confirmation before saving graded results on an expired lot.
+
+**Not in this tick:** The worksheet does not yet print the note outside
+the analysis suggestions; a lab-configurable "block" mode is not
+offered (warn-and-review only).
+
 ## Likely next tick
 
-Product review of data quality: extend the Worklist with a small set of
-integrity checks (active panel with no typed antigens, duplicate vendor
-lot, specimen linked to an expired panel at time of testing) using the
-same verify-or-fix pattern. Authenticated vendor portals stay later and
-must not bypass auth, CAPTCHA, licensing, or terms.
+Integrity checks on the Worklist with the same verify-or-fix pattern:
+active panel with no typed antigens, and duplicate vendor lot numbers.
+Authenticated vendor portals stay later and must not bypass auth,
+CAPTCHA, licensing, or terms.

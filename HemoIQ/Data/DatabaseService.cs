@@ -2704,6 +2704,25 @@ namespace HemoIQ.Data
                     }
                 }
 
+                // Only specimens tested on a lot that has expired by now can have expired-reagent results.
+                if ((!s.HasFinalCall || !s.IsReviewed) && panels.Any(p => p.IsExpired) &&
+                    Services.ExpiredReagentCheck.Check(this, s.AccessionNumber) is { Count: > 0 } expired)
+                {
+                    items.Add(new WorklistItem
+                    {
+                        Kind = WorklistKind.ExpiredReagentUse,
+                        KindLabel = "Expired reagent",
+                        Title = s.AccessionNumber,
+                        Detail = string.Join(" ", expired.Select(e =>
+                            $"{e.Run.PanelName} ({e.Run.DisplayLabel}) recorded {e.RecordedOn}, lot expired {e.Expiration}.")) +
+                                 " Review before relying on these results.",
+                        UrgencyLabel = "Review",
+                        SortOrder = 1,
+                        AccessionNumber = s.AccessionNumber,
+                        TargetTab = "Analysis",
+                    });
+                }
+
                 if (s.HasFinalCall && !s.IsReviewed && Services.AppSettings.Current.RequireSupervisorReview)
                 {
                     items.Add(new WorklistItem
