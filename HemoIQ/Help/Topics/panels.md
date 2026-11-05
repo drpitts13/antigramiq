@@ -6,7 +6,7 @@ The Panels tab stores panel lots and the antigen profile of each cell. Analysis 
 
 - **Find** filters by name, lot, vendor, or expiration date. Find is unavailable while you are editing antigens.
 - **Add** creates a lot. **Details** edits the name, lot, vendor, cell count, and expiration. **Copy** duplicates a lot so you can start a new lot from an existing antigram.
-- **Edit** turns on antigen editing for the selected panel. **Delete** removes the lot after you confirm.
+- **Edit** turns on antigen editing for the selected panel. **Delete** removes the lot after you confirm. A lot that holds test history cannot be deleted: if any reactions were recorded on it, or it is linked to a specimen with a confirmed identification, HemoIQ refuses and says why. Deactivate it instead so it is no longer offered for new testing. Deleting a lot that is only linked (no reactions, no confirmed identification) removes the links too, and the audit entry lists the specimens. Importing a lot that is already stored never replaces one that holds test history, and an import or copy that fails part-way leaves the stored panels exactly as they were.
 - **Show Inactive** includes lots that are not active. Imported lots stay inactive until you review them.
 - Yellow rows are nearing expiration. Red rows are expired.
 

@@ -1494,13 +1494,59 @@ namespace HemoIQ.Data
                 null, afterJson: JsonSerializer.Serialize(new { active }));
         }
 
+        /// <summary>How a panel has been used: linked specimens, recorded reaction rows, and
+        /// linked specimens with a confirmed identification.</summary>
+        public PanelUsage GetPanelUsage(int panelId)
+        {
+            var usage = new PanelUsage();
+            using (var cmd = _conn.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    SELECT sp.specimen_id, COALESCE(s.final_antibodies, '')
+                    FROM specimen_panels sp LEFT JOIN specimens s ON s.accession_number = sp.specimen_id
+                    WHERE sp.panel_id = $id ORDER BY sp.specimen_id";
+                cmd.Parameters.AddWithValue("$id", panelId);
+                using var r = cmd.ExecuteReader();
+                while (r.Read())
+                {
+                    usage.LinkedSpecimens.Add(r.GetString(0));
+                    if (!string.IsNullOrWhiteSpace(r.GetString(1))) usage.ConfirmedSpecimens.Add(r.GetString(0));
+                }
+            }
+            using (var cmd = _conn.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    SELECT COUNT(*) FROM reactions r JOIN panel_runs pr ON pr.run_id = r.run_id
+                    WHERE pr.panel_id = $id";
+                cmd.Parameters.AddWithValue("$id", panelId);
+                usage.ReactionCount = Convert.ToInt32(cmd.ExecuteScalar());
+            }
+            return usage;
+        }
+
+        /// <summary>
+        /// Deletes a panel and, by cascade, its cells, runs and specimen links. Refused
+        /// when the panel has recorded reactions or is linked to a confirmed
+        /// identification, because that would erase test history; deactivate it
+        /// instead. Linked specimens are recorded in the audit entry.
+        /// </summary>
         public void DeletePanel(int panelId)
         {
-            using var cmd = _conn.CreateCommand();
-            cmd.CommandText = "DELETE FROM panels WHERE panel_id = $id";
-            cmd.Parameters.AddWithValue("$id", panelId);
-            cmd.ExecuteNonQuery();
-            AppendAudit("delete_panel", "panel", panelId.ToString(), null, null, null);
+            var usage = GetPanelUsage(panelId);
+            if (usage.ProtectsHistory)
+                throw new InvalidOperationException(
+                    $"Panel #{panelId} cannot be deleted because it holds test history: {usage.Describe()}. " +
+                    "Deactivate it instead so it is no longer offered for new testing.");
+            RunInTransaction(() =>
+            {
+                using var cmd = _conn.CreateCommand();
+                cmd.CommandText = "DELETE FROM panels WHERE panel_id = $id";
+                cmd.Parameters.AddWithValue("$id", panelId);
+                cmd.ExecuteNonQuery();
+                AppendAudit("delete_panel", "panel", panelId.ToString(), null,
+                    usage.LinkedSpecimens.Count == 0 ? null : JsonSerializer.Serialize(new { linkedSpecimens = usage.LinkedSpecimens }),
+                    null);
+            });
         }
 
         // ── Panel Cells ───────────────────────────────────────────────────────
@@ -1602,7 +1648,11 @@ namespace HemoIQ.Data
             cmd.ExecuteNonQuery();
         }
 
-        public void ReplacePanelCells(int panelId, IReadOnlyList<PanelCell> cells)
+        /// <summary>Replaces every cell on a panel in one transaction; a failure keeps the old cells.</summary>
+        public void ReplacePanelCells(int panelId, IReadOnlyList<PanelCell> cells) =>
+            RunInTransaction(() => ReplacePanelCellsCore(panelId, cells));
+
+        private void ReplacePanelCellsCore(int panelId, IReadOnlyList<PanelCell> cells)
         {
             DeletePanelCells(panelId);
             int numeric = 0;
@@ -3355,6 +3405,14 @@ namespace HemoIQ.Data
             {
                 _savepointDepth--;
             }
+        }
+
+        /// <summary><see cref="RunInTransaction(Action)"/> for work that returns a value.</summary>
+        public T RunInTransaction<T>(Func<T> body)
+        {
+            T result = default!;
+            RunInTransaction(() => { result = body(); });
+            return result;
         }
 
         public void AppendAudit(string action, string? entityType, string? entityId, string? reason,

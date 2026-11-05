@@ -241,7 +241,15 @@ namespace HemoIQ.ViewModels
             if (SelectedPanel == null) return;
             if (MessageBox.Show($"Delete panel '{SelectedPanel.Name}'?",
                 "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
-            _db.DeletePanel(SelectedPanel.PanelId);
+            try
+            {
+                _db.DeletePanel(SelectedPanel.PanelId);
+            }
+            catch (InvalidOperationException ex)
+            {
+                MessageBox.Show(ex.Message, "Panel not deleted", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
             _main.SetStatus("Panel deleted.");
             NotifyPanelsChanged();
         }
@@ -319,10 +327,15 @@ namespace HemoIQ.ViewModels
             dlg.Title = "Copy Panel — Edit Details";
             if (dlg.ShowDialog() != true) return;
             // AddPanel creates placeholder cells; CopyPanelCells then replaces them with the real data.
-            var newId = _db.AddPanel(dlg.PanelName, dlg.LotNumber, dlg.Vendor,
-                dlg.NumCells, dlg.ExpirationDate, dlg.IncludeAc, dlg.StartCell, dlg.ItemIsActive,
-                dlg.CatalogNumber, dlg.ProductLine, dlg.EnzymeTreated);
-            _db.CopyPanelCells(SelectedPanel.PanelId, newId);
+            var sourceId = SelectedPanel.PanelId;
+            var newId = _db.RunInTransaction(() =>
+            {
+                var id = _db.AddPanel(dlg.PanelName, dlg.LotNumber, dlg.Vendor,
+                    dlg.NumCells, dlg.ExpirationDate, dlg.IncludeAc, dlg.StartCell, dlg.ItemIsActive,
+                    dlg.CatalogNumber, dlg.ProductLine, dlg.EnzymeTreated);
+                _db.CopyPanelCells(sourceId, id);
+                return id;
+            });
             _main.SetStatus($"Panel copied as '{dlg.PanelName}'.");
             NotifyPanelsChanged();
             SelectedPanel = Panels.FirstOrDefault(p => p.PanelId == newId);

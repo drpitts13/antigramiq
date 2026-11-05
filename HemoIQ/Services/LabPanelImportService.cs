@@ -45,6 +45,16 @@ namespace HemoIQ.Services
                     $"A panel with lot {request.LotNumber} from {request.Vendor} is already stored (panel #{existing.PanelId}).");
 
             var prior = _db.FindPriorVendorPanel(request.Vendor, request.ProductLine, request.LotNumber);
+            if (existing != null && _db.GetPanelUsage(existing.PanelId) is { ProtectsHistory: true } used)
+                throw new InvalidOperationException(
+                    $"Lot {request.LotNumber} from {request.Vendor} is already stored as panel #{existing.PanelId} and holds test history " +
+                    $"({used.Describe()}), so it cannot be replaced. The stored panel is unchanged.");
+
+            return _db.RunInTransaction(() => ImportCore(existing, prior, parsed, request));
+        }
+
+        private PanelImportOutcome ImportCore(Panel? existing, Panel? prior, PanelCsvImportResult parsed, LabPanelImportRequest request)
+        {
             if (existing != null)
                 _db.DeletePanel(existing.PanelId);
 

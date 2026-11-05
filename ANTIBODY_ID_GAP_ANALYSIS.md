@@ -1373,10 +1373,35 @@ step keeps its own validation and audit.
 patient save plus MRN link) still run step by step and should move to
 `RunInTransaction`.
 
+## Iteration 72 (this change)
+
+**Deficiency:** Replacing an already-stored lot during import deleted
+the old panel first and then inserted the new one step by step. A
+failure part-way left the lot missing. Worse, `DeletePanel` cascades to
+specimen links and panel runs, and runs cascade to reactions, so
+deleting or replacing a lot that had been used for testing silently
+erased patients' recorded reactions. Panel copy and cell replacement
+were also multi-step without a transaction.
+
+**Bounded improvement:** `GetPanelUsage` reports linked specimens,
+recorded reaction rows, and linked specimens with a confirmed
+identification. `DeletePanel` refuses a panel with reactions or a
+confirmed identification ("Deactivate it instead"), and the audit
+entry of an allowed delete lists the links it removed. Vendor and lab
+imports refuse to replace a stored lot that holds test history and
+otherwise run delete-plus-import in one `RunInTransaction`, so a
+failure keeps the stored lot. `ReplacePanelCells` and Copy Panel are
+transactional. The Panels Delete button shows the refusal instead of
+failing. A `RunInTransaction<T>` overload returns a value.
+
+**Not in this tick:** A source artifact saved to disk before a failed
+import is left in the artifact folder (content-addressed, harmless,
+not referenced). Specimen deletion and archive purge were not reviewed
+in this pass.
+
 ## Likely next tick
 
-Audit other multi-step writes (panel import, panel activation with
-cells, reaction batch saves) and move any that can fail part-way to
-`RunInTransaction`, with partial-failure tests. Then per-user
-reaction-entry and amendment counts. Authenticated vendor portals stay
-later and must not bypass auth, CAPTCHA, licensing, or terms.
+Review specimen deletion and archive purge for the same
+history-erasure risk, then per-user reaction-entry and amendment
+counts. Authenticated vendor portals stay later and must not bypass
+auth, CAPTCHA, licensing, or terms.
