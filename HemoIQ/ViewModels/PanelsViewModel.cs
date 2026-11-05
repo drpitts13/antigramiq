@@ -522,8 +522,17 @@ namespace HemoIQ.ViewModels
                     "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return;
 
-            foreach (var ag in dlg.SelectedAntigens)
-                _db.RemovePanelExtraAntigen(SelectedPanel.PanelId, ag);
+            try
+            {
+                foreach (var ag in dlg.SelectedAntigens)
+                    _db.RemovePanelExtraAntigen(SelectedPanel.PanelId, ag);
+            }
+            catch (InvalidOperationException ex)
+            {
+                MessageBox.Show(ex.Message, "Antigen not removed", MessageBoxButton.OK, MessageBoxImage.Warning);
+                LoadCells();
+                return;
+            }
             LoadCells();
             _main.SetStatus($"Removed extra antigen(s) from '{SelectedPanel.Name}'.");
         }

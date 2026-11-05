@@ -1559,9 +1559,33 @@ notes, phenotype" and active/inactive changes.
 **Not in this tick:** Roadmap item 4 (panel activation reasons,
 extra-antigen removal, antigen order).
 
+## Iteration 79 (this change)
+
+**Deficiency:** Adding an extra (warehouse) antigen to a panel filled
+every cell with "-", a typed negative, so a column nobody had typed was
+analyzed as antigen-negative on every cell. Removing an extra antigen
+deleted its typing with no audit entry, even on lots used for testing,
+and antigen order changes were unaudited.
+
+**Bounded improvement:** New extra-antigen cells start as NT, so the
+antigen is unknown until typed (analysis already skips untyped cells).
+`add_extra_antigen` is audited when the column is new.
+`RemovePanelExtraAntigen` refuses to remove an antigen typed on any
+cell of a lot that holds test history; otherwise it runs in one
+transaction with a `remove_extra_antigen` entry holding the removed
+values. `SetPanelAntigenOrder` audits a change to a previously saved
+order. The Panels tab shows the refusal. Three tests that relied on the
+negative default now type the values they need.
+
+**Not in this tick:** Existing panels already carry "-" for extra
+antigens added before this change; they are not rewritten
+automatically, because some may be real typing. A data-quality check
+listing extra-antigen columns that are "-" on every cell would let a
+supervisor review them.
+
 ## Likely next tick
 
-Roadmap item 4: audit panel extra-antigen removal and antigen display
-order changes, and refuse removing an extra antigen from a lot with
-test history. Authenticated vendor portals stay later and must not
-bypass auth, CAPTCHA, licensing, or terms.
+Data-quality check for extra-antigen columns typed "-" on every cell
+(likely the old default, not real typing), listed for review on the
+Worklist without changing data. Authenticated vendor portals stay later
+and must not bypass auth, CAPTCHA, licensing, or terms.

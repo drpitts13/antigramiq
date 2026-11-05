@@ -99,7 +99,7 @@ public class WarehouseAntigenTests
     }
 
     [Fact]
-    public void AddPanelExtraAntigen_TypesAllCellsDefaultNegative()
+    public void AddPanelExtraAntigen_StartsUntyped_NotNegative()
     {
         using var iso = new IsolatedDatabase();
         var panelId = iso.Db.AddPanel("Do", "L", "V", 3, null, false);
@@ -110,10 +110,10 @@ public class WarehouseAntigenTests
         var cells = iso.Db.GetPanelCells(panelId);
         foreach (var cell in cells)
         {
-            Assert.True(cell.HasTypedAntigen("Doa"));
-            Assert.True(cell.HasTypedAntigen("Dob"));
-            Assert.Equal("-", cell.GetAntigen("Doa"));
-            Assert.Equal("-", cell.GetAntigen("Dob"));
+            // A new column is not tested until typed, so analysis does not treat it as negative.
+            Assert.False(cell.HasTypedAntigen("Doa"));
+            Assert.False(cell.HasTypedAntigen("Dob"));
+            Assert.Equal(AntigenConstants.AntigenNotTested, cell.Antigens["Doa"]);
         }
     }
 
@@ -287,6 +287,7 @@ public class WarehouseAntigenTests
     {
         using var iso = new IsolatedDatabase();
         var panelId = CreateDoPanel(iso, 1);
+        SetDo(iso, iso.Db.GetPanelCells(panelId).Single(), doa: "+", dob: "-");
         iso.Db.RemovePanelExtraAntigen(panelId, "Doa");
         Assert.Equal(new[] { "Dob" }, iso.Db.GetPanelExtraAntigens(panelId));
         Assert.False(iso.Db.GetPanelCells(panelId).Single().HasTypedAntigen("Doa"));

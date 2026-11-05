@@ -1956,7 +1956,21 @@ namespace HemoIQ.Data
                 .ToList();
         }
 
+        /// <summary>
+        /// Saves a panel's antigen display order, audited (<c>set_antigen_order</c>) when a
+        /// previously saved order changes. Order affects display only, not analysis.
+        /// </summary>
         public void SetPanelAntigenOrder(int panelId, IReadOnlyList<string> antigens)
+        {
+            var previous = GetPanelAntigenOrder(panelId);
+            SetPanelAntigenOrderCore(panelId, antigens);
+            var current = GetPanelAntigenOrder(panelId);
+            if (previous.Count > 0 && !previous.SequenceEqual(current))
+                AppendAudit("set_antigen_order", "panel", panelId.ToString(), null,
+                    JsonSerializer.Serialize(new { order = previous }), JsonSerializer.Serialize(new { order = current }));
+        }
+
+        private void SetPanelAntigenOrderCore(int panelId, IReadOnlyList<string> antigens)
         {
             using (var del = _conn.CreateCommand())
             {
@@ -2036,9 +2050,15 @@ namespace HemoIQ.Data
             return cmd.ExecuteScalar() != null;
         }
 
+        /// <summary>
+        /// Adds an extra (warehouse) antigen column to a panel. Cells start as NT (not
+        /// tested), so the antigen stays out of analysis until it is typed; it is never
+        /// assumed negative. Audited when the column is new.
+        /// </summary>
         public void AddPanelExtraAntigen(int panelId, string antigen)
         {
             if (!AntigenConstants.IsWarehouse(antigen)) return;
+            int inserted;
             using (var cmd = _conn.CreateCommand())
             {
                 cmd.CommandText = @"
@@ -2046,22 +2066,45 @@ namespace HemoIQ.Data
                     VALUES ($pid, $ag)";
                 cmd.Parameters.AddWithValue("$pid", panelId);
                 cmd.Parameters.AddWithValue("$ag", antigen);
-                cmd.ExecuteNonQuery();
+                inserted = cmd.ExecuteNonQuery();
             }
 
             foreach (var cell in GetPanelCells(panelId))
             {
                 if (cell.HasTypedAntigen(antigen)) continue;
-                UpsertExtraCellAntigen(cell.Id, antigen, "-");
+                UpsertExtraCellAntigen(cell.Id, antigen, AntigenConstants.AntigenNotTested);
             }
+            if (inserted > 0)
+                AppendAudit("add_extra_antigen", "panel", panelId.ToString(), null, null,
+                    JsonSerializer.Serialize(new { antigen }));
 
             var saved = GetPanelAntigenOrder(panelId);
             if (saved.Count > 0)
                 SetPanelAntigenOrder(panelId, saved);
         }
 
+        /// <summary>
+        /// Removes an extra antigen column and its typing. Refused when the panel holds
+        /// test history and any cell is typed for the antigen, because that typing is
+        /// evidence behind past results. Audited with the removed values.
+        /// </summary>
         public void RemovePanelExtraAntigen(int panelId, string antigen)
         {
+            var typed = GetPanelCells(panelId)
+                .Where(c => c.HasTypedAntigen(antigen))
+                .ToDictionary(c => c.CellNumber, c => c.Antigens[antigen]);
+            if (typed.Count > 0 && GetPanelUsage(panelId) is { ProtectsHistory: true } usage)
+                throw new InvalidOperationException(
+                    $"{antigen} is typed on {typed.Count} cell(s) of panel #{panelId}, which holds test history " +
+                    $"({usage.Describe()}). Removing it would erase evidence behind those results. " +
+                    "Mark individual values NT with Edit if they are wrong.");
+            RunInTransaction(() => RemovePanelExtraAntigenCore(panelId, antigen, typed));
+        }
+
+        private void RemovePanelExtraAntigenCore(int panelId, string antigen, Dictionary<string, string> typed)
+        {
+            AppendAudit("remove_extra_antigen", "panel", panelId.ToString(), null,
+                JsonSerializer.Serialize(new { antigen, typed }), null);
             var saved = GetPanelAntigenOrder(panelId);
             using (var cmd = _conn.CreateCommand())
             {

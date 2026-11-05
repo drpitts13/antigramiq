@@ -149,6 +149,7 @@ public class PanelAntigenOrderTests
         using var iso = new IsolatedDatabase();
         var id = iso.Db.AddPanel("CSV Order", "L", "V", 1, null, false);
         iso.Db.AddPanelExtraAntigen(id, "Doa");
+        iso.Db.UpdatePanelCellAntigen(iso.Db.GetPanelCells(id).Single().Id, "Doa", "+");
         var custom = AntigenConstants.Antigens.ToList();
         custom.Insert(1, "Doa");
         iso.Db.SetPanelAntigenOrder(id, custom);

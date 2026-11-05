@@ -27,6 +27,6 @@ The grid on the right is the antigram. Press **Edit** before changing it.
 - Drag column headers to reorder while editing.
 - **Save** writes the grid (Ctrl+S does the same on this tab). **Cancel** leaves edit mode without saving.
 
-**Add antigen…** adds a non-standard antigen from the warehouse catalog to this panel only. **Remove antigen…** drops one of those extra columns. **Compare…** diffs this antigram against another stored lot.
+**Add antigen…** adds a non-standard antigen from the warehouse catalog to this panel only. Every cell starts as NT (not tested), so analysis treats the antigen as unknown until you type each cell with **Edit**; a new column is never assumed negative. **Remove antigen…** drops one of those extra columns. If any cell is typed for that antigen and the lot holds test history, removal is refused because the typing is evidence behind past results; mark wrong values NT with **Edit** instead. Adding, removing, and reordering antigen columns are recorded in the audit log. **Compare…** diffs this antigram against another stored lot.
 
 Antigen typing on the grid is the profile analysis uses. A blank or NT antigen is not treated as negative.
