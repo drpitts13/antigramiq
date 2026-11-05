@@ -31,6 +31,7 @@ namespace HemoIQ.ViewModels
         public ObservableCollection<OverdueInvestigation> Overdue { get; } = new();
         public ObservableCollection<TechnologistWorkload> Workload { get; } = new();
         public ObservableCollection<LocationWorkload> LocationWorkload { get; } = new();
+        public ObservableCollection<UserActivity> UserActivity { get; } = new();
 
         private OverdueInvestigation? _selectedOverdue;
         public OverdueInvestigation? SelectedOverdue
@@ -166,6 +167,8 @@ namespace HemoIQ.ViewModels
             foreach (var w in WorkloadService.Compute(specimens, FromDate, ToDate, _db.GetUsers())) Workload.Add(w);
             LocationWorkload.Clear();
             foreach (var w in WorkloadService.ComputeByLocation(specimens, FromDate, ToDate)) LocationWorkload.Add(w);
+            UserActivity.Clear();
+            foreach (var a in UserActivityService.Compute(_db, FromDate, ToDate)) UserActivity.Add(a);
 
             OnPropertyChanged(nameof(IsAllTime));
             OnPropertyChanged(nameof(RangeLabel));
@@ -208,6 +211,16 @@ namespace HemoIQ.ViewModels
                              (w.MedianConfirmDays is double d ? d.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "");
         }
 
+        public static IEnumerable<string> UserActivityCsvLines(IEnumerable<UserActivity> rows)
+        {
+            static string Q(string v) => v.Contains(',') || v.Contains('"') ? $"\"{v.Replace("\"", "\"\"")}\"" : v;
+            yield return "";
+            yield return "Activity by user (from the audit log, by local date of the event)";
+            yield return "Login,Name,Reaction cells entered,Recorded results changed,Specimens,Identifications confirmed,Identifications cleared,Supervisor reviews";
+            foreach (var a in rows)
+                yield return $"{Q(a.Login)},{Q(a.Name)},{a.ReactionEntries},{a.ReactionChanges},{a.Specimens},{a.Confirmations},{a.Clears},{a.Reviews}";
+        }
+
         private void OpenOverdue()
         {
             if (SelectedOverdue == null || _main == null) return;
@@ -237,6 +250,7 @@ namespace HemoIQ.ViewModels
                 File.AppendAllLines(dlg.FileName, TurnaroundCsvLines(Turnaround));
                 File.AppendAllLines(dlg.FileName, WorkloadCsvLines(Workload));
                 File.AppendAllLines(dlg.FileName, LocationCsvLines(LocationWorkload));
+                File.AppendAllLines(dlg.FileName, UserActivityCsvLines(UserActivity));
                 _main?.SetStatus($"CSV exported: {dlg.FileName}");
                 MessageBox.Show("CSV exported successfully.", "Export",
                     MessageBoxButton.OK, MessageBoxImage.Information);

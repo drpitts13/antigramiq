@@ -56,3 +56,14 @@ The **By ordering location** tab beside **Workload by technologist** groups inve
 - **Median TAT** is the median time from receipt to confirmation, in days.
 
 Cancelled investigations are not counted. **Export CSV** adds this table at the end.
+
+## Activity by user
+
+The **Activity by user** tab counts work recorded in the audit log, by Windows login and by the local date of each event in the range. It covers reaction entry and amendments, which initials-based workload cannot.
+
+- **Entered** is reaction cells saved for the first time, or saved where every phase was still NT.
+- **Changed** is reaction cells whose recorded result was replaced. The audit entry keeps the original value.
+- **Specimens** is how many different specimens the user saved reactions on, confirmed, cleared, or reviewed.
+- **Confirmed**, **Cleared**, and **Reviews** count identifications confirmed, identifications cleared (amendments), and supervisor reviews.
+
+When the login belongs to a user in **Preferences > Users & roles**, the name and initials are shown with it. Saving a reaction grid without changing a cell writes nothing to the audit log, so it is not counted. **Export CSV** adds this table at the end.

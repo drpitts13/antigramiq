@@ -32,7 +32,7 @@ Last updated: 2026-11-03 (iteration 66 — local users and roles enforcing revie
 | Analysis | Single / multiple / dosage scoring | Partial | Fisher + pattern; pairwise combinations; dosage averages | Label as evidence, not diagnosis |
 | Audit | Investigation timeline | Present | `InvestigationTimeline` merges receipt, panel link/unlink (now audited), runs, grouped reaction saves, analysis snapshots, confirm/clear/review, MRN/transfusion/DAT/patient edits; Specimens Timeline expander and worksheet section | Report print/PDF/CSV audited with SHA-256 and shown on the timeline |
 | Reporting | Turnaround metrics | Present | `TurnaroundService`: received→confirmed (days) and confirmed→reviewed (hours) median and nearest-rank 90th percentile by received date, cancelled excluded; overdue open list with status and Open; configurable threshold; CSV | Uses recorded received time when present |
-| Reporting | Workload by technologist | Present | `WorkloadService`: per initials, confirmations (by confirmed date), multi-antibody confirmations, supervisor reviews (by review date), median received→confirmed; names from the user registry; cancelled excluded; on Analytics and in CSV | Reaction entry and amendments per user not counted (audit operator is a login, not initials) |
+| Reporting | Workload by technologist | Present | `WorkloadService`: per initials, confirmations (by confirmed date), multi-antibody confirmations, supervisor reviews (by review date), median received→confirmed; names from the user registry; cancelled excluded; on Analytics and in CSV | Reaction entry and amendments per user are on the Activity by user tab (by login, from the audit log) |
 | Specimen | Collector, collection and ordering location, ordering provider | Present | Four optional specimen columns with DB length CHECK (128); trimmed and whitespace-collapsed; audited `update_origin`; locked after final call; on the timeline, detail pane, worksheet, and Search; `WorkloadService.ComputeByLocation` groups received investigations by ordering location on Analytics and CSV | Free text, not a configured location list |
 | Specimen | Collection/receipt time and dating check | Present | Audited `collected_at`/`received_at`; expiration defaults from collection; `SpecimenDating` REVIEW when transfused within the look-back and expiration exceeds collection + dating days, or cannot be checked | Pregnancy (current or within look-back) is a dating trigger; RhIG date flags possible passive anti-D |
 | Tests | Isolation from user data | Present | `AppDataPaths.RootOverride` set by a test-module initializer to a temp folder; live vendor test persists only to its isolated database; full run verified to leave %AppData%\HemoIQ untouched | One intermittent failure seen once and not reproduced in two reruns |
@@ -1422,8 +1422,30 @@ Delete button shows the refusal.
 the eluate is newer than the cutoff (the eluate keeps the accession as
 text). Per-specimen delete has no reason prompt.
 
+## Iteration 74 (this change)
+
+**Deficiency:** Every reaction save wrote an audit entry with only the
+new value, even when nothing changed. A changed result could not be
+told apart from first entry, the original value was lost from the
+audit trail, and per-user counts would have been inflated by repeated
+grid saves. Workload covered confirmations and reviews by initials only.
+
+**Bounded improvement:** `SaveReaction` compares with the stored row:
+unchanged saves write nothing; changes record the previous phases and
+extra phases as the audit before-value. The timeline names how many
+recorded results changed in each entry session. `UserActivityService`
+counts, per Windows login and local date range, reaction cells entered,
+recorded results changed, specimens touched, identifications confirmed,
+identifications cleared, and supervisor reviews, with registered names.
+Analytics shows it on an **Activity by user** tab and Export CSV
+includes it.
+
+**Not in this tick:** Reaction-change reasons (a change is recorded but
+no reason is asked), and per-user counts for panel and rule edits.
+
 ## Likely next tick
 
-Per-user reaction-entry and amendment counts from the audit log for
-registered users, on Analytics. Authenticated vendor portals stay later
-and must not bypass auth, CAPTCHA, licensing, or terms.
+Ask for a reason when a recorded reaction result is changed after
+analysis has run on it (the before-value is now known), store it on the
+audit entry, and show it on the timeline. Authenticated vendor portals
+stay later and must not bypass auth, CAPTCHA, licensing, or terms.

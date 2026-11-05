@@ -150,6 +150,21 @@
                     </DataGrid.Columns>
                 </DataGrid>
                 </TabItem>
+                <TabItem Header="Activity by user"
+                         ToolTip="From the audit log, by Windows login and the local date of each event: reaction cells entered, recorded results changed, specimens worked on, identifications confirmed and cleared, and supervisor reviews.">
+                <DataGrid ItemsSource="{Binding UserActivity}" AutoGenerateColumns="False" IsReadOnly="True"
+                          HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="User" Binding="{Binding Display}" Width="*"/>
+                        <DataGridTextColumn Header="Entered" Binding="{Binding ReactionEntries}" Width="62"/>
+                        <DataGridTextColumn Header="Changed" Binding="{Binding ReactionChanges}" Width="64"/>
+                        <DataGridTextColumn Header="Specimens" Binding="{Binding Specimens}" Width="72"/>
+                        <DataGridTextColumn Header="Confirmed" Binding="{Binding Confirmations}" Width="72"/>
+                        <DataGridTextColumn Header="Cleared" Binding="{Binding Clears}" Width="60"/>
+                        <DataGridTextColumn Header="Reviews" Binding="{Binding Reviews}" Width="60"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+                </TabItem>
             </TabControl>
         </Grid>
 

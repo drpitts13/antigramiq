@@ -105,11 +105,12 @@ namespace HemoIQ.Services
             {
                 var start = parsed[i];
                 var cells = new HashSet<string>();
-                int count = 0, j = i;
+                int count = 0, changed = 0, j = i;
                 var last = start.at;
                 while (j < parsed.Count && parsed[j].run == start.run && parsed[j].at - last <= ReactionSessionGap)
                 {
                     count++;
+                    if (UserActivityService.IsReactionChange(parsed[j].a)) changed++;
                     if (Cell(parsed[j].a.AfterJson) is string c) cells.Add(c);
                     last = parsed[j].at;
                     j++;
@@ -118,7 +119,8 @@ namespace HemoIQ.Services
                 result.Add(new TimelineEvent
                 {
                     When = start.at,
-                    What = $"Reactions entered: {count} save(s), {cells.Count} cell(s) on {runText}",
+                    What = $"Reactions entered: {count} save(s), {cells.Count} cell(s) on {runText}" +
+                           (changed > 0 ? $"; {changed} recorded result(s) changed" : ""),
                     Who = start.a.Operator,
                 });
                 i = j;

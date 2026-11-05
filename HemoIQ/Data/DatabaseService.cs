@@ -2205,6 +2205,29 @@ namespace HemoIQ.Data
             // Need specimen_id to call TouchSpecimenReactionsUpdated
             var run = GetPanelRun(runId);
             if (run != null) EnsureSpecimenUnlocked(run.SpecimenId);
+            var extra = ExtraPhaseParser.Serialize(extraPhases);
+
+            // Unchanged saves write nothing, so the audit log holds only real entries and changes.
+            object? before = null;
+            using (var read = _conn.CreateCommand())
+            {
+                read.CommandText = @"SELECT ""IS"", C37, AHG, CC, extra_phases FROM reactions
+                                     WHERE run_id = $rid AND cell_number = $cn";
+                read.Parameters.AddWithValue("$rid", runId);
+                read.Parameters.AddWithValue("$cn", cellNumber);
+                using var r = read.ExecuteReader();
+                if (r.Read())
+                {
+                    string Col(int i) => r.IsDBNull(i) ? "" : r.GetString(i);
+                    var oldExtra = r.IsDBNull(4) ? null : r.GetString(4);
+                    if (Col(0) == is_ && Col(1) == c37 && Col(2) == ahg && Col(3) == cc &&
+                        string.IsNullOrEmpty(oldExtra) == string.IsNullOrEmpty(extra) &&
+                        (string.IsNullOrEmpty(extra) || oldExtra == extra))
+                        return;
+                    before = new { runId, cellNumber, is_ = Col(0), c37 = Col(1), ahg = Col(2), cc = Col(3), extra = oldExtra };
+                }
+            }
+
             using var cmd = _conn.CreateCommand();
             cmd.CommandText = @"
                 INSERT OR REPLACE INTO reactions (run_id, cell_number, ""IS"", C37, AHG, CC, extra_phases)
@@ -2215,20 +2238,22 @@ namespace HemoIQ.Data
             cmd.Parameters.AddWithValue("$c37", c37);
             cmd.Parameters.AddWithValue("$ahg", ahg);
             cmd.Parameters.AddWithValue("$cc", cc);
-            cmd.Parameters.AddWithValue("$extra", ExtraPhaseParser.Serialize(extraPhases));
+            cmd.Parameters.AddWithValue("$extra", (object?)extra ?? DBNull.Value);
             cmd.ExecuteNonQuery();
             if (run != null)
             {
                 TouchSpecimenReactionsUpdated(run.SpecimenId);
                 AppendAudit("save_reaction", "specimen", run.SpecimenId, null,
-                    afterJson: JsonSerializer.Serialize(new
+                    before == null ? null : JsonSerializer.Serialize(before),
+                    JsonSerializer.Serialize(new
                     {
                         runId,
                         cellNumber,
                         is_,
                         c37,
                         ahg,
-                        cc
+                        cc,
+                        extra
                     }));
             }
         }
@@ -3506,6 +3531,34 @@ namespace HemoIQ.Data
                 ORDER BY id";
             cmd.Parameters.AddWithValue("$type", entityType);
             cmd.Parameters.AddWithValue("$id", entityId);
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+                list.Add(new AuditEvent
+                {
+                    Id = r.GetInt64(0),
+                    OccurredAtUtc = r.GetString(1),
+                    Operator = r.GetString(2),
+                    Action = r.GetString(3),
+                    EntityType = r.IsDBNull(4) ? null : r.GetString(4),
+                    EntityId = r.IsDBNull(5) ? null : r.GetString(5),
+                    Reason = r.IsDBNull(6) ? null : r.GetString(6),
+                    BeforeJson = r.IsDBNull(7) ? null : r.GetString(7),
+                    AfterJson = r.IsDBNull(8) ? null : r.GetString(8),
+                });
+            return list;
+        }
+
+        /// <summary>Audit events with any of the given actions, oldest first.</summary>
+        public List<AuditEvent> GetAuditEventsByAction(params string[] actions)
+        {
+            var list = new List<AuditEvent>();
+            if (actions.Length == 0) return list;
+            using var cmd = _conn.CreateCommand();
+            var names = actions.Select((a, i) => "$a" + i).ToList();
+            cmd.CommandText = $@"
+                SELECT id, occurred_at_utc, operator, action, entity_type, entity_id, reason, before_json, after_json
+                FROM audit_events WHERE action IN ({string.Join(", ", names)}) ORDER BY id";
+            for (int i = 0; i < actions.Length; i++) cmd.Parameters.AddWithValue(names[i], actions[i]);
             using var r = cmd.ExecuteReader();
             while (r.Read())
                 list.Add(new AuditEvent
