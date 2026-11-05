@@ -181,6 +181,8 @@ namespace HemoIQ.Services
                 "delete_run" => $"Run deleted: {Prop(a.BeforeJson, "panel") ?? "panel"}, {Prop(a.BeforeJson, "run") ?? "run"} " +
                                 $"with {Prop(a.BeforeJson, "gradedCells") ?? "0"} graded cell(s)" +
                                 (string.IsNullOrWhiteSpace(a.Reason) ? "" : $"; reason: {a.Reason}"),
+                "update_specimen" => "Specimen details changed: " + ChangedFields(a.AfterJson),
+                "set_specimen_active" => Prop(a.AfterJson, "isActive") == "true" ? "Specimen marked active" : "Specimen marked inactive",
                 "cancel_investigation" => $"Investigation cancelled; reason: {a.Reason}",
                 "reinstate_investigation" => $"Investigation reinstated; reason: {a.Reason}",
                 "link_eluate" => Prop(a.AfterJson, "source") is string src
@@ -231,6 +233,29 @@ namespace HemoIQ.Services
                 OrderingProvider = Prop(json, "orderingProvider"),
             };
             return s.OriginDisplay.Length == 0 ? "cleared" : s.OriginDisplay;
+        }
+
+        private static readonly Dictionary<string, string> FieldLabels = new()
+        {
+            ["type"] = "type", ["expirationDate"] = "expiration", ["isActive"] = "active",
+            ["notes"] = "notes", ["phenotype"] = "phenotype", ["previousAntibodies"] = "previous antibodies",
+            ["datResult"] = "DAT polyspecific", ["genotype"] = "genotype",
+        };
+
+        private static string ChangedFields(string? json)
+        {
+            if (string.IsNullOrEmpty(json)) return "—";
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                var names = doc.RootElement.EnumerateObject()
+                    .Select(p => FieldLabels.TryGetValue(p.Name, out var l) ? l : p.Name).ToList();
+                return names.Count == 0 ? "—" : string.Join(", ", names);
+            }
+            catch (JsonException)
+            {
+                return "—";
+            }
         }
 
         private static string? Prop(string? json, string name)

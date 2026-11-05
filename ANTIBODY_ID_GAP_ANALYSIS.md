@@ -1540,9 +1540,28 @@ shows both actions with the reason.
 (they are kept and readable in the audit log, not one-click
 restorable).
 
+## Iteration 78 (this change)
+
+**Deficiency:** Creating a specimen and editing its type, expiration,
+Active flag, notes, phenotype, genotype, previous antibodies, or
+polyspecific DAT wrote no audit entry, so a changed phenotype or a
+removed "previous anti-K" left no trace. Every dialog save rewrote these
+fields whether or not they changed.
+
+**Bounded improvement:** `AddSpecimen` writes `add_specimen`.
+`UpdateSpecimen` compares with the stored record, writes nothing when
+nothing changed, and otherwise writes one `update_specimen` entry with
+before and after values of only the changed fields; a locked specimen is
+refused only when something would change. `SetSpecimenActive` is audited
+when the value changes. The timeline shows "Specimen details changed:
+notes, phenotype" and active/inactive changes.
+
+**Not in this tick:** Roadmap item 4 (panel activation reasons,
+extra-antigen removal, antigen order).
+
 ## Likely next tick
 
-Roadmap item 3: audit `UpdateSpecimen` (notes, phenotype, genotype,
-previous antibodies, expiration, type) with before and after values, and
-`AddSpecimen`. Authenticated vendor portals stay later and must not
+Roadmap item 4: audit panel extra-antigen removal and antigen display
+order changes, and refuse removing an extra antigen from a lot with
+test history. Authenticated vendor portals stay later and must not
 bypass auth, CAPTCHA, licensing, or terms.

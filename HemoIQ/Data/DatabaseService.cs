@@ -536,6 +536,8 @@ namespace HemoIQ.Data
             cmd.Parameters.AddWithValue("$dat", (object?)datResult ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$geno", (object?)genotype ?? DBNull.Value);
             cmd.ExecuteNonQuery();
+            AppendAudit("add_specimen", "specimen", accessionNumber, null, null,
+                JsonSerializer.Serialize(new { type, createdDate = created, expirationDate, isActive = active }));
         }
 
         public Specimen? GetSpecimen(string accessionNumber)
@@ -571,7 +573,24 @@ namespace HemoIQ.Data
             string? notes = null, string? phenotype = null, string? previousAntibodies = null, string? datResult = null,
             string? genotype = null)
         {
+            var before = GetSpecimen(accessionNumber)
+                         ?? throw new ArgumentException($"Specimen {accessionNumber} not found.");
+            var changed = new Dictionary<string, (object? before, object? after)>();
+            void Diff(string field, object? b, object? a)
+            {
+                if (!Equals(b, a)) changed[field] = (b, a);
+            }
+            Diff("type", before.Type, type);
+            Diff("expirationDate", before.ExpirationDate, expirationDate);
+            Diff("isActive", before.IsActive, isActive);
+            Diff("notes", before.Notes, notes);
+            Diff("phenotype", before.Phenotype, phenotype);
+            Diff("previousAntibodies", before.PreviousAntibodies, previousAntibodies);
+            Diff("datResult", before.DatResult, datResult);
+            Diff("genotype", before.Genotype, genotype);
+            if (changed.Count == 0) return;
             EnsureSpecimenUnlocked(accessionNumber);
+
             using var cmd = _conn.CreateCommand();
             cmd.CommandText = @"
                 UPDATE specimens SET type = $type, expiration_date = $exp, is_active = $active,
@@ -588,6 +607,9 @@ namespace HemoIQ.Data
             cmd.Parameters.AddWithValue("$geno", (object?)genotype ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$acc", accessionNumber);
             cmd.ExecuteNonQuery();
+            AppendAudit("update_specimen", "specimen", accessionNumber, null,
+                JsonSerializer.Serialize(changed.ToDictionary(c => c.Key, c => c.Value.before)),
+                JsonSerializer.Serialize(changed.ToDictionary(c => c.Key, c => c.Value.after)));
         }
 
         /// <summary>
@@ -1015,6 +1037,11 @@ namespace HemoIQ.Data
 
         public void SetSpecimenActive(string accessionNumber, bool active)
         {
+            var before = GetSpecimen(accessionNumber);
+            if (before == null || before.IsActive == active) return;
+            AppendAudit("set_specimen_active", "specimen", accessionNumber, null,
+                JsonSerializer.Serialize(new { isActive = before.IsActive }),
+                JsonSerializer.Serialize(new { isActive = active }));
             using var cmd = _conn.CreateCommand();
             cmd.CommandText = "UPDATE specimens SET is_active = $active WHERE accession_number = $acc";
             cmd.Parameters.AddWithValue("$active", active ? 1 : 0);
