@@ -31,7 +31,8 @@ Last updated: 2026-11-03 (iteration 66 — local users and roles enforcing revie
 | Analysis | Configurable visible rule-out | Partial | `Rule.MinRuleoutCount` is now applied; lab default + explanation sentences | Watch seeded anti-D/anti-k rules; ACS remains separate |
 | Analysis | Single / multiple / dosage scoring | Partial | Fisher + pattern; pairwise combinations; dosage averages | Label as evidence, not diagnosis |
 | Audit | Investigation timeline | Present | `InvestigationTimeline` merges receipt, panel link/unlink (now audited), runs, grouped reaction saves, analysis snapshots, confirm/clear/review, MRN/transfusion/DAT/patient edits; Specimens Timeline expander and worksheet section | Report print/PDF/CSV audited with SHA-256 and shown on the timeline |
-| Reporting | Turnaround metrics | Present | `TurnaroundService`: received→confirmed (days) and confirmed→reviewed (hours) median and nearest-rank 90th percentile by received date, cancelled excluded; overdue open list with status and Open; configurable threshold; CSV | Uses recorded received time when present; no workload-by-technologist yet |
+| Reporting | Turnaround metrics | Present | `TurnaroundService`: received→confirmed (days) and confirmed→reviewed (hours) median and nearest-rank 90th percentile by received date, cancelled excluded; overdue open list with status and Open; configurable threshold; CSV | Uses recorded received time when present |
+| Reporting | Workload by technologist | Present | `WorkloadService`: per initials, confirmations (by confirmed date), multi-antibody confirmations, supervisor reviews (by review date), median received→confirmed; names from the user registry; cancelled excluded; on Analytics and in CSV | Reaction entry and amendments per user not counted (audit operator is a login, not initials) |
 | Specimen | Collection/receipt time and dating check | Present | Audited `collected_at`/`received_at`; expiration defaults from collection; `SpecimenDating` REVIEW when transfused within the look-back and expiration exceeds collection + dating days, or cannot be checked | Pregnancy (current or within look-back) is a dating trigger; RhIG date flags possible passive anti-D |
 | Tests | Isolation from user data | Present | `AppDataPaths.RootOverride` set by a test-module initializer to a temp folder; live vendor test persists only to its isolated database; full run verified to leave %AppData%\HemoIQ untouched | One intermittent failure seen once and not reproduced in two reruns |
 | Search | Investigation search | Present | Search tab › Investigations: accession, MRN, patient name/DOB, final/previous antibodies, technologist; every word must match; inclusive date range; status column; Open jumps to Specimens | Panel lot/manufacturer used in an investigation not yet searchable |
@@ -1226,10 +1227,34 @@ records the signed-in login. Preferences has **Users & roles…**.
 permissions, and password or second-factor sign-in (identity is the
 Windows login).
 
+## Iteration 67 (this change)
+
+**Deficiency:** Analytics showed turnaround for the lab as a whole but
+not who did the work. A supervisor could not see how confirmations and
+reviews were spread across technologists, or whose cases took longest.
+
+**Bounded improvement:** `WorkloadService` is a reporting-only model
+over specimens. For each set of initials it counts confirmed
+identifications by confirmed date (Identified by), confirmations
+naming more than one antibody, and supervisor reviews by review date
+(Reviewed by), with the median received-to-confirmed time. Initials
+match case-insensitively; names come from Users and roles when the
+initials are registered. Cancelled investigations, unconfirmed cases
+and blank initials are excluded, and a confirmation recorded before
+receipt is counted but left out of the median. Analytics shows a
+**Workload by technologist** table beside the overdue list, and
+**Export CSV** appends it.
+
+**Not in this tick:** Reaction-entry and amendment counts per user
+(audit entries record the Windows login, so they can be joined only
+when users are registered), and workload by location (no location
+field yet).
+
 ## Likely next tick
 
-Roadmap item 3: workload by technologist on Analytics (confirmations,
-reviews, and reaction-entry sessions per user over the date range),
-built from the audit log and the user registry. Authenticated vendor portals stay later
-and must not bypass auth, CAPTCHA, licensing, or terms.
+Run a product review (several iterations since the last one), then
+pick from: collector and collection/ordering location on specimens
+(enables workload by location), and per-user reaction-entry counts
+from the audit log. Authenticated vendor portals stay later and must
+not bypass auth, CAPTCHA, licensing, or terms.
 

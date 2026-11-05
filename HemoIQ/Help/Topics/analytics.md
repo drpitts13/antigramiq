@@ -34,3 +34,14 @@ The purple and red cards measure workflow time for investigations **received** i
 - **Overdue open investigations** counts active investigations with no confirmed identification that are older than the Preferences **Turnaround threshold (days)**, default 3.
 
 The overdue list at the bottom shows each case, oldest first, with its current status. Select one and choose **Open** to go to it. **Export CSV** adds the turnaround figures and the overdue list after the antibody counts. The 90th percentile uses the nearest-rank method.
+
+## Workload by technologist
+
+The table beside the overdue list shows work done in the selected date range by each set of initials.
+
+- **Confirmed** counts identifications whose **Identified by** is these initials and whose confirmation date is in the range.
+- **Multiple Ab** counts the confirmations that name more than one antibody, such as anti-E; anti-K.
+- **Reviews** counts supervisor reviews recorded under these initials with a review date in the range.
+- **Median TAT** is the median time from receipt to confirmation, in days, for this person's confirmations.
+
+Initials are matched regardless of case. When the initials belong to a user in **Preferences > Users & roles**, the name is shown too. Cancelled investigations are not counted. **Export CSV** adds this table after the turnaround figures.

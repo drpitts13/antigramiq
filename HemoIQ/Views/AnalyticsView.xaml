@@ -103,21 +103,40 @@
             </Border>
         </UniformGrid>
 
-        <GroupBox DockPanel.Dock="Bottom" Header="Overdue open investigations" Height="170" Margin="0,8,0,0">
-            <DockPanel>
-                <Button DockPanel.Dock="Right" Content="Open" VerticalAlignment="Top" Padding="10,2" Margin="6,0,0,0"
-                        Command="{Binding OpenOverdueCommand}" ToolTip="Open the selected investigation on the Specimens tab."/>
-                <DataGrid ItemsSource="{Binding Overdue}" SelectedItem="{Binding SelectedOverdue}"
-                          AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column">
+        <Grid DockPanel.Dock="Bottom" Height="170" Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <GroupBox Grid.Column="0" Header="Overdue open investigations" Margin="0,0,8,0">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="Open" VerticalAlignment="Top" Padding="10,2" Margin="6,0,0,0"
+                            Command="{Binding OpenOverdueCommand}" ToolTip="Open the selected investigation on the Specimens tab."/>
+                    <DataGrid ItemsSource="{Binding Overdue}" SelectedItem="{Binding SelectedOverdue}"
+                              AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Accession" Binding="{Binding Accession}" Width="140"/>
+                            <DataGridTextColumn Header="Received" Binding="{Binding Received}" Width="110"/>
+                            <DataGridTextColumn Header="Age (days)" Binding="{Binding AgeDays}" Width="90"/>
+                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </GroupBox>
+            <GroupBox Grid.Column="1" Header="Workload by technologist"
+                      ToolTip="Confirmed identifications counted by confirmed date (Identified by) and supervisor reviews by review date (Reviewed by), within the range. Cancelled investigations are excluded. Names come from Users and roles.">
+                <DataGrid ItemsSource="{Binding Workload}" AutoGenerateColumns="False" IsReadOnly="True"
+                          HeadersVisibility="Column">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Accession" Binding="{Binding Accession}" Width="140"/>
-                        <DataGridTextColumn Header="Received" Binding="{Binding Received}" Width="110"/>
-                        <DataGridTextColumn Header="Age (days)" Binding="{Binding AgeDays}" Width="90"/>
-                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*"/>
+                        <DataGridTextColumn Header="Technologist" Binding="{Binding Display}" Width="*"/>
+                        <DataGridTextColumn Header="Confirmed" Binding="{Binding Confirmed}" Width="80"/>
+                        <DataGridTextColumn Header="Multiple Ab" Binding="{Binding MultipleAntibodies}" Width="85"/>
+                        <DataGridTextColumn Header="Reviews" Binding="{Binding Reviewed}" Width="70"/>
+                        <DataGridTextColumn Header="Median TAT" Binding="{Binding MedianConfirmDisplay}" Width="85"/>
                     </DataGrid.Columns>
                 </DataGrid>
-            </DockPanel>
-        </GroupBox>
+            </GroupBox>
+        </Grid>
 
         <Grid DockPanel.Dock="Top" Height="280" Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
