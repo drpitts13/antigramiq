@@ -340,26 +340,45 @@ namespace HemoIQ.ViewModels
             }
             try
             {
-                _db.AddSpecimen(dlg.AccessionNumber, dlg.SpecimenType, dlg.ExpirationDate, dlg.ItemIsActive,
-                    dlg.Notes, dlg.Phenotype, dlg.PreviousAntibodies, dlg.DatResult, genotype: dlg.Genotype);
-                _db.UpdateSpecimenTransfusion(dlg.AccessionNumber, dlg.TransfusionStatusCode, dlg.LastTransfusionDate);
-                _db.UpdateSpecimenDatSplit(dlg.AccessionNumber, dlg.DatIgg, dlg.DatC3);
-                _db.UpdateSpecimenMrn(dlg.AccessionNumber, dlg.Mrn);
-                _db.SetEluateSource(dlg.AccessionNumber, dlg.SourceAccession);
-                _db.UpdateSpecimenCollection(dlg.AccessionNumber, dlg.CollectedAt, dlg.ReceivedAt);
-                _db.UpdateSpecimenOrigin(dlg.AccessionNumber, dlg.Collector, dlg.CollectionLocation,
-                    dlg.OrderingLocation, dlg.OrderingProvider);
-                _db.UpdateSpecimenPregnancy(dlg.AccessionNumber, dlg.PregnancyStatusCode, dlg.PregnancyEndDate, dlg.RhigDate);
+                Services.SpecimenSaveService.Save(_db, ToEdit(dlg, dlg.AccessionNumber), isNew: true);
                 _main.SetStatus($"Specimen {dlg.AccessionNumber} added.");
                 NotifySpecimensChanged();
                 SelectedSpecimen = Specimens.FirstOrDefault(s => s.AccessionNumber == dlg.AccessionNumber);
             }
             catch (System.Exception ex)
             {
-                MessageBox.Show($"Error adding specimen: {ex.Message}", "Error",
+                MessageBox.Show($"The specimen was not added. Nothing was saved.\n\n{ex.Message}", "Specimen not saved",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        private static Services.SpecimenEdit ToEdit(Views.Dialogs.SpecimenDialog dlg, string accession) => new()
+        {
+            AccessionNumber = accession,
+            Type = dlg.SpecimenType,
+            ExpirationDate = dlg.ExpirationDate,
+            IsActive = dlg.ItemIsActive,
+            Notes = dlg.Notes,
+            Phenotype = dlg.Phenotype,
+            Genotype = dlg.Genotype,
+            PreviousAntibodies = dlg.PreviousAntibodies,
+            DatResult = dlg.DatResult,
+            DatIgg = dlg.DatIgg,
+            DatC3 = dlg.DatC3,
+            TransfusionStatus = dlg.TransfusionStatusCode,
+            LastTransfusionDate = dlg.LastTransfusionDate,
+            Mrn = dlg.Mrn,
+            SourceAccession = dlg.SourceAccession,
+            CollectedAt = dlg.CollectedAt,
+            ReceivedAt = dlg.ReceivedAt,
+            Collector = dlg.Collector,
+            CollectionLocation = dlg.CollectionLocation,
+            OrderingLocation = dlg.OrderingLocation,
+            OrderingProvider = dlg.OrderingProvider,
+            PregnancyStatus = dlg.PregnancyStatusCode,
+            PregnancyEndDate = dlg.PregnancyEndDate,
+            RhigDate = dlg.RhigDate,
+        };
 
         private void EditSpecimen()
         {
@@ -368,24 +387,13 @@ namespace HemoIQ.ViewModels
             if (dlg.ShowDialog() != true) return;
             try
             {
-                _db.UpdateSpecimen(SelectedSpecimen.AccessionNumber, dlg.SpecimenType, dlg.ExpirationDate, dlg.ItemIsActive,
-                    dlg.Notes, dlg.Phenotype, dlg.PreviousAntibodies, dlg.DatResult, dlg.Genotype);
-                _db.UpdateSpecimenTransfusion(SelectedSpecimen.AccessionNumber, dlg.TransfusionStatusCode,
-                    dlg.LastTransfusionDate);
-                _db.UpdateSpecimenDatSplit(SelectedSpecimen.AccessionNumber, dlg.DatIgg, dlg.DatC3);
-                _db.UpdateSpecimenMrn(SelectedSpecimen.AccessionNumber, dlg.Mrn);
-                _db.SetEluateSource(SelectedSpecimen.AccessionNumber, dlg.SourceAccession);
-                _db.UpdateSpecimenCollection(SelectedSpecimen.AccessionNumber, dlg.CollectedAt, dlg.ReceivedAt);
-                _db.UpdateSpecimenOrigin(SelectedSpecimen.AccessionNumber, dlg.Collector, dlg.CollectionLocation,
-                    dlg.OrderingLocation, dlg.OrderingProvider);
-                _db.UpdateSpecimenPregnancy(SelectedSpecimen.AccessionNumber, dlg.PregnancyStatusCode,
-                    dlg.PregnancyEndDate, dlg.RhigDate);
+                Services.SpecimenSaveService.Save(_db, ToEdit(dlg, SelectedSpecimen.AccessionNumber), isNew: false);
                 _main.SetStatus($"Specimen {SelectedSpecimen.AccessionNumber} updated.");
                 NotifySpecimensChanged();
             }
             catch (System.Exception ex)
             {
-                MessageBox.Show($"Error updating specimen: {ex.Message}", "Error",
+                MessageBox.Show($"No changes were saved.\n\n{ex.Message}", "Specimen not saved",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }

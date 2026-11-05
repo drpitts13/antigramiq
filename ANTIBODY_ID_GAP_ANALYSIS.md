@@ -1353,12 +1353,30 @@ and the save sequence are unchanged.
 a later failure can leave earlier fields saved), and remembering the
 last tab.
 
+## Iteration 71 (this change)
+
+**Deficiency:** Saving the Specimen dialog ran eight audited updates in
+turn. If a later one was refused (an eluate source that does not exist,
+received before collected), the earlier ones stayed saved. A new
+specimen could be created half-filled, and the audit log recorded
+changes the user was told had failed.
+
+**Bounded improvement:** `DatabaseService.RunInTransaction` wraps work
+in a SQL savepoint, so every existing update method takes part without
+change and calls may nest. `SpecimenSaveService.Save` runs the whole
+dialog save inside it, for both add and edit. A refused step rolls back
+the specimen row, every field, and every audit entry from that save. The
+message now says "Nothing was saved" / "No changes were saved". Each
+step keeps its own validation and audit.
+
+**Not in this tick:** Other multi-step writes (panel import with cells,
+patient save plus MRN link) still run step by step and should move to
+`RunInTransaction`.
+
 ## Likely next tick
 
-Make specimen save atomic: wrap the dialog's sequence of audited
-updates in one database transaction so a validation failure in a later
-step rolls back the earlier ones, with tests for the partial-failure
-case. Then roadmap item 4 (per-user reaction-entry and amendment counts).
-Authenticated vendor portals stay later and must not bypass auth,
-CAPTCHA, licensing, or terms.
-
+Audit other multi-step writes (panel import, panel activation with
+cells, reaction batch saves) and move any that can fail part-way to
+`RunInTransaction`, with partial-failure tests. Then per-user
+reaction-entry and amendment counts. Authenticated vendor portals stay
+later and must not bypass auth, CAPTCHA, licensing, or terms.

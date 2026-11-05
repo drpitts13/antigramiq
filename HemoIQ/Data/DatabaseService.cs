@@ -3325,6 +3325,38 @@ namespace HemoIQ.Data
                 throw new RecordLockedException(specimenId);
         }
 
+        private int _savepointDepth;
+
+        /// <summary>
+        /// Runs <paramref name="body"/> as one unit: every write it makes, audit entries
+        /// included, is kept only if it returns normally, and is rolled back if it throws.
+        /// Uses SQL savepoints, so existing methods need no transaction object and calls
+        /// may nest. The exception is rethrown after the rollback.
+        /// </summary>
+        public void RunInTransaction(Action body)
+        {
+            var name = $"sp_{++_savepointDepth}";
+            try
+            {
+                ExecNonQuery($"SAVEPOINT {name}");
+                try
+                {
+                    body();
+                }
+                catch
+                {
+                    ExecNonQuery($"ROLLBACK TO {name}");
+                    ExecNonQuery($"RELEASE {name}");
+                    throw;
+                }
+                ExecNonQuery($"RELEASE {name}");
+            }
+            finally
+            {
+                _savepointDepth--;
+            }
+        }
+
         public void AppendAudit(string action, string? entityType, string? entityId, string? reason,
             string? beforeJson = null, string? afterJson = null)
         {

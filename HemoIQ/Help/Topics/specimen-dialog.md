@@ -35,4 +35,4 @@ The **Context** line under the tabs always lists what is recorded on Clinical co
 
 Each change to the transfusion status or date is written to the audit log with the old and new values. The fields cannot be changed after an identification is confirmed.
 
-**Save** writes the record. **Cancel** discards the changes. **Help** opens this chapter.
+**Save** writes the record. The whole record is saved together: if any value is refused (for example an eluate source that does not exist, or a record locked by a confirmed identification), nothing from that save is kept, no audit entries are written for it, and the message says so. **Cancel** discards the changes. **Help** opens this chapter.
