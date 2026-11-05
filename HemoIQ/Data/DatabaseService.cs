@@ -2724,6 +2724,22 @@ namespace HemoIQ.Data
                     panelId: null, lotNumber: null);
             }
 
+            foreach (var (panel, antigen, cells) in FindUnverifiedAllNegativeExtraAntigens())
+                items.Add(new WorklistItem
+                {
+                    Kind = WorklistKind.ExtraAntigenReview,
+                    KindLabel = "Check typing",
+                    Title = panel.Name,
+                    Detail = $"Lot {panel.LotNumber}: {antigen} is negative on all {cells} cells. Extra antigens added before " +
+                             "this check was introduced were filled in as negative automatically. Compare with the antigram, then " +
+                             "Mark typing verified, or Edit the panel to correct or set NT.",
+                    UrgencyLabel = "Verify",
+                    SortOrder = 1,
+                    PanelId = panel.PanelId,
+                    Antigen = antigen,
+                    TargetTab = "Panels",
+                });
+
             foreach (var p in GetAllPanels().Where(p => p.IsActive))
             {
                 AddExpirationWorklistItem(items, p.ExpirationDate, today, todayStr, horizon,
@@ -2735,6 +2751,55 @@ namespace HemoIQ.Data
                 .OrderBy(i => i.SortOrder)
                 .ThenBy(i => i.Title)
                 .ToList();
+        }
+
+        /// <summary>
+        /// Extra-antigen columns typed "-" on every cell (two or more) whose typing has no
+        /// record of being entered or verified: no <c>add_extra_antigen</c> entry (columns
+        /// added since that entry exists start as NT), no audited typing edit for the
+        /// antigen, and no <c>verify_extra_antigen</c> entry. These are likely the old
+        /// automatic negative default rather than real typing.
+        /// </summary>
+        public List<(Panel Panel, string Antigen, int Cells)> FindUnverifiedAllNegativeExtraAntigens()
+        {
+            var found = new List<(Panel, string, int)>();
+            foreach (var panel in GetAllPanels())
+            {
+                var extras = GetPanelExtraAntigens(panel.PanelId);
+                if (extras.Count == 0) continue;
+                var cells = GetPanelCells(panel.PanelId)
+                    .Where(c => !string.Equals(c.CellNumber, "AC", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                if (cells.Count < 2) continue;
+                List<AuditEvent>? audit = null;
+                foreach (var antigen in extras)
+                {
+                    if (!cells.All(c => c.Antigens.TryGetValue(antigen, out var v) && v == "-")) continue;
+                    audit ??= GetAuditEventsForEntity("panel", panel.PanelId.ToString());
+                    bool Mentions(AuditEvent e, string json) =>
+                        json != null && json.Contains($"\"antigen\":\"{antigen}\"", StringComparison.Ordinal);
+                    if (audit.Any(e => (e.Action is "add_extra_antigen" or "verify_extra_antigen") && Mentions(e, e.AfterJson ?? "")))
+                        continue;
+                    if (audit.Any(e => e.Action == "edit_panel_typing" && (e.AfterJson ?? "").Contains($" {antigen}: ", StringComparison.Ordinal)))
+                        continue;
+                    found.Add((panel, antigen, cells.Count));
+                }
+            }
+            return found;
+        }
+
+        /// <summary>
+        /// Records that a person checked an all-negative extra-antigen column against the
+        /// antigram and it is correct. Needs the supervisor-review permission. Changes no
+        /// typing; only the audit log and the Worklist.
+        /// </summary>
+        public void VerifyExtraAntigenTyping(int panelId, string antigen)
+        {
+            Services.AccessControl.Demand(this, Services.Permission.SupervisorReview);
+            if (!GetPanelExtraAntigens(panelId).Contains(antigen))
+                throw new ArgumentException($"{antigen} is not an extra antigen on panel #{panelId}.");
+            AppendAudit("verify_extra_antigen", "panel", panelId.ToString(), null, null,
+                JsonSerializer.Serialize(new { antigen, verified = "all cells negative" }));
         }
 
         private static void AddExpirationWorklistItem(

@@ -40,6 +40,8 @@
                          ToolTip="Filter by accession, panel name, kind, urgency, or detail"/>
                 <Button Content="Show all" Command="{Binding ShowAllCommand}" Padding="10,2" Margin="0,0,8,0"
                         ToolTip="Show every worklist category"/>
+                <Button Content="Mark typing verified" Command="{Binding VerifyTypingCommand}" Padding="10,2" Margin="0,0,8,0"
+                        ToolTip="For a Check typing item: record that the all-negative extra-antigen column matches the antigram. Needs a supervisor once users are registered."/>
                 <Button Content="Open" Command="{Binding OpenCommand}" Padding="10,2" Margin="0,0,8,0"/>
                 <Button Content="Refresh" Command="{Binding RefreshCommand}" Padding="10,2"/>
                 <Button Content="Help" Padding="10,2" Margin="8,0,0,0"

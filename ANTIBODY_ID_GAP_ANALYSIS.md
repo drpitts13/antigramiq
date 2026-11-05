@@ -1583,9 +1583,30 @@ automatically, because some may be real typing. A data-quality check
 listing extra-antigen columns that are "-" on every cell would let a
 supervisor review them.
 
+## Iteration 80 (this change)
+
+**Deficiency:** Panels that gained an extra antigen before iteration 79
+still hold "-" (typed negative) on every cell for that column. Some may
+be real typing, some the old automatic default; analysis cannot tell,
+and nothing pointed a person at them.
+
+**Bounded improvement:** `FindUnverifiedAllNegativeExtraAntigens` lists
+extra-antigen columns that are "-" on every non-AC cell (two or more)
+with no `add_extra_antigen`, no audited typing edit for that antigen,
+and no `verify_extra_antigen` entry. Each appears on the Worklist as
+**Check typing** (opens Panels). **Mark typing verified** records a
+`verify_extra_antigen` audit entry (supervisor permission once users are
+registered) and clears the item without changing typing; an audited
+Edit also clears it. Nothing is rewritten automatically.
+
+**Not in this tick:** A count card for data-quality items on the
+Worklist header, and other data-quality checks (duplicate lots, panels
+with no typed antigens).
+
 ## Likely next tick
 
-Data-quality check for extra-antigen columns typed "-" on every cell
-(likely the old default, not real typing), listed for review on the
-Worklist without changing data. Authenticated vendor portals stay later
-and must not bypass auth, CAPTCHA, licensing, or terms.
+Product review of data quality: extend the Worklist with a small set of
+integrity checks (active panel with no typed antigens, duplicate vendor
+lot, specimen linked to an expired panel at time of testing) using the
+same verify-or-fix pattern. Authenticated vendor portals stay later and
+must not bypass auth, CAPTCHA, licensing, or terms.

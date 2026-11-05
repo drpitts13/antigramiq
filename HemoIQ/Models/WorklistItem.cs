@@ -8,7 +8,8 @@ namespace HemoIQ.Models
         ExpiringPanel,
         ExpiredSpecimen,
         ExpiredPanel,
-        AwaitingSupervisorReview
+        AwaitingSupervisorReview,
+        ExtraAntigenReview
     }
 
     public class WorklistItem
@@ -21,6 +22,8 @@ namespace HemoIQ.Models
         public int SortOrder { get; set; }
         public string? AccessionNumber { get; set; }
         public int? PanelId { get; set; }
+        /// <summary>The antigen an <see cref="WorklistKind.ExtraAntigenReview"/> item is about.</summary>
+        public string? Antigen { get; set; }
         public string TargetTab { get; set; } = "Specimens";
 
         public bool MatchesFilter(string? query) =>

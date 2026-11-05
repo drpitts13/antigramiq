@@ -119,6 +119,7 @@ namespace HemoIQ.ViewModels
         public ICommand OpenCommand { get; }
         public ICommand ShowAllCommand { get; }
         public ICommand IsolateKindCommand { get; }
+        public ICommand VerifyTypingCommand { get; }
 
         public WorklistViewModel(DatabaseService db, MainViewModel main)
         {
@@ -128,6 +129,8 @@ namespace HemoIQ.ViewModels
             OpenCommand = new RelayCommand(OpenSelected, () => SelectedItem != null);
             ShowAllCommand = new RelayCommand(ShowAllCategories);
             IsolateKindCommand = new RelayCommand(IsolateOrRestoreKind);
+            VerifyTypingCommand = new RelayCommand(VerifySelectedTyping,
+                () => SelectedItem is { Kind: WorklistKind.ExtraAntigenReview, PanelId: not null, Antigen: not null });
             Refresh();
         }
 
@@ -167,6 +170,27 @@ namespace HemoIQ.ViewModels
                 _main.SetStatus($"Worklist: {Items.Count} item(s) need attention.");
             else
                 _main.SetStatus($"Worklist: {Items.Count} of {_allItems.Count} item(s) shown.");
+        }
+
+        private void VerifySelectedTyping()
+        {
+            if (SelectedItem is not { Kind: WorklistKind.ExtraAntigenReview, PanelId: int panelId, Antigen: string antigen }) return;
+            if (System.Windows.MessageBox.Show(
+                    $"Confirm that {antigen} is negative on every cell of {SelectedItem.Title}, as printed on the vendor antigram?",
+                    "Mark typing verified", System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Question) != System.Windows.MessageBoxResult.Yes) return;
+            try
+            {
+                _db.VerifyExtraAntigenTyping(panelId, antigen);
+            }
+            catch (System.Exception ex) when (ex is System.UnauthorizedAccessException or System.ArgumentException)
+            {
+                System.Windows.MessageBox.Show(ex.Message, "Mark typing verified",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+            _main.SetStatus($"{antigen} typing on {SelectedItem.Title} marked verified.");
+            Refresh();
         }
 
         private void PersistFilters()
