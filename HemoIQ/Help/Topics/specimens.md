@@ -8,7 +8,7 @@ The left pane lists accession number, type, final ID, expiration, created date, 
 
 - **Find** filters by accession, type, phenotype, previous antibodies, notes, DAT, or final ID.
 - **Add** opens a blank specimen record. **Edit** opens the selected record. Double-click a row to edit it.
-- **Delete** removes the selected specimen after you confirm.
+- **Delete** removes the selected specimen, with its panel links, reactions, and analysis, after you confirm. It is meant for a specimen entered in error. A specimen with a confirmed identification cannot be deleted; use **Cancel** on the investigation instead, or have a supervisor clear the identification first. A specimen named as the source of an eluate cannot be deleted until that link is removed. Each deletion is written to the audit log with the MRN, type, received date, linked panels, and how many reaction rows were removed.
 - **Refresh** reloads the list.
 - **Show Inactive** includes specimens that were marked inactive.
 - **Help** opens this chapter.

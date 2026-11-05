@@ -1165,12 +1165,51 @@ namespace HemoIQ.Data
                 }));
         }
 
+        /// <summary>
+        /// Deletes a specimen and, by cascade, its panel links, runs, reactions and
+        /// analysis. Refused when the specimen has a confirmed identification (cancel the
+        /// investigation or clear the identification first) or when eluates name it as
+        /// their source. Audited with what was removed. Missing accessions are ignored.
+        /// </summary>
         public void DeleteSpecimen(string accessionNumber)
         {
-            using var cmd = _conn.CreateCommand();
-            cmd.CommandText = "DELETE FROM specimens WHERE accession_number = $acc";
-            cmd.Parameters.AddWithValue("$acc", accessionNumber);
-            cmd.ExecuteNonQuery();
+            var s = GetSpecimen(accessionNumber);
+            if (s == null) return;
+            if (s.HasFinalCall)
+                throw new InvalidOperationException(
+                    $"Specimen {accessionNumber} has a confirmed identification ({s.FinalAntibodies}) and cannot be deleted. " +
+                    "Cancel the investigation instead, or have a supervisor clear the identification first.");
+            var eluates = GetEluatesFor(accessionNumber);
+            if (eluates.Count > 0)
+                throw new InvalidOperationException(
+                    $"Specimen {accessionNumber} is the source of eluate(s) {string.Join(", ", eluates.Select(e => e.AccessionNumber))}. " +
+                    "Remove those links before deleting it.");
+
+            int reactionRows;
+            using (var count = _conn.CreateCommand())
+            {
+                count.CommandText = @"
+                    SELECT COUNT(*) FROM reactions r JOIN panel_runs pr ON pr.run_id = r.run_id
+                    WHERE pr.specimen_id = $acc";
+                count.Parameters.AddWithValue("$acc", accessionNumber);
+                reactionRows = Convert.ToInt32(count.ExecuteScalar());
+            }
+            var panels = GetSpecimenPanels(accessionNumber).Select(p => p.PanelId).ToList();
+
+            RunInTransaction(() =>
+            {
+                using var cmd = _conn.CreateCommand();
+                cmd.CommandText = "DELETE FROM specimens WHERE accession_number = $acc";
+                cmd.Parameters.AddWithValue("$acc", accessionNumber);
+                cmd.ExecuteNonQuery();
+                AppendAudit("delete_specimen", "specimen", accessionNumber, null,
+                    JsonSerializer.Serialize(new
+                    {
+                        mrn = s.Mrn, type = s.Type, createdDate = s.CreatedDate,
+                        linkedPanels = panels, reactionRows, cancelled = s.IsCancelled,
+                    }),
+                    null);
+            });
         }
 
         public void TouchSpecimenReactionsUpdated(string specimenId)
@@ -2948,11 +2987,21 @@ namespace HemoIQ.Data
             return Convert.ToInt32(cmd.ExecuteScalar());
         }
 
+        public int CountConfirmedSpecimensCreatedBefore(string cutoffDate)
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"SELECT COUNT(*) FROM specimens
+                WHERE created_date < $cutoff AND final_antibodies IS NOT NULL AND trim(final_antibodies) <> ''";
+            cmd.Parameters.AddWithValue("$cutoff", cutoffDate);
+            return Convert.ToInt32(cmd.ExecuteScalar());
+        }
+
         public PurgeResult PurgeSpecimensCreatedBefore(string cutoffDate, string? archivePath = null)
         {
             if (string.IsNullOrWhiteSpace(cutoffDate))
                 throw new ArgumentException("Cutoff date is required.", nameof(cutoffDate));
 
+            Services.AccessControl.Demand(this, Services.Permission.PurgeData);
             var count = CountSpecimensCreatedBefore(cutoffDate);
             if (count == 0)
             {
@@ -2964,6 +3013,15 @@ namespace HemoIQ.Data
                 };
             }
 
+            if (string.IsNullOrWhiteSpace(archivePath))
+            {
+                var confirmed = CountConfirmedSpecimensCreatedBefore(cutoffDate);
+                if (confirmed > 0)
+                    throw new InvalidOperationException(
+                        $"{confirmed} of the {count} specimen(s) created before {cutoffDate} have a confirmed identification. " +
+                        "Choose an archive file so that history is kept; nothing was purged.");
+            }
+
             string? createdArchive = null;
             if (!string.IsNullOrWhiteSpace(archivePath))
             {
@@ -2973,16 +3031,18 @@ namespace HemoIQ.Data
                 CreateSpecimenArchive(cutoffDate, createdArchive);
             }
 
-            using (var cmd = _conn.CreateCommand())
+            RunInTransaction(() =>
             {
-                cmd.CommandText = "DELETE FROM specimens WHERE created_date < $cutoff";
-                cmd.Parameters.AddWithValue("$cutoff", cutoffDate);
-                cmd.ExecuteNonQuery();
-            }
-
+                using (var cmd = _conn.CreateCommand())
+                {
+                    cmd.CommandText = "DELETE FROM specimens WHERE created_date < $cutoff";
+                    cmd.Parameters.AddWithValue("$cutoff", cutoffDate);
+                    cmd.ExecuteNonQuery();
+                }
+                AppendAudit("purge", "database", cutoffDate, createdArchive,
+                    afterJson: JsonSerializer.Serialize(new { count, archive = createdArchive }));
+            });
             Vacuum();
-            AppendAudit("purge", "database", cutoffDate, createdArchive,
-                afterJson: JsonSerializer.Serialize(new { count, archive = createdArchive }));
 
             return new PurgeResult
             {

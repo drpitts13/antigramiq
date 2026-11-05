@@ -404,7 +404,15 @@ namespace HemoIQ.ViewModels
             var acc = SelectedSpecimen.AccessionNumber;
             if (MessageBox.Show($"Delete specimen {acc}? This will also delete all reactions and analysis results.",
                 "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
-            _db.DeleteSpecimen(acc);
+            try
+            {
+                _db.DeleteSpecimen(acc);
+            }
+            catch (System.InvalidOperationException ex)
+            {
+                MessageBox.Show(ex.Message, "Specimen not deleted", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
             _main.SetStatus($"Specimen {acc} deleted.");
             NotifySpecimensChanged();
         }

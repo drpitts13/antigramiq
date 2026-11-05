@@ -13,6 +13,7 @@ namespace HemoIQ.Services
         ReinstateInvestigation,
         ConfigurePreferences,
         ManageUsers,
+        PurgeData,
     }
 
     /// <summary>
@@ -33,6 +34,7 @@ namespace HemoIQ.Services
             [Permission.ReinstateInvestigation] = new[] { UserRole.Supervisor, UserRole.Administrator },
             [Permission.ConfigurePreferences] = new[] { UserRole.Administrator },
             [Permission.ManageUsers] = new[] { UserRole.Administrator },
+            [Permission.PurgeData] = new[] { UserRole.Administrator },
         };
 
         public static string Describe(Permission p) => p switch
@@ -42,6 +44,7 @@ namespace HemoIQ.Services
             Permission.ReinstateInvestigation => "reinstate a cancelled investigation",
             Permission.ConfigurePreferences => "change Preferences",
             Permission.ManageUsers => "manage users and roles",
+            Permission.PurgeData => "purge specimens from the database",
             _ => p.ToString(),
         };
 

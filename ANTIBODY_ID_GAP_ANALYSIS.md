@@ -1399,9 +1399,31 @@ import is left in the artifact folder (content-addressed, harmless,
 not referenced). Specimen deletion and archive purge were not reviewed
 in this pass.
 
+## Iteration 73 (this change)
+
+**Deficiency:** Deleting a specimen wrote no audit entry and was allowed
+even with a confirmed identification, erasing the reactions, analysis,
+and final call by cascade. It could also leave eluates pointing at a
+missing source. Purge Database could permanently delete confirmed
+identifications with no archive, and any user could run it.
+
+**Bounded improvement:** `DeleteSpecimen` refuses a specimen with a
+confirmed identification (cancel the investigation or clear the
+identification first) and one named as an eluate source. Allowed
+deletions run in one transaction with a `delete_specimen` audit entry
+listing the MRN, type, received date, linked panels, reaction rows, and
+cancelled state. Purge needs the new `PurgeData` permission
+(Administrator once users are registered), refuses to run without an
+archive when any matching specimen has a confirmed identification, and
+deletes and audits in one transaction before vacuuming. The Specimens
+Delete button shows the refusal.
+
+**Not in this tick:** A purge can still remove an eluate's source when
+the eluate is newer than the cutoff (the eluate keeps the accession as
+text). Per-specimen delete has no reason prompt.
+
 ## Likely next tick
 
-Review specimen deletion and archive purge for the same
-history-erasure risk, then per-user reaction-entry and amendment
-counts. Authenticated vendor portals stay later and must not bypass
-auth, CAPTCHA, licensing, or terms.
+Per-user reaction-entry and amendment counts from the audit log for
+registered users, on Analytics. Authenticated vendor portals stay later
+and must not bypass auth, CAPTCHA, licensing, or terms.
