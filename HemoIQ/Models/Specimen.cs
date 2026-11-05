@@ -30,6 +30,28 @@ namespace HemoIQ.Models
                 return RhigDate == null ? label : $"{label}; RhIG {RhigDate}";
             }
         }
+        /// <summary>Who collected the specimen.</summary>
+        public string? Collector { get; set; }
+        /// <summary>Where the specimen was collected (unit, clinic, or site).</summary>
+        public string? CollectionLocation { get; set; }
+        /// <summary>Ordering location (unit or clinic the order came from).</summary>
+        public string? OrderingLocation { get; set; }
+        public string? OrderingProvider { get; set; }
+        /// <summary>One-line collector, locations and provider; empty when none is recorded.</summary>
+        public string OriginDisplay
+        {
+            get
+            {
+                var parts = new System.Collections.Generic.List<string>();
+                if (Collector != null || CollectionLocation != null)
+                    parts.Add("Collected" + (Collector != null ? $" by {Collector}" : "") +
+                              (CollectionLocation != null ? $" at {CollectionLocation}" : ""));
+                if (OrderingProvider != null || OrderingLocation != null)
+                    parts.Add("Ordered" + (OrderingProvider != null ? $" by {OrderingProvider}" : "") +
+                              (OrderingLocation != null ? $" from {OrderingLocation}" : ""));
+                return string.Join("; ", parts);
+            }
+        }
         public bool IsEluate => string.Equals(Type, "eluate", StringComparison.OrdinalIgnoreCase);
         public string Type { get; set; } = "serum";
         public string? ExpirationDate { get; set; }

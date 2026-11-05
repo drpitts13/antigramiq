@@ -254,6 +254,9 @@ namespace HemoIQ.Data
                 ExecNonQuery("ALTER TABLE specimens ADD COLUMN collected_at TEXT");
             if (!cols.Contains("received_at"))
                 ExecNonQuery("ALTER TABLE specimens ADD COLUMN received_at TEXT");
+            foreach (var col in new[] { "collector", "collection_location", "ordering_location", "ordering_provider" })
+                if (!cols.Contains(col))
+                    ExecNonQuery($"ALTER TABLE specimens ADD COLUMN {col} TEXT CHECK ({col} IS NULL OR length({col}) <= {OriginMaxLength})");
             if (!cols.Contains("source_accession"))
                 ExecNonQuery("ALTER TABLE specimens ADD COLUMN source_accession TEXT");
             ExecNonQuery("CREATE INDEX IF NOT EXISTS ix_specimens_source ON specimens(source_accession)");
@@ -856,6 +859,48 @@ namespace HemoIQ.Data
         /// receipt may not precede collection. Blank clears a value. Audited; locked
         /// after a final call.
         /// </summary>
+        public const int OriginMaxLength = 128;
+
+        /// <summary>
+        /// Records who collected the specimen, where, and who ordered it from where.
+        /// Values are trimmed with inner whitespace collapsed; blank clears a value; each
+        /// is at most 128 characters. Audited; locked after a final call.
+        /// </summary>
+        public void UpdateSpecimenOrigin(string accessionNumber, string? collector, string? collectionLocation,
+            string? orderingLocation, string? orderingProvider)
+        {
+            static string? Clean(string? v, string label)
+            {
+                var t = string.IsNullOrWhiteSpace(v) ? null : System.Text.RegularExpressions.Regex.Replace(v.Trim(), @"\s+", " ");
+                if (t != null && t.Length > OriginMaxLength)
+                    throw new ArgumentException($"{label} is longer than {OriginMaxLength} characters.");
+                return t;
+            }
+            var c = Clean(collector, "Collector");
+            var cl = Clean(collectionLocation, "Collection location");
+            var ol = Clean(orderingLocation, "Ordering location");
+            var op = Clean(orderingProvider, "Ordering provider");
+            var before = GetSpecimen(accessionNumber)
+                         ?? throw new ArgumentException($"Specimen {accessionNumber} not found.");
+            if (before.Collector == c && before.CollectionLocation == cl &&
+                before.OrderingLocation == ol && before.OrderingProvider == op) return;
+            EnsureSpecimenUnlocked(accessionNumber);
+
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"UPDATE specimens SET collector = $c, collection_location = $cl,
+                ordering_location = $ol, ordering_provider = $op WHERE accession_number = $acc";
+            cmd.Parameters.AddWithValue("$c", (object?)c ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$cl", (object?)cl ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$ol", (object?)ol ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$op", (object?)op ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$acc", accessionNumber);
+            cmd.ExecuteNonQuery();
+            AppendAudit("update_origin", "specimen", accessionNumber, null,
+                JsonSerializer.Serialize(new { collector = before.Collector, collectionLocation = before.CollectionLocation,
+                    orderingLocation = before.OrderingLocation, orderingProvider = before.OrderingProvider }),
+                JsonSerializer.Serialize(new { collector = c, collectionLocation = cl, orderingLocation = ol, orderingProvider = op }));
+        }
+
         public void UpdateSpecimenCollection(string accessionNumber, string? collectedAt, string? receivedAt)
         {
             var now = DateTime.Now;
@@ -2631,6 +2676,10 @@ namespace HemoIQ.Data
             Mrn = SafeGetString(r, "mrn"),
             SourceAccession = SafeGetString(r, "source_accession"),
             CollectedAt = SafeGetString(r, "collected_at"),
+            Collector = SafeGetString(r, "collector"),
+            CollectionLocation = SafeGetString(r, "collection_location"),
+            OrderingLocation = SafeGetString(r, "ordering_location"),
+            OrderingProvider = SafeGetString(r, "ordering_provider"),
             PregnancyStatus = PregnancyStatus.Normalize(SafeGetString(r, "pregnancy_status")),
             PregnancyEndDate = SafeGetString(r, "pregnancy_end_date"),
             RhigDate = SafeGetString(r, "rhig_date"),

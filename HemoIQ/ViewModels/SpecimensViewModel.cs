@@ -288,7 +288,8 @@ namespace HemoIQ.ViewModels
 
             PatientText = FormatPatient(_db.GetPatient(_selectedSpecimen.Mrn), _selectedSpecimen.Mrn);
             Status = Services.InvestigationStatusService.Compute(_db, _selectedSpecimen);
-            var times = $"Collected {_selectedSpecimen.CollectedAt ?? "not recorded"}; received {_selectedSpecimen.ReceivedAt ?? _selectedSpecimen.CreatedDate}.";
+            var times = $"Collected {_selectedSpecimen.CollectedAt ?? "not recorded"}; received {_selectedSpecimen.ReceivedAt ?? _selectedSpecimen.CreatedDate}." +
+                        (_selectedSpecimen.OriginDisplay.Length == 0 ? "" : $" {_selectedSpecimen.OriginDisplay}.");
             DatingText = Services.SpecimenDating.Check(_selectedSpecimen, Services.AppSettings.Current.DefaultSpecimenDatingDays,
                 Services.AppSettings.Current.DatingTransfusionLookbackDays) is string note
                 ? times + " REVIEW: " + note
@@ -345,6 +346,8 @@ namespace HemoIQ.ViewModels
                 _db.UpdateSpecimenMrn(dlg.AccessionNumber, dlg.Mrn);
                 _db.SetEluateSource(dlg.AccessionNumber, dlg.SourceAccession);
                 _db.UpdateSpecimenCollection(dlg.AccessionNumber, dlg.CollectedAt, dlg.ReceivedAt);
+                _db.UpdateSpecimenOrigin(dlg.AccessionNumber, dlg.Collector, dlg.CollectionLocation,
+                    dlg.OrderingLocation, dlg.OrderingProvider);
                 _db.UpdateSpecimenPregnancy(dlg.AccessionNumber, dlg.PregnancyStatusCode, dlg.PregnancyEndDate, dlg.RhigDate);
                 _main.SetStatus($"Specimen {dlg.AccessionNumber} added.");
                 NotifySpecimensChanged();
@@ -372,6 +375,8 @@ namespace HemoIQ.ViewModels
                 _db.UpdateSpecimenMrn(SelectedSpecimen.AccessionNumber, dlg.Mrn);
                 _db.SetEluateSource(SelectedSpecimen.AccessionNumber, dlg.SourceAccession);
                 _db.UpdateSpecimenCollection(SelectedSpecimen.AccessionNumber, dlg.CollectedAt, dlg.ReceivedAt);
+                _db.UpdateSpecimenOrigin(SelectedSpecimen.AccessionNumber, dlg.Collector, dlg.CollectionLocation,
+                    dlg.OrderingLocation, dlg.OrderingProvider);
                 _db.UpdateSpecimenPregnancy(SelectedSpecimen.AccessionNumber, dlg.PregnancyStatusCode,
                     dlg.PregnancyEndDate, dlg.RhigDate);
                 _main.SetStatus($"Specimen {SelectedSpecimen.AccessionNumber} updated.");

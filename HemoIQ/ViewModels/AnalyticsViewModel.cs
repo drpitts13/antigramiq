@@ -30,6 +30,7 @@ namespace HemoIQ.ViewModels
 
         public ObservableCollection<OverdueInvestigation> Overdue { get; } = new();
         public ObservableCollection<TechnologistWorkload> Workload { get; } = new();
+        public ObservableCollection<LocationWorkload> LocationWorkload { get; } = new();
 
         private OverdueInvestigation? _selectedOverdue;
         public OverdueInvestigation? SelectedOverdue
@@ -163,6 +164,8 @@ namespace HemoIQ.ViewModels
 
             Workload.Clear();
             foreach (var w in WorkloadService.Compute(specimens, FromDate, ToDate, _db.GetUsers())) Workload.Add(w);
+            LocationWorkload.Clear();
+            foreach (var w in WorkloadService.ComputeByLocation(specimens, FromDate, ToDate)) LocationWorkload.Add(w);
 
             OnPropertyChanged(nameof(IsAllTime));
             OnPropertyChanged(nameof(RangeLabel));
@@ -194,6 +197,17 @@ namespace HemoIQ.ViewModels
                              (w.MedianConfirmDays is double d ? d.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "");
         }
 
+        public static IEnumerable<string> LocationCsvLines(IEnumerable<LocationWorkload> rows)
+        {
+            static string Q(string v) => v.Contains(',') || v.Contains('"') ? $"\"{v.Replace("\"", "\"\"")}\"" : v;
+            yield return "";
+            yield return "Workload by ordering location (investigations received in the range)";
+            yield return "Ordering location,Received,Confirmed,Open,Median received to confirmed (days)";
+            foreach (var w in rows)
+                yield return $"{Q(w.Location)},{w.Received},{w.Confirmed},{w.Open}," +
+                             (w.MedianConfirmDays is double d ? d.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "");
+        }
+
         private void OpenOverdue()
         {
             if (SelectedOverdue == null || _main == null) return;
@@ -222,6 +236,7 @@ namespace HemoIQ.ViewModels
                 AntibodyAnalyticsService.ExportToCsv(result, FromDate, ToDate, dlg.FileName);
                 File.AppendAllLines(dlg.FileName, TurnaroundCsvLines(Turnaround));
                 File.AppendAllLines(dlg.FileName, WorkloadCsvLines(Workload));
+                File.AppendAllLines(dlg.FileName, LocationCsvLines(LocationWorkload));
                 _main?.SetStatus($"CSV exported: {dlg.FileName}");
                 MessageBox.Show("CSV exported successfully.", "Export",
                     MessageBoxButton.OK, MessageBoxImage.Information);

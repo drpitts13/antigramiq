@@ -24,6 +24,16 @@ namespace HemoIQ.Services
         public int Total => Confirmed + Reviewed;
     }
 
+    public sealed class LocationWorkload
+    {
+        public string Location { get; init; } = string.Empty;
+        public int Received { get; init; }
+        public int Confirmed { get; init; }
+        public int Open { get; init; }
+        public double? MedianConfirmDays { get; init; }
+        public string MedianConfirmDisplay => MedianConfirmDays is double d ? $"{d:F1} d" : "—";
+    }
+
     /// <summary>
     /// Work done per technologist in a date range. Confirmations are counted by the
     /// confirmed date and attributed to Identified by; supervisor reviews are counted by
@@ -78,6 +88,42 @@ namespace HemoIQ.Services
                 })
                 .OrderByDescending(w => w.Total)
                 .ThenBy(w => w.Initials, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        public const string NoLocation = "(not recorded)";
+
+        /// <summary>
+        /// Investigations received in the range, grouped by ordering location (trimmed,
+        /// case-insensitive; blank is "(not recorded)"). Counts received, confirmed and
+        /// still-open (active, unconfirmed) cases, with the median received-to-confirmed
+        /// time. Cancelled investigations are excluded. Busiest location first.
+        /// </summary>
+        public static List<LocationWorkload> ComputeByLocation(IEnumerable<Specimen> specimens, DateTime? from, DateTime? to)
+        {
+            return specimens
+                .Where(s => !s.IsCancelled && InRange(s.CreatedDate, from, to))
+                .GroupBy(s => string.IsNullOrWhiteSpace(s.OrderingLocation) ? NoLocation : s.OrderingLocation.Trim(),
+                    StringComparer.OrdinalIgnoreCase)
+                .Select(g =>
+                {
+                    var days = g.Where(s => s.HasFinalCall)
+                        .Select(s => (s, received: TurnaroundService.ReceivedTime(s)))
+                        .Where(x => TryDate(x.s.IdentifiedAt, out var c) && c >= x.received && x.received > DateTime.MinValue)
+                        .Select(x => { TryDate(x.s.IdentifiedAt, out var c); return (c - x.received).TotalDays; })
+                        .ToList();
+                    return new LocationWorkload
+                    {
+                        Location = g.Key,
+                        Received = g.Count(),
+                        Confirmed = g.Count(s => s.HasFinalCall),
+                        Open = g.Count(s => s.IsActive && !s.HasFinalCall),
+                        MedianConfirmDays = TurnaroundService.Stats(days).Median,
+                    };
+                })
+                .OrderBy(w => w.Location == NoLocation)
+                .ThenByDescending(w => w.Received)
+                .ThenBy(w => w.Location, StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }
 

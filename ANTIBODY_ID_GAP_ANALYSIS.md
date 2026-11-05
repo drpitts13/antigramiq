@@ -33,6 +33,7 @@ Last updated: 2026-11-03 (iteration 66 — local users and roles enforcing revie
 | Audit | Investigation timeline | Present | `InvestigationTimeline` merges receipt, panel link/unlink (now audited), runs, grouped reaction saves, analysis snapshots, confirm/clear/review, MRN/transfusion/DAT/patient edits; Specimens Timeline expander and worksheet section | Report print/PDF/CSV audited with SHA-256 and shown on the timeline |
 | Reporting | Turnaround metrics | Present | `TurnaroundService`: received→confirmed (days) and confirmed→reviewed (hours) median and nearest-rank 90th percentile by received date, cancelled excluded; overdue open list with status and Open; configurable threshold; CSV | Uses recorded received time when present |
 | Reporting | Workload by technologist | Present | `WorkloadService`: per initials, confirmations (by confirmed date), multi-antibody confirmations, supervisor reviews (by review date), median received→confirmed; names from the user registry; cancelled excluded; on Analytics and in CSV | Reaction entry and amendments per user not counted (audit operator is a login, not initials) |
+| Specimen | Collector, collection and ordering location, ordering provider | Present | Four optional specimen columns with DB length CHECK (128); trimmed and whitespace-collapsed; audited `update_origin`; locked after final call; on the timeline, detail pane, worksheet, and Search; `WorkloadService.ComputeByLocation` groups received investigations by ordering location on Analytics and CSV | Free text, not a configured location list |
 | Specimen | Collection/receipt time and dating check | Present | Audited `collected_at`/`received_at`; expiration defaults from collection; `SpecimenDating` REVIEW when transfused within the look-back and expiration exceeds collection + dating days, or cannot be checked | Pregnancy (current or within look-back) is a dating trigger; RhIG date flags possible passive anti-D |
 | Tests | Isolation from user data | Present | `AppDataPaths.RootOverride` set by a test-module initializer to a temp folder; live vendor test persists only to its isolated database; full run verified to leave %AppData%\HemoIQ untouched | One intermittent failure seen once and not reproduced in two reruns |
 | Search | Investigation search | Present | Search tab › Investigations: accession, MRN, patient name/DOB, final/previous antibodies, technologist; every word must match; inclusive date range; status column; Open jumps to Specimens | Panel lot/manufacturer used in an investigation not yet searchable |
@@ -1250,11 +1251,64 @@ receipt is counted but left out of the median. Analytics shows a
 when users are registered), and workload by location (no location
 field yet).
 
+## Product review (after iteration 67)
+
+**Complete enough to rely on:** specimen receipt through confirmation
+(status strip, worklist, timeline), transfusion/pregnancy/DAT context
+feeding analysis as named REVIEW notes, supervisor review with roles,
+cancel/reinstate, eluate linking, report-output audit, and
+turnaround/workload analytics.
+
+**Still fragmented:**
+- Specimen origin (collector, locations, provider) was not recorded,
+  so reports could not show where a specimen came from and workload by
+  location was impossible. Addressed in iteration 68.
+- Patient transfusion requirements are free text; the requirement
+  check relies on keywords. A structured antigen-negative requirement
+  list would make the check exact.
+- Reaction entry and amendments per user cannot be counted by
+  initials because the audit log stores the Windows login.
+- PDF import remains layout-fragile; vendor portals stay file-only.
+
+**Screens growing complex:** the Specimen dialog now has 21 rows. It
+should be split into Specimen and Patient context sections (or tabs)
+before more fields are added.
+
+**Testing gaps:** no UI automation; dialog validation is covered only
+through the service methods it calls.
+
+## Roadmap after review
+
+1. Specimen origin and workload by ordering location (iteration 68).
+2. Structured antigen-negative transfusion requirements on the patient record.
+3. Split the Specimen dialog into sections.
+4. Per-user reaction-entry and amendment counts from the audit log (registered users).
+
+## Iteration 68 (this change)
+
+**Deficiency:** Specimens had no collector, collection location,
+ordering location, or ordering provider. The worksheet could not say
+where a specimen came from, Search could not find cases by unit or
+provider, and Analytics could not show workload by location.
+
+**Bounded improvement:** Four optional specimen columns, each with a
+database CHECK of 128 characters. `UpdateSpecimenOrigin` trims and
+collapses whitespace, writes an `update_origin` audit with before and
+after values only when something changed, and is locked after a final
+call. The Specimen dialog has **Collected by / at** and **Ordered by /
+from**; the detail pane, timeline, and worksheet show the origin, and
+Search matches it. Analytics has a **By ordering location** tab
+(received, confirmed, open, median TAT; cancelled excluded; unrecorded
+last), included in Export CSV.
+
+**Not in this tick:** A configured location list (values are free
+text, so spelling variants count separately), and location on the
+patient record.
+
 ## Likely next tick
 
-Run a product review (several iterations since the last one), then
-pick from: collector and collection/ordering location on specimens
-(enables workload by location), and per-user reaction-entry counts
-from the audit log. Authenticated vendor portals stay later and must
-not bypass auth, CAPTCHA, licensing, or terms.
+Roadmap item 2: structured antigen-negative transfusion requirements on
+the patient record, used exactly by the requirement check. Authenticated
+vendor portals stay later and must not bypass auth, CAPTCHA, licensing,
+or terms.
 

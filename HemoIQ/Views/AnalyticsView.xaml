@@ -123,8 +123,9 @@
                     </DataGrid>
                 </DockPanel>
             </GroupBox>
-            <GroupBox Grid.Column="1" Header="Workload by technologist"
-                      ToolTip="Confirmed identifications counted by confirmed date (Identified by) and supervisor reviews by review date (Reviewed by), within the range. Cancelled investigations are excluded. Names come from Users and roles.">
+            <TabControl Grid.Column="1">
+                <TabItem Header="Workload by technologist"
+                         ToolTip="Confirmed identifications counted by confirmed date (Identified by) and supervisor reviews by review date (Reviewed by), within the range. Cancelled investigations are excluded. Names come from Users and roles.">
                 <DataGrid ItemsSource="{Binding Workload}" AutoGenerateColumns="False" IsReadOnly="True"
                           HeadersVisibility="Column">
                     <DataGrid.Columns>
@@ -135,7 +136,21 @@
                         <DataGridTextColumn Header="Median TAT" Binding="{Binding MedianConfirmDisplay}" Width="85"/>
                     </DataGrid.Columns>
                 </DataGrid>
-            </GroupBox>
+                </TabItem>
+                <TabItem Header="By ordering location"
+                         ToolTip="Investigations received in the range, grouped by the ordering location recorded on the specimen. Cancelled investigations are excluded.">
+                <DataGrid ItemsSource="{Binding LocationWorkload}" AutoGenerateColumns="False" IsReadOnly="True"
+                          HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Ordering location" Binding="{Binding Location}" Width="*"/>
+                        <DataGridTextColumn Header="Received" Binding="{Binding Received}" Width="75"/>
+                        <DataGridTextColumn Header="Confirmed" Binding="{Binding Confirmed}" Width="80"/>
+                        <DataGridTextColumn Header="Open" Binding="{Binding Open}" Width="60"/>
+                        <DataGridTextColumn Header="Median TAT" Binding="{Binding MedianConfirmDisplay}" Width="85"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+                </TabItem>
+            </TabControl>
         </Grid>
 
         <Grid DockPanel.Dock="Top" Height="280" Margin="0,0,0,8">

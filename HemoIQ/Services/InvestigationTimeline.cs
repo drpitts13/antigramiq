@@ -147,6 +147,7 @@ namespace HemoIQ.Services
                                       (Prop(a.AfterJson, "endDate") is string pe ? $", ended {pe}" : "") +
                                       (Prop(a.AfterJson, "rhigDate") is string rh ? $"; RhIG {rh}" : ""),
                 "update_collection" => $"Collection/receipt recorded: collected {Prop(a.AfterJson, "collectedAt") ?? "—"}, received {Prop(a.AfterJson, "receivedAt") ?? "—"}",
+                "update_origin" => "Origin recorded: " + OriginText(a.AfterJson),
                 "cancel_investigation" => $"Investigation cancelled; reason: {a.Reason}",
                 "reinstate_investigation" => $"Investigation reinstated; reason: {a.Reason}",
                 "link_eluate" => Prop(a.AfterJson, "source") is string src
@@ -186,6 +187,18 @@ namespace HemoIQ.Services
         }
 
         private static string? Cell(string? json) => Prop(json, "cellNumber");
+
+        private static string OriginText(string? json)
+        {
+            var s = new Specimen
+            {
+                Collector = Prop(json, "collector"),
+                CollectionLocation = Prop(json, "collectionLocation"),
+                OrderingLocation = Prop(json, "orderingLocation"),
+                OrderingProvider = Prop(json, "orderingProvider"),
+            };
+            return s.OriginDisplay.Length == 0 ? "cleared" : s.OriginDisplay;
+        }
 
         private static string? Prop(string? json, string name)
         {

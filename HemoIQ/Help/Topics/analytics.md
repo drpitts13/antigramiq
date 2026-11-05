@@ -45,3 +45,14 @@ The table beside the overdue list shows work done in the selected date range by 
 - **Median TAT** is the median time from receipt to confirmation, in days, for this person's confirmations.
 
 Initials are matched regardless of case. When the initials belong to a user in **Preferences > Users & roles**, the name is shown too. Cancelled investigations are not counted. **Export CSV** adds this table after the turnaround figures.
+
+## By ordering location
+
+The **By ordering location** tab beside **Workload by technologist** groups investigations **received** in the date range by the ordering location recorded on the specimen. Locations match regardless of case and surrounding spaces. Specimens with no ordering location are listed last as **(not recorded)**.
+
+- **Received** is how many investigations came from that location.
+- **Confirmed** is how many of them have a confirmed identification.
+- **Open** is how many are active with no confirmed identification.
+- **Median TAT** is the median time from receipt to confirmation, in days.
+
+Cancelled investigations are not counted. **Export CSV** adds this table at the end.

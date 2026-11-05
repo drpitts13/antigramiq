@@ -31,6 +31,8 @@
                 <RowDefinition Height="36"/>
                 <RowDefinition Height="36"/>
                 <RowDefinition Height="36"/>
+                <RowDefinition Height="36"/>
+                <RowDefinition Height="36"/>
                 <RowDefinition Height="80"/>
             </Grid.RowDefinitions>
 
@@ -66,38 +68,54 @@
                          ToolTip="Time as HH:mm (24-hour). Used for turnaround on Analytics."/>
             </StackPanel>
 
-            <Label Content="Expiration Date:" Grid.Row="6" VerticalAlignment="Center"/>
-            <DatePicker x:Name="ExpirationPicker" Grid.Row="6" Grid.Column="1"
+            <Label Content="Collected by / at:" Grid.Row="6" VerticalAlignment="Center"/>
+            <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBox x:Name="CollectorBox" Width="105" VerticalContentAlignment="Center" MaxLength="128"
+                         ToolTip="Who collected the specimen (name, initials, or ID)."/>
+                <TextBox x:Name="CollectionLocationBox" Width="190" Margin="6,0,0,0" VerticalContentAlignment="Center" MaxLength="128"
+                         ToolTip="Where the specimen was collected (unit, clinic, or draw site)."/>
+            </StackPanel>
+
+            <Label Content="Ordered by / from:" Grid.Row="7" VerticalAlignment="Center"/>
+            <StackPanel Grid.Row="7" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBox x:Name="OrderingProviderBox" Width="105" VerticalContentAlignment="Center" MaxLength="128"
+                         ToolTip="Ordering provider."/>
+                <TextBox x:Name="OrderingLocationBox" Width="190" Margin="6,0,0,0" VerticalContentAlignment="Center" MaxLength="128"
+                         ToolTip="Ordering location (unit or clinic). Used for workload by location on Analytics."/>
+            </StackPanel>
+
+            <Label Content="Expiration Date:" Grid.Row="8" VerticalAlignment="Center"/>
+            <DatePicker x:Name="ExpirationPicker" Grid.Row="8" Grid.Column="1"
                         VerticalAlignment="Center" Margin="0,2"
                         SelectedDateChanged="ExpirationPicker_SelectedDateChanged"/>
 
-            <Label Content="DAT polyspecific:" Grid.Row="7" VerticalAlignment="Center"/>
-            <ComboBox x:Name="DatBox" Grid.Row="7" Grid.Column="1"
+            <Label Content="DAT polyspecific:" Grid.Row="9" VerticalAlignment="Center"/>
+            <ComboBox x:Name="DatBox" Grid.Row="9" Grid.Column="1"
                       VerticalAlignment="Center" Margin="0,2"/>
 
-            <Label Content="DAT IgG:" Grid.Row="8" VerticalAlignment="Center"/>
-            <ComboBox x:Name="DatIggBox" Grid.Row="8" Grid.Column="1"
+            <Label Content="DAT IgG:" Grid.Row="10" VerticalAlignment="Center"/>
+            <ComboBox x:Name="DatIggBox" Grid.Row="10" Grid.Column="1"
                       VerticalAlignment="Center" Margin="0,2"
                       ToolTip="Monospecific anti-IgG DAT. NT if not performed. MF (mixed field) after transfusion is reviewed against the transfusion record."/>
 
-            <Label Content="DAT C3:" Grid.Row="9" VerticalAlignment="Center"/>
-            <ComboBox x:Name="DatC3Box" Grid.Row="9" Grid.Column="1"
+            <Label Content="DAT C3:" Grid.Row="11" VerticalAlignment="Center"/>
+            <ComboBox x:Name="DatC3Box" Grid.Row="11" Grid.Column="1"
                       VerticalAlignment="Center" Margin="0,2"
                       ToolTip="Monospecific anti-C3 DAT. C3 reactive with IgG negative is noted as more typical of cold or complement-mediated reactivity."/>
 
-            <Label Content="Transfusion status:" Grid.Row="10" VerticalAlignment="Center"/>
-            <ComboBox x:Name="TransfusionBox" Grid.Row="10" Grid.Column="1"
+            <Label Content="Transfusion status:" Grid.Row="12" VerticalAlignment="Center"/>
+            <ComboBox x:Name="TransfusionBox" Grid.Row="12" Grid.Column="1"
                       VerticalAlignment="Center" Margin="0,2" DisplayMemberPath="Label"
                       SelectionChanged="TransfusionBox_SelectionChanged"
                       ToolTip="Transfused within the configured Preferences window makes serologic phenotype uninterpretable for analysis. Unknown falls back to wording in Notes."/>
 
-            <Label Content="Last transfusion:" Grid.Row="11" VerticalAlignment="Center"/>
-            <DatePicker x:Name="LastTransfusionPicker" Grid.Row="11" Grid.Column="1"
+            <Label Content="Last transfusion:" Grid.Row="13" VerticalAlignment="Center"/>
+            <DatePicker x:Name="LastTransfusionPicker" Grid.Row="13" Grid.Column="1"
                         VerticalAlignment="Center" Margin="0,2"
                         ToolTip="Date of the most recent red-cell transfusion. Leave blank if unknown; the phenotype is then treated as uninterpretable."/>
 
-            <Label Content="Pregnancy:" Grid.Row="12" VerticalAlignment="Center"/>
-            <StackPanel Grid.Row="12" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+            <Label Content="Pregnancy:" Grid.Row="14" VerticalAlignment="Center"/>
+            <StackPanel Grid.Row="14" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                 <ComboBox x:Name="PregnancyBox" Width="150" DisplayMemberPath="Label"
                           SelectionChanged="PregnancyBox_SelectionChanged"
                           ToolTip="Pregnant, or pregnant within the Preferences dating look-back, applies the specimen-dating check like a recent transfusion."/>
@@ -105,30 +123,30 @@
                             ToolTip="Date a recent pregnancy ended (delivery or loss). Required for Recently pregnant."/>
             </StackPanel>
 
-            <Label Content="RhIG given:" Grid.Row="13" VerticalAlignment="Center"/>
-            <DatePicker x:Name="RhigPicker" Grid.Row="13" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"
+            <Label Content="RhIG given:" Grid.Row="15" VerticalAlignment="Center"/>
+            <DatePicker x:Name="RhigPicker" Grid.Row="15" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"
                         ToolTip="Date Rh immune globulin was last given. Anti-D within the Preferences RhIG window is flagged as possibly passive."/>
 
-            <Label Content="Phenotype:" Grid.Row="14" VerticalAlignment="Center"/>
-            <TextBox x:Name="PhenotypeBox" Grid.Row="14" Grid.Column="1"
+            <Label Content="Phenotype:" Grid.Row="16" VerticalAlignment="Center"/>
+            <TextBox x:Name="PhenotypeBox" Grid.Row="16" Grid.Column="1"
                      VerticalAlignment="Center" Margin="0,2"
                      ToolTip="e.g. R1r, K−, Fy(a−b+). Record recent transfusion in Transfusion status so analysis will not use typing to exclude alloantibodies."/>
 
-            <Label Content="Genotype:" Grid.Row="15" VerticalAlignment="Center"/>
-            <TextBox x:Name="GenotypeBox" Grid.Row="15" Grid.Column="1"
+            <Label Content="Genotype:" Grid.Row="17" VerticalAlignment="Center"/>
+            <TextBox x:Name="GenotypeBox" Grid.Row="17" Grid.Column="1"
                      VerticalAlignment="Center" Margin="0,2"
                      ToolTip="Predicted type from molecular results, e.g. RHCE*ce/ce; FY*02/FY*02. Remains reviewable after transfusion. Not a diagnosis."/>
 
-            <Label Content="Previous antibodies:" Grid.Row="16" VerticalAlignment="Center"/>
-            <TextBox x:Name="PreviousAbsBox" Grid.Row="16" Grid.Column="1"
+            <Label Content="Previous antibodies:" Grid.Row="18" VerticalAlignment="Center"/>
+            <TextBox x:Name="PreviousAbsBox" Grid.Row="18" Grid.Column="1"
                      VerticalAlignment="Center" Margin="0,2"/>
 
-            <Label Content="Active:" Grid.Row="17" VerticalAlignment="Center"/>
-            <CheckBox x:Name="ActiveCheck" Grid.Row="17" Grid.Column="1"
+            <Label Content="Active:" Grid.Row="19" VerticalAlignment="Center"/>
+            <CheckBox x:Name="ActiveCheck" Grid.Row="19" Grid.Column="1"
                       VerticalAlignment="Center" Margin="0,2" IsChecked="True"/>
 
-            <Label Content="Notes:" Grid.Row="18" VerticalAlignment="Top" Margin="0,4,0,0"/>
-            <TextBox x:Name="NotesBox" Grid.Row="18" Grid.Column="1"
+            <Label Content="Notes:" Grid.Row="20" VerticalAlignment="Top" Margin="0,4,0,0"/>
+            <TextBox x:Name="NotesBox" Grid.Row="20" Grid.Column="1"
                      AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
                      Height="70" Margin="0,2"/>
         </Grid>

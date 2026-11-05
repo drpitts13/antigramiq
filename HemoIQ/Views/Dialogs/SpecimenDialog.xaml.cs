@@ -12,6 +12,10 @@ namespace HemoIQ.Views.Dialogs
         public string? Mrn => Services.PatientHistory.NormalizeMrn(MrnBox.Text);
         public string? CollectedAt => Combine(CollectedPicker.SelectedDate, CollectedTimeBox.Text);
         public string? ReceivedAt => Combine(ReceivedPicker.SelectedDate, ReceivedTimeBox.Text);
+        public string? Collector => CollectorBox.Text;
+        public string? CollectionLocation => CollectionLocationBox.Text;
+        public string? OrderingLocation => OrderingLocationBox.Text;
+        public string? OrderingProvider => OrderingProviderBox.Text;
 
         private bool _isNew;
 
@@ -122,6 +126,10 @@ namespace HemoIQ.Views.Dialogs
                 MrnBox.Text = existing.Mrn ?? "";
                 Load(CollectedPicker, CollectedTimeBox, existing.CollectedAt);
                 Load(ReceivedPicker, ReceivedTimeBox, existing.ReceivedAt);
+                CollectorBox.Text = existing.Collector ?? "";
+                CollectionLocationBox.Text = existing.CollectionLocation ?? "";
+                OrderingProviderBox.Text = existing.OrderingProvider ?? "";
+                OrderingLocationBox.Text = existing.OrderingLocation ?? "";
                 SourceBox.Text = existing.SourceAccession ?? "";
                 PhenotypeBox.Text = existing.Phenotype ?? "";
                 GenotypeBox.Text = existing.Genotype ?? "";
