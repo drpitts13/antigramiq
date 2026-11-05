@@ -65,6 +65,27 @@ namespace HemoIQ.Services
                 });
             }
 
+            foreach (var panel in db.GetSpecimenPanels(s.AccessionNumber))
+                foreach (var a in db.GetAuditEventsForEntity("panel", panel.PanelId.ToString())
+                             .Where(a => a.Action == "edit_panel_typing"))
+                    if (TryUtc(a.OccurredAtUtc, out var at))
+                    {
+                        var count = 0;
+                        try
+                        {
+                            using var doc = System.Text.Json.JsonDocument.Parse(a.AfterJson ?? "{}");
+                            if (doc.RootElement.TryGetProperty("changes", out var c)) count = c.GetArrayLength();
+                        }
+                        catch (System.Text.Json.JsonException) { }
+                        events.Add(new TimelineEvent
+                        {
+                            When = at,
+                            What = $"Panel {panel.Name} (lot {panel.LotNumber}) typing edited: {count} change(s)" +
+                                   (string.IsNullOrWhiteSpace(a.Reason) ? "" : $"; reason: {a.Reason}"),
+                            Who = a.Operator,
+                        });
+                    }
+
             var audit = db.GetAuditEventsForEntity("specimen", s.AccessionNumber);
             events.AddRange(GroupReactionSaves(audit.Where(a => a.Action == "save_reaction"), runNames));
             foreach (var a in audit.Where(a => a.Action != "save_reaction"))

@@ -1644,6 +1644,75 @@ namespace HemoIQ.Data
             cmd.ExecuteNonQuery();
         }
 
+        /// <summary>The value <see cref="UpdatePanelCell"/> would store for an antigen.</summary>
+        private static string StoredTyping(PanelCell cell, string antigen) =>
+            cell.Antigens.TryGetValue(antigen, out var v) &&
+            (AntigenConstants.IsTypedAntigenValue(v) || v == AntigenConstants.AntigenNotTested)
+                ? v
+                : AntigenConstants.AntigenNotTested;
+
+        /// <summary>
+        /// Differences between the stored cells of a panel and edited copies, one line per
+        /// change, e.g. "Cell 3 Jka: + → 0" or "Cell 3 donor: A1 → A2".
+        /// </summary>
+        public List<string> DescribePanelCellChanges(int panelId, IEnumerable<PanelCell> edited)
+        {
+            var stored = GetPanelCells(panelId).ToDictionary(c => c.Id);
+            var extras = GetPanelExtraAntigens(panelId);
+            var changes = new List<string>();
+            foreach (var cell in edited)
+            {
+                if (!stored.TryGetValue(cell.Id, out var old)) continue;
+                foreach (var ag in AntigenConstants.Antigens.Concat(extras))
+                {
+                    var before = StoredTyping(old, ag);
+                    var after = StoredTyping(cell, ag);
+                    if (AntigenConstants.IsWarehouse(ag) && !cell.Antigens.ContainsKey(ag)) continue;
+                    if (before != after) changes.Add($"Cell {cell.CellNumber} {ag}: {before} → {after}");
+                }
+                void Meta(string label, string? before, string? after)
+                {
+                    var b = string.IsNullOrWhiteSpace(before) ? null : before.Trim();
+                    var a = string.IsNullOrWhiteSpace(after) ? null : after.Trim();
+                    if (b != a) changes.Add($"Cell {cell.CellNumber} {label}: {b ?? "—"} → {a ?? "—"}");
+                }
+                Meta("donor", old.DonorId, cell.DonorId);
+                Meta("Rh phenotype", old.RhPhenotype, cell.RhPhenotype);
+                Meta("special types", old.SpecialTypes, cell.SpecialTypes);
+            }
+            return changes;
+        }
+
+        /// <summary>
+        /// Saves edited cell typing for a panel in one transaction and audits each change
+        /// (<c>edit_panel_typing</c>). When the panel holds test history (recorded reactions
+        /// or a confirmed identification), a reason is required, because the edit changes
+        /// the evidence behind past results; the audit entry names the linked specimens.
+        /// Returns the changes saved (empty when nothing changed).
+        /// </summary>
+        public List<string> SavePanelCellEdits(int panelId, IReadOnlyList<PanelCell> edited, string? reason = null)
+        {
+            var changes = DescribePanelCellChanges(panelId, edited);
+            if (changes.Count == 0) return changes;
+            var usage = GetPanelUsage(panelId);
+            if (usage.ProtectsHistory && string.IsNullOrWhiteSpace(reason))
+                throw new ReasonRequiredException(
+                    $"Panel #{panelId} holds test history ({usage.Describe()}). A reason is required to change its typing: " +
+                    string.Join("; ", changes.Take(5)) + (changes.Count > 5 ? "; …" : "") + ".", changes);
+
+            var storedIds = GetPanelCells(panelId).Select(c => c.Id).ToHashSet();
+            RunInTransaction(() =>
+            {
+                foreach (var cell in edited.Where(c => storedIds.Contains(c.Id)))
+                    UpdatePanelCell(cell);
+                AppendAudit("edit_panel_typing", "panel", panelId.ToString(),
+                    string.IsNullOrWhiteSpace(reason) ? null : reason.Trim(),
+                    usage.LinkedSpecimens.Count == 0 ? null : JsonSerializer.Serialize(new { linkedSpecimens = usage.LinkedSpecimens }),
+                    JsonSerializer.Serialize(new { changes }));
+            });
+            return changes;
+        }
+
         public void UpdatePanelCell(PanelCell cell)
         {
             foreach (var ag in AntigenConstants.Antigens)

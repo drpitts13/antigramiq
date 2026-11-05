@@ -1466,8 +1466,62 @@ phases properly.
 single-cell save (they write new runs or empty cells), and a reason is
 not asked before analysis has run.
 
+## Product review (after iteration 75)
+
+**Method:** every public write method in `DatabaseService` was checked
+for an audit entry and for protection of test history.
+
+**Now complete:** specimen save, panel import, panel delete, specimen
+delete, purge, and reaction-grid save are all-or-nothing and audited;
+lots and specimens that hold test history cannot be deleted; recorded
+reaction results changed after analysis need a reason; workload and
+activity are reported by initials, location, and login.
+
+**Writes still without an audit entry (ranked):**
+1. Panel cell typing edits (`UpdatePanelCell`): editing a lot used for a
+   confirmed identification silently changed the evidence behind it.
+   Addressed in iteration 76.
+2. Run and reaction deletion (`DeletePanelRun`, `DeleteReactions` from
+   the Reactions tab): removes recorded results with no audit entry.
+3. `UpdateSpecimen` (notes, phenotype, genotype, previous antibodies,
+   expiration, type) and `AddSpecimen`: no before/after values.
+4. `SetSpecimenActive`, `RemovePanelExtraAntigen`, `SetPanelAntigenOrder`.
+5. Analysis outputs (`AddSpecimenAntibody`, rule-outs) are regenerated
+   by analysis and covered by analysis snapshots; acceptable.
+
+**Screens:** Analytics now has three workload tabs and stays readable;
+the Specimen dialog is tabbed. Reactions tab Clear and Delete Run are
+the remaining one-click destructive actions on clinical data.
+
+## Roadmap after review
+
+1. Panel typing edits audited and reason-gated (iteration 76).
+2. Audit and protect run/reaction deletion (refuse after a confirmed
+   identification; reason after analysis).
+3. Audit `UpdateSpecimen` with before/after values and `AddSpecimen`.
+4. Audit activation, extra-antigen removal, and antigen order changes.
+
+## Iteration 76 (this change)
+
+**Deficiency:** Editing a panel's antigen typing wrote every cell with
+no audit entry, even for a lot used for confirmed identifications.
+Analysis reads typing live, so a later re-analysis or reprint of those
+investigations would silently use different evidence.
+
+**Bounded improvement:** `DescribePanelCellChanges` lists each typing or
+cell-metadata difference ("Cell 3 Jka: + → -"). `SavePanelCellEdits`
+saves only real changes in one transaction and writes an
+`edit_panel_typing` audit entry with the change list. When the lot holds
+test history, a reason is required (`ReasonRequiredException`
+otherwise) and the audit entry names the linked specimens. The Panels
+Save button lists the changes and asks for the reason; every linked
+specimen's timeline shows the edit and its reason.
+
+**Not in this tick:** Extra-antigen removal and antigen display order
+are still unaudited (roadmap item 4).
+
 ## Likely next tick
 
-Product review (several iterations since the last), then pick from the
-refreshed roadmap. Authenticated vendor portals stay later and must not
+Roadmap item 2: audit and protect run and reaction deletion on the
+Reactions tab. Authenticated vendor portals stay later and must not
 bypass auth, CAPTCHA, licensing, or terms.

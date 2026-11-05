@@ -538,11 +538,43 @@ namespace HemoIQ.ViewModels
         public void SaveAllCells()
         {
             if (SelectedPanel == null || !IsEditingAntigens) return;
-            foreach (var row in CellRows)
-                _db.UpdatePanelCell(row.Cell);
+            var cells = CellRows.Select(r => r.Cell).ToList();
+            var changes = _db.DescribePanelCellChanges(SelectedPanel.PanelId, cells);
+            string? reason = null;
+            var usage = _db.GetPanelUsage(SelectedPanel.PanelId);
+            if (changes.Count > 0 && usage.ProtectsHistory)
+            {
+                var dlg = new Views.Dialogs.ReasonDialog(
+                    $"This lot holds test history ({usage.Describe()}). Changing its typing changes the evidence " +
+                    "behind those results the next time they are analyzed or printed.\n\n" +
+                    string.Join("\n", changes.Take(12)) + (changes.Count > 12 ? $"\n… and {changes.Count - 12} more" : "") +
+                    "\n\nEnter the reason (for example, the vendor's corrected antigram).")
+                {
+                    Owner = Application.Current?.MainWindow,
+                    Title = "Reason for changing panel typing",
+                };
+                if (dlg.ShowDialog() != true)
+                {
+                    _main.SetStatus("Typing not saved: no reason was given. Keep editing or Cancel.");
+                    return;
+                }
+                reason = dlg.Reason;
+            }
+            try
+            {
+                _db.SavePanelCellEdits(SelectedPanel.PanelId, cells, reason);
+            }
+            catch (System.Exception ex)
+            {
+                MessageBox.Show($"Typing was not saved.\n\n{ex.Message}", "Panel not saved",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
             _db.SetPanelAntigenOrder(SelectedPanel.PanelId, AntigenDisplayOrder.ToList());
             IsEditingAntigens = false;
-            _main.SetStatus($"Panel '{SelectedPanel.Name}' cells saved.");
+            _main.SetStatus(changes.Count == 0
+                ? $"Panel '{SelectedPanel.Name}': no typing changes."
+                : $"Panel '{SelectedPanel.Name}': {changes.Count} typing change(s) saved and audited.");
         }
 
         private void CancelEdit()
