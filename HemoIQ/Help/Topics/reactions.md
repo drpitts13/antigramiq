@@ -20,6 +20,7 @@ The Reactions tab is where you record IS, 37°C, AHG, and CC grades for each cel
 - After the specimen has been analyzed, changing a recorded result (anything other than NT) asks for a reason. The prompt lists each change, for example *Cell 3 AHG: 2+ → 0*. Without a reason nothing is saved. The reason and the original value go into the audit log, and the timeline shows the reason on that entry. Entering a result in an empty or NT cell never needs a reason.
 - **Fill 0s** sets remaining NT phases to 0. Check cells become 2+ when AHG is 0. Grades you already entered are left alone.
 - **Clear** removes the grades on this run.
+- **Clear** and **Delete Run** keep a copy of every deleted grade in the audit log and appear on the investigation timeline. After the specimen has been analyzed, deleting graded cells asks for a reason instead of Yes/No; without one nothing is deleted. Neither is possible once an identification is confirmed.
 - **Help** opens this chapter.
 
 A blue banner names the cell or serum treatment when the run is not an ordinary untreated panel.

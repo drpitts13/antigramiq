@@ -815,12 +815,46 @@ namespace HemoIQ.ViewModels
             SetSaveStatus(true, msg);
         }
 
+        /// <summary>
+        /// Confirms a deletion of recorded results. After analysis, when graded cells would
+        /// be deleted, asks for a reason instead of a Yes/No. Returns false when cancelled.
+        /// </summary>
+        private bool TryGetDeletionReason(int runId, string question, string title, out string? reason)
+        {
+            reason = null;
+            var graded = _db.CountGradedReactions(runId);
+            var analyzed = SelectedSpecimen != null &&
+                           _db.GetSpecimen(SelectedSpecimen.AccessionNumber)?.LastAnalyzedAt != null;
+            if (graded > 0 && analyzed)
+            {
+                var dlg = new Views.Dialogs.ReasonDialog(
+                    $"{question}\n\n{graded} graded cell(s) on this run were already analyzed. The deleted grades are kept " +
+                    "in the audit log. Enter the reason for deleting them.")
+                {
+                    Owner = Application.Current?.MainWindow,
+                    Title = title,
+                };
+                if (dlg.ShowDialog() != true) return false;
+                reason = dlg.Reason;
+                return true;
+            }
+            return MessageBox.Show(question, "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
+        }
+
         private void ClearReactions()
         {
             if (SelectedSpecimen == null || SelectedRun == null) return;
-            if (MessageBox.Show("Clear all reactions for this run?",
-                "Confirm", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
-            _db.DeleteReactions(SelectedRun.RunId);
+            if (!TryGetDeletionReason(SelectedRun.RunId, "Clear all reactions for this run?",
+                    "Clear reactions", out var reason)) return;
+            try
+            {
+                _db.DeleteReactions(SelectedRun.RunId, reason);
+            }
+            catch (InvalidOperationException ex)
+            {
+                MessageBox.Show(ex.Message, "Reactions not cleared", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
             SaveStatusMessage = string.Empty;
             Rows.Clear();
             ResetCompareRows();
@@ -884,10 +918,17 @@ namespace HemoIQ.ViewModels
                     "Info", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
-            if (MessageBox.Show($"Delete run '{SelectedRun.DisplayLabel}' and all its reactions?",
-                "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
-
-            _db.DeletePanelRun(SelectedRun.RunId);
+            if (!TryGetDeletionReason(SelectedRun.RunId, $"Delete run '{SelectedRun.DisplayLabel}' and all its reactions?",
+                    "Delete run", out var reason)) return;
+            try
+            {
+                _db.DeletePanelRun(SelectedRun.RunId, reason);
+            }
+            catch (InvalidOperationException ex)
+            {
+                MessageBox.Show(ex.Message, "Run not deleted", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
             Rows.Clear();
             RefreshRuns();
             _main.SetStatus("Run deleted.");

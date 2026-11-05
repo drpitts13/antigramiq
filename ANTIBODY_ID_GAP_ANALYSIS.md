@@ -1520,8 +1520,29 @@ specimen's timeline shows the edit and its reason.
 **Not in this tick:** Extra-antigen removal and antigen display order
 are still unaudited (roadmap item 4).
 
+## Iteration 77 (this change)
+
+**Deficiency:** Clear (all reactions on a run) and Delete Run removed
+recorded results with no audit entry and only a Yes/No prompt, even
+after analysis had used them. The deleted grades could not be
+recovered or reviewed.
+
+**Bounded improvement:** `DeleteReactions` and `DeletePanelRun` run in
+one transaction and write `clear_reactions` / `delete_run` audit
+entries holding every deleted grade, the panel and run name, and the
+number of graded cells. After analysis, deleting graded cells requires
+a reason (`ReasonRequiredException` otherwise); the Reactions tab asks
+for it in place of Yes/No. Clearing an empty run writes nothing.
+Deletion stays refused after a confirmed identification. The timeline
+shows both actions with the reason.
+
+**Not in this tick:** Restoring deleted grades from the audit snapshot
+(they are kept and readable in the audit log, not one-click
+restorable).
+
 ## Likely next tick
 
-Roadmap item 2: audit and protect run and reaction deletion on the
-Reactions tab. Authenticated vendor portals stay later and must not
+Roadmap item 3: audit `UpdateSpecimen` (notes, phenotype, genotype,
+previous antibodies, expiration, type) with before and after values, and
+`AddSpecimen`. Authenticated vendor portals stay later and must not
 bypass auth, CAPTCHA, licensing, or terms.

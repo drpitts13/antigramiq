@@ -2245,14 +2245,52 @@ namespace HemoIQ.Data
             return list;
         }
 
-        public void DeletePanelRun(int runId)
+        /// <summary>Cells on a run with at least one graded (not NT or blank) result.</summary>
+        public int CountGradedReactions(int runId) =>
+            GetReactions(runId).Count(r => IsGraded(r.IS) || IsGraded(r.C37) || IsGraded(r.AHG) || IsGraded(r.CC) ||
+                                           r.ExtraPhases.Values.Any(IsGraded));
+
+        /// <summary>
+        /// Checks a deletion of recorded results and returns the snapshot for its audit
+        /// entry. Locked specimens are refused; after analysis, deleting graded results
+        /// needs a reason.
+        /// </summary>
+        private object? PrepareReactionDeletion(PanelRun run, string what, string? reason)
+        {
+            EnsureSpecimenUnlocked(run.SpecimenId);
+            var rows = GetReactions(run.RunId);
+            var graded = CountGradedReactions(run.RunId);
+            if (graded > 0 && string.IsNullOrWhiteSpace(reason) && GetSpecimen(run.SpecimenId)?.LastAnalyzedAt != null)
+                throw new ReasonRequiredException(
+                    $"{what} would delete {graded} graded cell(s) that were already analyzed. A reason is required.",
+                    new[] { $"{graded} graded cell(s) on {run.PanelName}, {run.DisplayLabel}" });
+            return new
+            {
+                runId = run.RunId, panel = run.PanelName, run = run.DisplayLabel, gradedCells = graded,
+                reactions = rows.Select(r => new { cell = r.CellNumber, is_ = r.IS, c37 = r.C37, ahg = r.AHG, cc = r.CC, extra = r.ExtraPhases }),
+            };
+        }
+
+        /// <summary>
+        /// Deletes a treatment run and its reactions. Refused after a confirmed
+        /// identification; after analysis, graded results need a reason. Audited
+        /// (<c>delete_run</c>) with every deleted grade.
+        /// </summary>
+        public void DeletePanelRun(int runId, string? reason = null)
         {
             var run = GetPanelRun(runId);
-            if (run != null) EnsureSpecimenUnlocked(run.SpecimenId);
-            using var cmd = _conn.CreateCommand();
-            cmd.CommandText = "DELETE FROM panel_runs WHERE run_id = $id";
-            cmd.Parameters.AddWithValue("$id", runId);
-            cmd.ExecuteNonQuery();
+            if (run == null) return;
+            var snapshot = PrepareReactionDeletion(run, $"Deleting run '{run.DisplayLabel}'", reason);
+            RunInTransaction(() =>
+            {
+                using var cmd = _conn.CreateCommand();
+                cmd.CommandText = "DELETE FROM panel_runs WHERE run_id = $id";
+                cmd.Parameters.AddWithValue("$id", runId);
+                cmd.ExecuteNonQuery();
+                AppendAudit("delete_run", "specimen", run.SpecimenId,
+                    string.IsNullOrWhiteSpace(reason) ? null : reason.Trim(), JsonSerializer.Serialize(snapshot), null);
+                TouchSpecimenReactionsUpdated(run.SpecimenId);
+            });
         }
 
         public int CopyReactions(int sourceRunId, int targetRunId)
@@ -2458,32 +2496,37 @@ namespace HemoIQ.Data
         }
 
         /// <summary>Deletes all reactions for a specific run.</summary>
-        public void DeleteReactions(int runId)
+        /// <summary>
+        /// Clears every reaction on a run. Refused after a confirmed identification;
+        /// after analysis, graded results need a reason. Audited (<c>clear_reactions</c>)
+        /// with every deleted grade; clearing an empty run writes nothing.
+        /// </summary>
+        public void DeleteReactions(int runId, string? reason = null)
         {
             var run = GetPanelRun(runId);
-            if (run != null) EnsureSpecimenUnlocked(run.SpecimenId);
-            using var cmd = _conn.CreateCommand();
-            cmd.CommandText = "DELETE FROM reactions WHERE run_id = $rid";
-            cmd.Parameters.AddWithValue("$rid", runId);
-            cmd.ExecuteNonQuery();
+            if (run == null) return;
+            if (GetReactions(runId).Count == 0) return;
+            var snapshot = PrepareReactionDeletion(run, "Clearing this run", reason);
+            RunInTransaction(() =>
+            {
+                using var cmd = _conn.CreateCommand();
+                cmd.CommandText = "DELETE FROM reactions WHERE run_id = $rid";
+                cmd.Parameters.AddWithValue("$rid", runId);
+                cmd.ExecuteNonQuery();
+                AppendAudit("clear_reactions", "specimen", run.SpecimenId,
+                    string.IsNullOrWhiteSpace(reason) ? null : reason.Trim(), JsonSerializer.Serialize(snapshot), null);
+                TouchSpecimenReactionsUpdated(run.SpecimenId);
+            });
         }
 
         /// <summary>
         /// Compatibility overload: deletes reactions for the untreated default run.
         /// </summary>
-        public void DeleteReactions(string specimenId, int panelId)
+        public void DeleteReactions(string specimenId, int panelId, string? reason = null)
         {
             EnsureSpecimenUnlocked(specimenId);
-            using var cmd = _conn.CreateCommand();
-            cmd.CommandText = @"
-                DELETE FROM reactions WHERE run_id IN (
-                    SELECT run_id FROM panel_runs
-                    WHERE specimen_id = $sid AND panel_id = $pid
-                      AND cell_treatment = 'None' AND serum_treatment = 'None'
-                )";
-            cmd.Parameters.AddWithValue("$sid", specimenId);
-            cmd.Parameters.AddWithValue("$pid", panelId);
-            cmd.ExecuteNonQuery();
+            foreach (var run in GetPanelRuns(specimenId, panelId).Where(r => r.IsUntreated))
+                DeleteReactions(run.RunId, reason);
         }
 
         // ── Worklist ──────────────────────────────────────────────────────────

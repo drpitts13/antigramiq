@@ -175,6 +175,12 @@ namespace HemoIQ.Services
                                       (Prop(a.AfterJson, "rhigDate") is string rh ? $"; RhIG {rh}" : ""),
                 "update_collection" => $"Collection/receipt recorded: collected {Prop(a.AfterJson, "collectedAt") ?? "—"}, received {Prop(a.AfterJson, "receivedAt") ?? "—"}",
                 "update_origin" => "Origin recorded: " + OriginText(a.AfterJson),
+                "clear_reactions" => $"Reactions cleared on {Prop(a.BeforeJson, "panel") ?? "panel"}, {Prop(a.BeforeJson, "run") ?? "run"}: " +
+                                     $"{Prop(a.BeforeJson, "gradedCells") ?? "0"} graded cell(s)" +
+                                     (string.IsNullOrWhiteSpace(a.Reason) ? "" : $"; reason: {a.Reason}"),
+                "delete_run" => $"Run deleted: {Prop(a.BeforeJson, "panel") ?? "panel"}, {Prop(a.BeforeJson, "run") ?? "run"} " +
+                                $"with {Prop(a.BeforeJson, "gradedCells") ?? "0"} graded cell(s)" +
+                                (string.IsNullOrWhiteSpace(a.Reason) ? "" : $"; reason: {a.Reason}"),
                 "cancel_investigation" => $"Investigation cancelled; reason: {a.Reason}",
                 "reinstate_investigation" => $"Investigation reinstated; reason: {a.Reason}",
                 "link_eluate" => Prop(a.AfterJson, "source") is string src
