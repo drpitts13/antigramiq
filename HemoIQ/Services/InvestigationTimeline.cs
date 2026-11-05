@@ -106,11 +106,14 @@ namespace HemoIQ.Services
                 var start = parsed[i];
                 var cells = new HashSet<string>();
                 int count = 0, changed = 0, j = i;
+                var reasons = new List<string>();
                 var last = start.at;
                 while (j < parsed.Count && parsed[j].run == start.run && parsed[j].at - last <= ReactionSessionGap)
                 {
                     count++;
                     if (UserActivityService.IsReactionChange(parsed[j].a)) changed++;
+                    if (!string.IsNullOrWhiteSpace(parsed[j].a.Reason) && !reasons.Contains(parsed[j].a.Reason!))
+                        reasons.Add(parsed[j].a.Reason!);
                     if (Cell(parsed[j].a.AfterJson) is string c) cells.Add(c);
                     last = parsed[j].at;
                     j++;
@@ -120,7 +123,8 @@ namespace HemoIQ.Services
                 {
                     When = start.at,
                     What = $"Reactions entered: {count} save(s), {cells.Count} cell(s) on {runText}" +
-                           (changed > 0 ? $"; {changed} recorded result(s) changed" : ""),
+                           (changed > 0 ? $"; {changed} recorded result(s) changed" : "") +
+                           (reasons.Count > 0 ? $"; reason: {string.Join(" / ", reasons)}" : ""),
                     Who = start.a.Operator,
                 });
                 i = j;

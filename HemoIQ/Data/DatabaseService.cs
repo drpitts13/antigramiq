@@ -2197,10 +2197,65 @@ namespace HemoIQ.Data
 
         // ── Reactions ─────────────────────────────────────────────────────────
 
+        private static bool IsGraded(string? v) =>
+            !string.IsNullOrWhiteSpace(v) && !string.Equals(v, "NT", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Recorded results the given grades would replace on a run, one line per phase,
+        /// e.g. "Cell 3 AHG: 2+ → 0". A phase counts only when it already held a graded
+        /// value (not NT or blank) and the new value differs.
+        /// </summary>
+        public List<string> DescribeReactionChanges(int runId, IEnumerable<ReactionInput> rows)
+        {
+            var stored = GetReactions(runId).ToDictionary(r => r.CellNumber, StringComparer.OrdinalIgnoreCase);
+            var changes = new List<string>();
+            foreach (var row in rows)
+            {
+                if (!stored.TryGetValue(row.CellNumber, out var old)) continue;
+                void Compare(string phase, string? before, string? after)
+                {
+                    if (IsGraded(before) && !string.Equals(before, after ?? "NT", StringComparison.Ordinal))
+                        changes.Add($"Cell {row.CellNumber} {phase}: {before} → {(string.IsNullOrWhiteSpace(after) ? "NT" : after)}");
+                }
+                Compare("IS", old.IS, row.IS);
+                Compare("37°C", old.C37, row.C37);
+                Compare("AHG", old.AHG, row.AHG);
+                Compare("CC", old.CC, row.CC);
+                var oldExtra = old.ExtraPhases;
+                foreach (var (phase, value) in oldExtra)
+                    Compare(phase, value, row.ExtraPhases != null && row.ExtraPhases.TryGetValue(phase, out var nv) ? nv : null);
+            }
+            return changes;
+        }
+
+        /// <summary>
+        /// Saves a run's grades in one transaction. Once the specimen has been analyzed,
+        /// changing a recorded result needs a reason, which is stored on each change's
+        /// audit entry; without one, nothing is saved.
+        /// </summary>
+        public void SaveReactions(int runId, IReadOnlyList<ReactionInput> rows, string? reason = null)
+        {
+            var run = GetPanelRun(runId);
+            if (run != null && string.IsNullOrWhiteSpace(reason) &&
+                GetSpecimen(run.SpecimenId)?.LastAnalyzedAt != null)
+            {
+                var changes = DescribeReactionChanges(runId, rows);
+                if (changes.Count > 0)
+                    throw new ReasonRequiredException(
+                        $"A reason is required to change {changes.Count} recorded result(s) after analysis: " +
+                        string.Join("; ", changes.Take(5)) + (changes.Count > 5 ? "; …" : "") + ".", changes);
+            }
+            RunInTransaction(() =>
+            {
+                foreach (var r in rows)
+                    SaveReaction(runId, r.CellNumber, r.IS, r.C37, r.AHG, r.CC, r.ExtraPhases, reason);
+            });
+        }
+
         /// <summary>Primary overload: saves a reaction for a specific run.</summary>
         public void SaveReaction(int runId, string cellNumber,
             string is_, string c37, string ahg, string cc,
-            IReadOnlyDictionary<string, string>? extraPhases = null)
+            IReadOnlyDictionary<string, string>? extraPhases = null, string? reason = null)
         {
             // Need specimen_id to call TouchSpecimenReactionsUpdated
             var run = GetPanelRun(runId);
@@ -2209,6 +2264,7 @@ namespace HemoIQ.Data
 
             // Unchanged saves write nothing, so the audit log holds only real entries and changes.
             object? before = null;
+            var replacesResult = false;
             using (var read = _conn.CreateCommand())
             {
                 read.CommandText = @"SELECT ""IS"", C37, AHG, CC, extra_phases FROM reactions
@@ -2225,6 +2281,8 @@ namespace HemoIQ.Data
                         (string.IsNullOrEmpty(extra) || oldExtra == extra))
                         return;
                     before = new { runId, cellNumber, is_ = Col(0), c37 = Col(1), ahg = Col(2), cc = Col(3), extra = oldExtra };
+                    replacesResult = IsGraded(Col(0)) || IsGraded(Col(1)) || IsGraded(Col(2)) || IsGraded(Col(3)) ||
+                                     ExtraPhaseParser.Deserialize(oldExtra).Values.Any(IsGraded);
                 }
             }
 
@@ -2243,7 +2301,8 @@ namespace HemoIQ.Data
             if (run != null)
             {
                 TouchSpecimenReactionsUpdated(run.SpecimenId);
-                AppendAudit("save_reaction", "specimen", run.SpecimenId, null,
+                AppendAudit("save_reaction", "specimen", run.SpecimenId,
+                    !replacesResult || string.IsNullOrWhiteSpace(reason) ? null : reason.Trim(),
                     before == null ? null : JsonSerializer.Serialize(before),
                     JsonSerializer.Serialize(new
                     {

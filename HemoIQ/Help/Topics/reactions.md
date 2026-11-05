@@ -16,6 +16,8 @@ The Reactions tab is where you record IS, 37°C, AHG, and CC grades for each cel
 - **Load Reactions** reloads grades from the database.
 - **Save** writes grades without running analysis. Ctrl+S does the same.
 - **Save & Analyze** writes grades, runs analysis, and shows a green or red banner with the result.
+- The grid is saved as one unit: if any cell cannot be saved, none is. Cells you did not change are not rewritten and add nothing to the audit log.
+- After the specimen has been analyzed, changing a recorded result (anything other than NT) asks for a reason. The prompt lists each change, for example *Cell 3 AHG: 2+ → 0*. Without a reason nothing is saved. The reason and the original value go into the audit log, and the timeline shows the reason on that entry. Entering a result in an empty or NT cell never needs a reason.
 - **Fill 0s** sets remaining NT phases to 0. Check cells become 2+ when AHG is 0. Grades you already entered are left alone.
 - **Clear** removes the grades on this run.
 - **Help** opens this chapter.

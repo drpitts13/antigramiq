@@ -728,9 +728,33 @@ namespace HemoIQ.ViewModels
 
             try
             {
-                foreach (var row in Rows)
-                    _db.SaveReaction(SelectedRun.RunId, row.CellNumber,
-                        row.IS, row.C37, row.AHG, row.CC, row.ExtraPhaseValues);
+                var inputs = Rows.Select(r => new ReactionInput(r.CellNumber, r.IS, r.C37, r.AHG, r.CC, r.ExtraPhaseValues))
+                    .ToList();
+                string? reason = null;
+                if (SelectedSpecimen.LastAnalyzedAt != null || _db.GetSpecimen(SelectedSpecimen.AccessionNumber)?.LastAnalyzedAt != null)
+                {
+                    var changes = _db.DescribeReactionChanges(SelectedRun.RunId, inputs);
+                    if (changes.Count > 0)
+                    {
+                        var dlg = new Views.Dialogs.ReasonDialog(
+                            "These recorded results were already analyzed and will be changed:\n\n" +
+                            string.Join("\n", changes.Take(12)) + (changes.Count > 12 ? $"\n… and {changes.Count - 12} more" : "") +
+                            "\n\nEnter the reason for the change. It is saved in the audit log and shown on the timeline.")
+                        {
+                            Owner = Application.Current?.MainWindow,
+                            Title = "Reason for changing results",
+                        };
+                        if (dlg.ShowDialog() != true)
+                        {
+                            const string cancelled = "Not saved: no reason was given for changing recorded results.";
+                            _main.SetStatus(cancelled);
+                            SetSaveStatus(false, cancelled);
+                            return false;
+                        }
+                        reason = dlg.Reason;
+                    }
+                }
+                _db.SaveReactions(SelectedRun.RunId, inputs, reason);
                 entered = Rows.Count(r => r.HasEnteredGrade);
                 MarkGradesClean();
                 return true;

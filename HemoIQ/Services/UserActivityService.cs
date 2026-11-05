@@ -86,7 +86,8 @@ namespace HemoIQ.Services
                         v.GetString() is string s && s.Length > 0 && !string.Equals(s, "NT", StringComparison.OrdinalIgnoreCase))
                         return true;
                 return doc.RootElement.TryGetProperty("extra", out var x) && x.ValueKind == JsonValueKind.String &&
-                       !string.IsNullOrWhiteSpace(x.GetString());
+                       ExtraPhaseParser.Deserialize(x.GetString()).Values.Any(v =>
+                           !string.IsNullOrWhiteSpace(v) && !string.Equals(v, "NT", StringComparison.OrdinalIgnoreCase));
             }
             catch (JsonException)
             {

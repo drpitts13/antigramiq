@@ -1443,9 +1443,31 @@ includes it.
 **Not in this tick:** Reaction-change reasons (a change is recorded but
 no reason is asked), and per-user counts for panel and rule edits.
 
+## Iteration 75 (this change)
+
+**Deficiency:** A recorded reaction result could be changed after
+analysis with no reason, so the audit log showed what changed but not
+why. The grid also saved cell by cell, so a failure part-way left a mix
+of old and new grades. Iteration 74's change count also treated a
+stored empty extra-phase object as a recorded result, overcounting
+changes.
+
+**Bounded improvement:** `DescribeReactionChanges` lists each recorded
+(non-NT) phase a save would replace ("Cell 3 AHG: 2+ → 0").
+`SaveReactions` saves a run's grid in one transaction; once the
+specimen has been analyzed, it refuses changes to recorded results
+without a reason (`ReasonRequiredException`, nothing saved). The grid
+shows the list and asks for the reason; the reason is stored only on
+the audit entries that replaced a result, and the timeline shows it.
+First entries never need a reason. Change detection now reads extra
+phases properly.
+
+**Not in this tick:** Paste/fill and Add Run copy still use the
+single-cell save (they write new runs or empty cells), and a reason is
+not asked before analysis has run.
+
 ## Likely next tick
 
-Ask for a reason when a recorded reaction result is changed after
-analysis has run on it (the before-value is now known), store it on the
-audit entry, and show it on the timeline. Authenticated vendor portals
-stay later and must not bypass auth, CAPTCHA, licensing, or terms.
+Product review (several iterations since the last), then pick from the
+refreshed roadmap. Authenticated vendor portals stay later and must not
+bypass auth, CAPTCHA, licensing, or terms.
