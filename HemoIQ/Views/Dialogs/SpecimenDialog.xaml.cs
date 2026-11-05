@@ -157,6 +157,58 @@ namespace HemoIQ.Views.Dialogs
             }
             SyncTransfusionDate();
             SyncSource();
+            _loaded = true;
+            UpdateContextSummary();
+        }
+
+        private bool _loaded;
+
+        /// <summary>The dialog's clinical context and serology as an unsaved specimen, for the summary line.</summary>
+        private Specimen ContextSnapshot() => new()
+        {
+            TransfusionStatus = TransfusionStatusCode,
+            LastTransfusionDate = LastTransfusionDate,
+            PregnancyStatus = PregnancyStatusCode,
+            PregnancyEndDate = PregnancyEndDate,
+            RhigDate = RhigDate,
+            DatResult = DatResult,
+            DatIgg = DatIgg,
+            DatC3 = DatC3,
+            Phenotype = Phenotype,
+            Genotype = Genotype,
+            PreviousAntibodies = PreviousAntibodies,
+        };
+
+        private void UpdateContextSummary()
+        {
+            if (!_loaded) return;
+            ContextSummaryText.Text = SpecimenContextSummary.Describe(ContextSnapshot());
+        }
+
+        private void Context_Changed(object sender, RoutedEventArgs e) => UpdateContextSummary();
+
+        /// <summary>Selects and returns the tab that holds <paramref name="field"/>, or null.</summary>
+        public TabItem? SelectSectionContaining(FrameworkElement field)
+        {
+            for (DependencyObject? d = field; d != null;
+                 d = LogicalTreeHelper.GetParent(d) ?? System.Windows.Media.VisualTreeHelper.GetParent(d))
+                if (d is TabItem tab)
+                {
+                    Sections.SelectedItem = tab;
+                    return tab;
+                }
+            return null;
+        }
+
+        /// <summary>The current context summary line.</summary>
+        public string ContextSummary => ContextSummaryText.Text;
+
+        /// <summary>Opens the tab holding <paramref name="field"/>, shows the message, and focuses the field.</summary>
+        private void Invalid(string message, FrameworkElement field)
+        {
+            SelectSectionContaining(field);
+            MessageBox.Show(message, "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dispatcher.BeginInvoke(new Action(() => field.Focus()), System.Windows.Threading.DispatcherPriority.Input);
         }
 
         private void CollectedPicker_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
@@ -186,10 +238,14 @@ namespace HemoIQ.Views.Dialogs
         {
             if (PregnancyEndPicker == null) return;
             PregnancyEndPicker.IsEnabled = PregnancyStatusCode == Models.PregnancyStatus.Recent;
+            UpdateContextSummary();
         }
 
-        private void TransfusionBox_SelectionChanged(object sender, SelectionChangedEventArgs e) =>
+        private void TransfusionBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
             SyncTransfusionDate();
+            UpdateContextSummary();
+        }
 
         private void SyncTransfusionDate()
         {
@@ -210,36 +266,38 @@ namespace HemoIQ.Views.Dialogs
         {
             if (string.IsNullOrWhiteSpace(AccessionBox.Text))
             {
-                MessageBox.Show("Accession number is required.", "Validation",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
-                AccessionBox.Focus();
+                Invalid("Accession number is required.", AccessionBox);
                 return;
             }
             if (TransfusionStatusCode == Models.TransfusionStatus.Transfused &&
                 LastTransfusionPicker.SelectedDate?.Date > DateTime.Today)
             {
-                MessageBox.Show("Last transfusion date cannot be in the future.", "Validation",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
-                LastTransfusionPicker.Focus();
+                Invalid("Last transfusion date cannot be in the future.", LastTransfusionPicker);
                 return;
             }
             if (PregnancyStatusCode == Models.PregnancyStatus.Recent && PregnancyEndPicker.SelectedDate == null)
             {
-                MessageBox.Show("Enter the date the recent pregnancy ended.", "Validation",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
-                PregnancyEndPicker.Focus();
+                Invalid("Enter the date the recent pregnancy ended.", PregnancyEndPicker);
                 return;
             }
-            if (PregnancyEndPicker.SelectedDate?.Date > DateTime.Today || RhigPicker.SelectedDate?.Date > DateTime.Today)
+            if (PregnancyEndPicker.SelectedDate?.Date > DateTime.Today)
             {
-                MessageBox.Show("Pregnancy and RhIG dates cannot be in the future.", "Validation",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                Invalid("The pregnancy end date cannot be in the future.", PregnancyEndPicker);
                 return;
             }
-            if (!ValidTime(CollectedTimeBox.Text) || !ValidTime(ReceivedTimeBox.Text))
+            if (RhigPicker.SelectedDate?.Date > DateTime.Today)
             {
-                MessageBox.Show("Times must be HH:mm (24-hour), for example 07:45.", "Validation",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                Invalid("The RhIG date cannot be in the future.", RhigPicker);
+                return;
+            }
+            if (!ValidTime(CollectedTimeBox.Text))
+            {
+                Invalid("Times must be HH:mm (24-hour), for example 07:45.", CollectedTimeBox);
+                return;
+            }
+            if (!ValidTime(ReceivedTimeBox.Text))
+            {
+                Invalid("Times must be HH:mm (24-hour), for example 07:45.", ReceivedTimeBox);
                 return;
             }
             try
@@ -252,7 +310,7 @@ namespace HemoIQ.Views.Dialogs
             }
             catch (ArgumentException ex)
             {
-                MessageBox.Show(ex.Message, "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Invalid(ex.Message, CollectedPicker);
                 return;
             }
             DialogResult = true;

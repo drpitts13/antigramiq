@@ -1329,10 +1329,36 @@ automatically. The detail pane and worksheet print E−, K−, Fy(a−).
 the REVIEW note, requirement source and date, and product-level
 requirements (irradiated, CMV-safe) as structured fields.
 
+## Iteration 70 (this change)
+
+**Deficiency:** The Specimen dialog had grown to 21 rows in one column.
+Transfusion, pregnancy, DAT, and typing fields sat between identity and
+notes, so users scrolled past fields they did not need and could miss
+the ones that change analysis. Validation errors did not say where the
+field was.
+
+**Bounded improvement:** The dialog has four tabs: Specimen (identity,
+collection, origin, expiration, Active), Clinical context (transfusion,
+pregnancy, RhIG, with a note on how they affect analysis), Serology
+(DAT, phenotype, genotype, previous antibodies), and Notes. A
+`SpecimenContextSummary` line under the tabs lists every recorded
+context and serology value as the user types, leaving out Unknown, Not
+transfused, Not pregnant, and NT, so nothing on a closed tab is hidden.
+Each validation error opens the tab holding the field and focuses it;
+pregnancy and RhIG future dates now have separate messages. Saved data
+and the save sequence are unchanged.
+
+**Not in this tick:** Saving the specimen's fields in one transaction
+(the view model still calls several audited update methods in turn, so
+a later failure can leave earlier fields saved), and remembering the
+last tab.
+
 ## Likely next tick
 
-Roadmap item 3: split the Specimen dialog into sections (identity and
-origin, transfusion and pregnancy context, serology history) so the
-21-row form is easier to scan. Authenticated vendor portals stay later
-and must not bypass auth, CAPTCHA, licensing, or terms.
+Make specimen save atomic: wrap the dialog's sequence of audited
+updates in one database transaction so a validation failure in a later
+step rolls back the earlier ones, with tests for the partial-failure
+case. Then roadmap item 4 (per-user reaction-entry and amendment counts).
+Authenticated vendor portals stay later and must not bypass auth,
+CAPTCHA, licensing, or terms.
 

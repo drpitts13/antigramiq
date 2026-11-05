@@ -2,6 +2,17 @@
 
 Use this dialog to add or edit an accession. Open it with **Add** or **Edit** on the Specimens tab, or with Ctrl+N while Specimens is selected.
 
+## Sections
+
+The fields are on four tabs. Press Ctrl+Tab and Ctrl+Shift+Tab to move between them.
+
+- **Specimen**: accession, MRN, type, eluate source, collection and receipt, origin, expiration, and Active.
+- **Clinical context**: transfusion status and date, pregnancy, and RhIG.
+- **Serology**: DAT results, phenotype, genotype, and previous antibodies.
+- **Notes**: free text.
+
+The **Context** line under the tabs always lists what is recorded on Clinical context and Serology, for example *Context: Transfused (last 2026-10-30) · DAT IgG 2+ · previous anti-K*, so a value on a tab you have not opened is never hidden. Unknown, Not transfused, Not pregnant, and NT are left out. When **Save** finds a problem, it opens the tab that holds the field and puts the cursor there.
+
 ## Fields
 
 - **Accession Number** identifies the specimen. Use the accession your laboratory already uses.
