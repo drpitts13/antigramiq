@@ -16,6 +16,8 @@ namespace HemoIQ.Models
         public Dictionary<string, Dictionary<string, double>> PhraseProbabilities { get; set; } = new();
         public List<DosageEffect> DosageEffects { get; set; } = new();
         public List<string> Suggestions { get; set; } = new();
+        /// <summary>Suggested separation criterion for antibodies called together; empty with fewer than two.</summary>
+        public List<SeparationEvaluation> SeparationEvaluations { get; set; } = new();
         public List<string> UntypedClinicallySignificant { get; set; } = new();
         public List<UntypeableSpecificity> UntypeableSpecificities { get; set; } = new();
         public List<SelectedCellRecommendation> SelectedCellRecommendations { get; set; } = new();
@@ -164,6 +166,29 @@ namespace HemoIQ.Models
         public List<string> ConflictingCells { get; set; } = new();
         public List<string> AbsorbedOut { get; set; } = new();
         public List<string> Surviving { get; set; } = new();
+    }
+
+    public class SeparationEvaluation
+    {
+        public string Antibody { get; set; } = string.Empty;
+        public string Antigen { get; set; } = string.Empty;
+        public List<string> Partners { get; set; } = new();
+        public List<string> RuleExemptPartners { get; set; } = new();
+        public int IsolatedCount { get; set; }
+        public int Required { get; set; }
+        /// <summary>"patient history", "rule", or null when the cells were counted.</summary>
+        public string? ExemptReason { get; set; }
+        public List<string> Cells { get; set; } = new();
+        public string Explanation { get; set; } = string.Empty;
+
+        public bool MeetsCriterion => ExemptReason != null || IsolatedCount >= Required;
+
+        public string Display => ExemptReason switch
+        {
+            "patient history" => "Exempt (history)",
+            "rule" => "Exempt (rule)",
+            _ => $"{IsolatedCount} / {Required}"
+        };
     }
 
     public class SuspectedStatistics

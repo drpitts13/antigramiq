@@ -10,6 +10,11 @@ namespace HemoIQ.Models
         public int IdentificationCellCount { get; set; } = 3;
         public int AcsRuleoutCount { get; set; } = 3;
         /// <summary>
+        /// Suggested multiple-antibody criterion: reactive cells each called antibody needs that are
+        /// negative for every other called antigen. 0 turns the check off.
+        /// </summary>
+        public int SeparationCellCount { get; set; } = 1;
+        /// <summary>
         /// Default number of qualifying antigen-positive nonreactive cells
         /// required to rule out an antibody when no per-antibody rule exists.
         /// 1 preserves historical behavior.
@@ -72,6 +77,8 @@ namespace HemoIQ.Models
                 IdentificationCellCount = 3;
             if (AcsRuleoutCount < 1 || AcsRuleoutCount > 5)
                 AcsRuleoutCount = 3;
+            if (SeparationCellCount < 0 || SeparationCellCount > 5)
+                SeparationCellCount = 1;
             if (DefaultMinRuleoutCount < 1 || DefaultMinRuleoutCount > 5)
                 DefaultMinRuleoutCount = 1;
             if (ExpirationWarningDays < 1) ExpirationWarningDays = 1;
@@ -137,6 +144,7 @@ namespace HemoIQ.Models
             IdentificationCellCount,
             AcsRuleoutCount,
             DefaultMinRuleoutCount,
+            SeparationCellCount,
             ExtraPhases,
             RecentTransfusionWindowDays
         };

@@ -13,7 +13,7 @@ namespace HemoIQ.Services
     /// </summary>
     public static class AnalysisRuleTrace
     {
-        public const string EngineVersion = "1";
+        public const string EngineVersion = "2";
 
         public static string Serialize(IEnumerable<Rule> rules, LabSettings settings)
         {
@@ -23,6 +23,7 @@ namespace HemoIQ.Services
                 settings.DefaultMinRuleoutCount,
                 settings.AcsRuleoutCount,
                 settings.IdentificationCellCount,
+                settings.SeparationCellCount,
                 Rules = (rules ?? Array.Empty<Rule>())
                     .OrderBy(r => r.Antibody, StringComparer.OrdinalIgnoreCase)
                     .Select(r => new
@@ -30,7 +31,9 @@ namespace HemoIQ.Services
                         r.Antibody,
                         r.MinRuleoutCount,
                         r.HeterozygousOk,
-                        r.ExceptionAntigen
+                        r.ExceptionAntigen,
+                        r.SeparationExempt,
+                        r.SeparationExemptFrom
                     })
                     .ToList()
             };
@@ -48,6 +51,9 @@ namespace HemoIQ.Services
                 .Append(settings.AcsRuleoutCount)
                 .Append(" observed qualifying cells; identification rule is ")
                 .Append(settings.IdentificationRuleLabel)
+                .Append(settings.SeparationCellCount > 0
+                    ? $"; multiple-antibody separation suggests {settings.SeparationCellCount} isolated reactive cell(s) per co-identified antibody"
+                    : "; multiple-antibody separation check is off")
                 .Append('.');
             if (list.Count == 0)
             {
@@ -113,6 +119,10 @@ namespace HemoIQ.Services
                     : $"heterozygous {rule.ExceptionAntigen}";
                 text += $" ({ag} allowed)";
             }
+            if (rule.SeparationExempt)
+                text += string.IsNullOrWhiteSpace(rule.SeparationExemptFrom)
+                    ? "; separation not required"
+                    : $"; separation not required from {rule.SeparationExemptFrom}";
             return text;
         }
     }

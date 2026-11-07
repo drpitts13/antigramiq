@@ -50,7 +50,8 @@ namespace HemoIQ.ViewModels
             var dlg = new Views.Dialogs.RuleDialog();
             if (dlg.ShowDialog() != true) return;
             var id = _db.AddRule(dlg.RuleName, dlg.Description, dlg.Antibody,
-                dlg.ExceptionAntigen, dlg.HeterozygousOk, dlg.MinRuleoutCount);
+                dlg.ExceptionAntigen, dlg.HeterozygousOk, dlg.MinRuleoutCount,
+                dlg.SeparationExempt, dlg.SeparationExemptFrom);
             _main.SetStatus($"Rule '{dlg.RuleName}' added.");
             Refresh();
             SelectedRule = Rules.FirstOrDefault(r => r.RuleId == id);
@@ -62,7 +63,8 @@ namespace HemoIQ.ViewModels
             var dlg = new Views.Dialogs.RuleDialog(SelectedRule);
             if (dlg.ShowDialog() != true) return;
             _db.UpdateRule(SelectedRule.RuleId, dlg.RuleName, dlg.Description, dlg.Antibody,
-                dlg.ExceptionAntigen, dlg.HeterozygousOk, dlg.MinRuleoutCount);
+                dlg.ExceptionAntigen, dlg.HeterozygousOk, dlg.MinRuleoutCount,
+                dlg.SeparationExempt, dlg.SeparationExemptFrom);
             _main.SetStatus($"Rule '{dlg.RuleName}' updated.");
             Refresh();
         }

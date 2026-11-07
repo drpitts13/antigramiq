@@ -24,6 +24,7 @@ namespace HemoIQ.Views.Dialogs
             if (idCount < 1 || idCount > 3) idCount = 3;
             IdRuleBox.SelectedItem = $"{idCount} + {idCount}";
             AcsRuleoutBox.Text = s.AcsRuleoutCount.ToString();
+            SeparationBox.Text = s.SeparationCellCount.ToString();
             DefaultRuleoutBox.Text = s.DefaultMinRuleoutCount.ToString();
             DefaultTypeBox.ItemsSource = AntigenConstants.SpecimenTypes;
             DefaultTypeBox.SelectedItem = s.DefaultSpecimenType;
@@ -103,6 +104,14 @@ namespace HemoIQ.Views.Dialogs
                 ThresholdBox.Focus();
                 return;
             }
+            if (!int.TryParse(SeparationBox.Text.Trim(), out var separationCount) ||
+                separationCount < 0 || separationCount > 5)
+            {
+                MessageBox.Show("Multiple-Ab separation must be a number between 0 and 5. Use 0 to turn the check off.",
+                    "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                SeparationBox.Focus();
+                return;
+            }
             if (!int.TryParse(AcsRuleoutBox.Text.Trim(), out var acsCount) || acsCount < 1 || acsCount > 5)
             {
                 MessageBox.Show("ACS rule-outs must be a number between 1 and 5.",
@@ -178,6 +187,7 @@ namespace HemoIQ.Views.Dialogs
             AppSettings.Current.IdentificationCellCount =
                 idRule.StartsWith("1") ? 1 : idRule.StartsWith("2") ? 2 : 3;
             AppSettings.Current.AcsRuleoutCount = acsCount;
+            AppSettings.Current.SeparationCellCount = separationCount;
             AppSettings.Current.DefaultMinRuleoutCount = defaultRuleouts;
             AppSettings.Current.DefaultSpecimenType = DefaultTypeBox.SelectedItem?.ToString() ?? "serum";
             AppSettings.Current.DefaultSpecimenDatingDays = datingDays;

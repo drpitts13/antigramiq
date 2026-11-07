@@ -7,6 +7,7 @@ Open **Tools → Preferences** to set laboratory defaults. **Save** writes them 
 - **Lab name** and **Department** identify the laboratory on this workstation.
 - **Score threshold** is the minimum combined score for the suspected list. The allowed range is 0.30 to 0.95.
 - **ID cell rule** is how many antigen-positive reactive cells and antigen-negative nonreactive cells are required before a row is marked as meeting the identification rule. AABB 3 + 3 is the usual standard. The Suspected Antibodies tab turns those rows green.
+- **Multiple-Ab separation** applies when two or more antibodies are called together. It is the number of reactive cells each antibody needs that carry its antigen and are negative for every other called antigen. For anti-e, anti-f, and anti-Lea, that means reactive e+ f- Lea- cells, reactive e- f+ Lea- cells, and reactive e- f- Lea+ cells. The range is 0 to 5; 0 turns the check off, and the default is 1. An antibody known from patient history needs no cells of its own, and a rule on the Rules tab can exempt an antibody. This is a suggested criterion: HemoIQ warns but does not block.
 - **ACS rule-outs** is how many times each clinically significant antibody must be ruled out before the application can suggest that all clinically significant antibodies are ruled out. The range is 1 to 5.
 - **Default rule-outs** is the minimum number of qualifying antigen-positive nonreactive cells required to rule out an antibody when no custom rule exists. The range is 1 to 5. A rule on the Rules tab overrides this for that antibody.
 

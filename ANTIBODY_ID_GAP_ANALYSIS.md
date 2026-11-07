@@ -1623,9 +1623,39 @@ confirmation before saving graded results on an expired lot.
 the analysis suggestions; a lab-configurable "block" mode is not
 offered (warn-and-review only).
 
+## Iteration 82 (this change)
+
+**Deficiency:** When several antibodies were called together, HemoIQ
+checked only each one's 3 + 3 rule. It did not check that the reactions
+could tell them apart. A pair where every K+ reactive cell was also E+
+could be pre-filled as "anti-E; anti-K" with no warning.
+
+**Bounded improvement:** `MultipleAntibodySeparation` takes the antibodies
+called together (suspected rows meeting the ID rule, or the Final ID text
+at confirmation). For each, it counts reactive cells that carry its antigen
+and are typed negative for every other called antigen. A cell whose partner
+antigen is NT does not count. The required number is the lab setting
+**Multiple-Ab separation**: default 1, range 0–5, 0 is off. Two kinds of
+exemption apply:
+- **Patient history.** Antibodies in the specimen's previous antibodies, or
+  confirmed on another specimen with the same MRN, need no isolated cells
+  of their own. Partners still need to be negative for them.
+- **Rules tab.** A rule's new "Separation not required" option can list the
+  partner antigens it covers, for example anti-f: e, c, or leave the list
+  blank to cover every partner.
+
+The result appears in a Suspected Antibodies **Separation** column and in
+Suggestions, and as a Yes/No prompt at Confirm ID. The criterion only
+warns. The rule engine version is now 2, and the setting and rule fields
+are in the analysis snapshot's rule trace.
+
+**Not in this tick:** The clinical report does not print the separation
+evaluations. Selected-cell recommendations do not yet rank cells by their
+ability to separate the called antibodies.
+
 ## Likely next tick
 
-Integrity checks on the Worklist with the same verify-or-fix pattern:
-active panel with no typed antigens, and duplicate vendor lot numbers.
-Authenticated vendor portals stay later and must not bypass auth,
-CAPTCHA, licensing, or terms.
+Recommend selected cells that would satisfy a separation shortfall (for
+example, a reactive-candidate K+ E- cell). After that, the Worklist
+integrity checks: an active panel with no typed antigens, and duplicate
+vendor lot numbers.

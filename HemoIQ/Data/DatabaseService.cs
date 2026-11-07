@@ -276,6 +276,11 @@ namespace HemoIQ.Data
                 )");
             if (!GetColumnNames("patients").Contains("antigen_negative"))
                 ExecNonQuery("ALTER TABLE patients ADD COLUMN antigen_negative TEXT");
+            var ruleCols = GetColumnNames("rules");
+            if (!ruleCols.Contains("separation_exempt"))
+                ExecNonQuery("ALTER TABLE rules ADD COLUMN separation_exempt INTEGER NOT NULL DEFAULT 0");
+            if (!ruleCols.Contains("separation_exempt_from"))
+                ExecNonQuery("ALTER TABLE rules ADD COLUMN separation_exempt_from TEXT");
         }
 
         private void MigrateSpecimenFinalCall()
@@ -2883,13 +2888,15 @@ namespace HemoIQ.Data
         // ── Rules ─────────────────────────────────────────────────────────────
 
         public int AddRule(string name, string? description, string antibody,
-            string? exceptionAntigen, bool heterozygousOk, int minRuleoutCount)
+            string? exceptionAntigen, bool heterozygousOk, int minRuleoutCount,
+            bool separationExempt = false, string? separationExemptFrom = null)
         {
+            separationExemptFrom = NormalizeSeparationList(separationExempt, separationExemptFrom);
             using var cmd = _conn.CreateCommand();
             cmd.CommandText = @"
                 INSERT INTO rules (name, description, antibody, exception_antigen,
-                                   heterozygous_ok, min_ruleout_count)
-                VALUES ($name, $desc, $ab, $exc, $hetok, $min);
+                                   heterozygous_ok, min_ruleout_count, separation_exempt, separation_exempt_from)
+                VALUES ($name, $desc, $ab, $exc, $hetok, $min, $sep, $sepfrom);
                 SELECT last_insert_rowid();";
             cmd.Parameters.AddWithValue("$name", name);
             cmd.Parameters.AddWithValue("$desc", (object?)description ?? DBNull.Value);
@@ -2897,9 +2904,11 @@ namespace HemoIQ.Data
             cmd.Parameters.AddWithValue("$exc", (object?)exceptionAntigen ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$hetok", heterozygousOk ? 1 : 0);
             cmd.Parameters.AddWithValue("$min", minRuleoutCount);
+            cmd.Parameters.AddWithValue("$sep", separationExempt ? 1 : 0);
+            cmd.Parameters.AddWithValue("$sepfrom", (object?)separationExemptFrom ?? DBNull.Value);
             var id = Convert.ToInt32(cmd.ExecuteScalar());
             AppendAudit("add_rule", "rule", id.ToString(), null,
-                afterJson: JsonSerializer.Serialize(new { name, antibody }));
+                afterJson: JsonSerializer.Serialize(new { name, antibody, separationExempt, separationExemptFrom }));
             return id;
         }
 
@@ -2914,12 +2923,15 @@ namespace HemoIQ.Data
         }
 
         public void UpdateRule(int ruleId, string name, string? description, string antibody,
-            string? exceptionAntigen, bool heterozygousOk, int minRuleoutCount)
+            string? exceptionAntigen, bool heterozygousOk, int minRuleoutCount,
+            bool separationExempt = false, string? separationExemptFrom = null)
         {
+            separationExemptFrom = NormalizeSeparationList(separationExempt, separationExemptFrom);
             using var cmd = _conn.CreateCommand();
             cmd.CommandText = @"
                 UPDATE rules SET name=$name, description=$desc, antibody=$ab,
-                exception_antigen=$exc, heterozygous_ok=$hetok, min_ruleout_count=$min
+                exception_antigen=$exc, heterozygous_ok=$hetok, min_ruleout_count=$min,
+                separation_exempt=$sep, separation_exempt_from=$sepfrom
                 WHERE rule_id=$id";
             cmd.Parameters.AddWithValue("$name", name);
             cmd.Parameters.AddWithValue("$desc", (object?)description ?? DBNull.Value);
@@ -2927,10 +2939,19 @@ namespace HemoIQ.Data
             cmd.Parameters.AddWithValue("$exc", (object?)exceptionAntigen ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$hetok", heterozygousOk ? 1 : 0);
             cmd.Parameters.AddWithValue("$min", minRuleoutCount);
+            cmd.Parameters.AddWithValue("$sep", separationExempt ? 1 : 0);
+            cmd.Parameters.AddWithValue("$sepfrom", (object?)separationExemptFrom ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$id", ruleId);
             cmd.ExecuteNonQuery();
             AppendAudit("update_rule", "rule", ruleId.ToString(), null,
-                afterJson: JsonSerializer.Serialize(new { name, antibody }));
+                afterJson: JsonSerializer.Serialize(new { name, antibody, separationExempt, separationExemptFrom }));
+        }
+
+        private static string? NormalizeSeparationList(bool exempt, string? list)
+        {
+            if (!exempt) return null;
+            var parts = Services.MultipleAntibodySeparation.ParseAntigenList(list);
+            return parts.Count == 0 ? null : string.Join(", ", parts);
         }
 
         public void DeleteRule(int ruleId)
@@ -3245,6 +3266,8 @@ namespace HemoIQ.Data
             ExceptionAntigen = r.IsDBNull(r.GetOrdinal("exception_antigen")) ? null : r.GetString(r.GetOrdinal("exception_antigen")),
             HeterozygousOk = r.GetInt32(r.GetOrdinal("heterozygous_ok")) != 0,
             MinRuleoutCount = r.GetInt32(r.GetOrdinal("min_ruleout_count")),
+            SeparationExempt = r.GetInt32(r.GetOrdinal("separation_exempt")) != 0,
+            SeparationExemptFrom = r.IsDBNull(r.GetOrdinal("separation_exempt_from")) ? null : r.GetString(r.GetOrdinal("separation_exempt_from")),
         };
 
         // ── Helpers ───────────────────────────────────────────────────────────

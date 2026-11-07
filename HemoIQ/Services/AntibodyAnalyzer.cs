@@ -106,6 +106,9 @@ namespace HemoIQ.Services
                 .Select(c => c.Run.PanelId)
                 .Distinct()
                 .ToDictionary(id => id, id => _db.GetPanelCells(id));
+            result.SeparationEvaluations = EvaluateSeparation(
+                suspectedStats.Where(s => s.Value.MeetsIdentificationRule).Select(s => s.Key),
+                byRun, contexts, cellsByPanel, rules, specimenId, scoreExclusions);
             EnzymeTreatmentPatternClassifier.Apply(result, byRun, contexts, cellsByPanel);
             DttTreatmentPatternClassifier.Apply(result, byRun, contexts, cellsByPanel);
             AbsorptionPatternClassifier.Apply(result, byRun, contexts, cellsByPanel);
@@ -122,6 +125,56 @@ namespace HemoIQ.Services
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Evaluates the suggested multiple-antibody separation criterion for the antibodies in a
+        /// final identification text (anti-E; anti-K). Empty when fewer than two known antibodies
+        /// are listed, the check is off, or there are no reactions.
+        /// </summary>
+        public List<SeparationEvaluation> EvaluateFinalCall(string specimenId, string? finalText)
+        {
+            var reactions = _db.GetAllSpecimenReactions(specimenId);
+            if (reactions.Count == 0) return new List<SeparationEvaluation>();
+            var runs = _db.GetAllSpecimenRuns(specimenId);
+            var contexts = BuildContexts(runs);
+            var byRun = GroupByRun(reactions);
+            var scoreExclusions = new HashSet<string>(StringComparer.Ordinal);
+            MarkPanreactiveUntreatedBesideAdsorption(byRun, contexts, scoreExclusions);
+            var cellsByPanel = contexts.Values
+                .Select(c => c.Run.PanelId)
+                .Distinct()
+                .ToDictionary(id => id, id => _db.GetPanelCells(id));
+            return EvaluateSeparation(FinalAntibodyParser.Split(finalText), byRun, contexts, cellsByPanel,
+                _db.GetAllRules(), specimenId, scoreExclusions);
+        }
+
+        private List<SeparationEvaluation> EvaluateSeparation(
+            IEnumerable<string> called,
+            Dictionary<int, List<Reaction>> byRun,
+            Dictionary<int, RunContext> contexts,
+            IReadOnlyDictionary<int, List<PanelCell>> cellsByPanel,
+            List<Rule> rules,
+            string specimenId,
+            ISet<string> scoreExclusions)
+        {
+            var historical = new HashSet<string>(StringComparer.Ordinal);
+            if (_db.GetSpecimen(specimenId) is Specimen specimen)
+            {
+                var transfusion = TransfusionContext.Assess(
+                    specimen.TransfusionStatus, specimen.LastTransfusionDate, specimen.CreatedDate,
+                    AppSettings.Current.RecentTransfusionWindowDays, specimen.Phenotype, specimen.Notes);
+                var typing = PatientTypingParser.Parse(
+                    specimen.Phenotype, specimen.PreviousAntibodies, specimen.Notes, specimen.Genotype, transfusion);
+                var prior = PatientHistory.ConfirmedAntibodies(PatientHistory.OtherSpecimens(_db, specimen))
+                    .Select(p => p.Antibody);
+                foreach (var ab in typing.HistoricalAntibodies.Concat(prior))
+                    if (MultipleAntibodySeparation.AntigenOf(ab) is string ag)
+                        historical.Add("anti-" + ag);
+            }
+            return MultipleAntibodySeparation.Evaluate(
+                called, byRun, contexts, cellsByPanel, AppSettings.Current.SeparationCellCount, rules, historical,
+                (ctx, antibody) => ExcludedFromOrdinaryScores(ctx, antibody, scoreExclusions));
         }
 
         private void PersistSnapshot(string specimenId, List<Reaction> reactions,
@@ -1205,6 +1258,12 @@ namespace HemoIQ.Services
                             $"Add {need} more {ag}- cell(s) that do not react.");
                     }
                 }
+            }
+
+            foreach (var sep in result.SeparationEvaluations)
+            {
+                if (sep.MeetsCriterion) informational.Add(sep.Explanation);
+                else important.Add(sep.Explanation);
             }
 
             if (result.Suspected.Count > 1)

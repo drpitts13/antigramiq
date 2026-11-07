@@ -12,6 +12,9 @@ namespace HemoIQ.Views.Dialogs
         public string? ExceptionAntigen => string.IsNullOrWhiteSpace(ExceptionAntigenBox.Text) ? null : ExceptionAntigenBox.Text.Trim();
         public bool HeterozygousOk => HeterozygousCheck.IsChecked == true;
         public int MinRuleoutCount => int.TryParse(MinCountBox.Text, out var n) ? n : 3;
+        public bool SeparationExempt => SeparationExemptCheck.IsChecked == true;
+        public string? SeparationExemptFrom => SeparationExempt && !string.IsNullOrWhiteSpace(SeparationFromBox.Text)
+            ? SeparationFromBox.Text.Trim() : null;
 
         public RuleDialog(Rule? existing = null)
         {
@@ -28,6 +31,8 @@ namespace HemoIQ.Views.Dialogs
                 ExceptionAntigenBox.Text = existing.ExceptionAntigen;
                 HeterozygousCheck.IsChecked = existing.HeterozygousOk;
                 MinCountBox.Text = existing.MinRuleoutCount.ToString();
+                SeparationExemptCheck.IsChecked = existing.SeparationExempt;
+                SeparationFromBox.Text = existing.SeparationExemptFrom;
             }
         }
 
@@ -36,6 +41,15 @@ namespace HemoIQ.Views.Dialogs
             if (string.IsNullOrWhiteSpace(NameBox.Text) || string.IsNullOrWhiteSpace(AntibodyBox.Text))
             {
                 MessageBox.Show("Name and Antibody are required.", "Validation",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            var unknown = Services.MultipleAntibodySeparation.ParseAntigenList(SeparationExemptFrom)
+                .Where(a => !AntigenConstants.IsKnown(a)).ToList();
+            if (unknown.Count > 0)
+            {
+                MessageBox.Show($"Unknown antigen(s) in Exempt from: {string.Join(", ", unknown)}. " +
+                    "Antigen names are case-sensitive (E and e differ).", "Validation",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }

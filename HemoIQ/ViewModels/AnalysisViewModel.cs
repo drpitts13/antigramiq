@@ -302,6 +302,7 @@ namespace HemoIQ.ViewModels
             foreach (var (ab, prob) in result.Suspected.OrderByDescending(x => x.Value))
             {
                 result.SuspectedStatistics.TryGetValue(ab, out var stats);
+                var sep = result.SeparationEvaluations.FirstOrDefault(e => e.Antibody == ab);
                 SuspectedRows.Add(new SuspectedRow
                 {
                     Antibody = ab,
@@ -314,6 +315,8 @@ namespace HemoIQ.ViewModels
                         ? $"{stats.NegativeAgNegativeCount} / {stats.IdentificationRequired}" : "-",
                     IdentificationRule = stats?.IdentificationStatus ?? "-",
                     MeetsIdentificationRule = stats?.MeetsIdentificationRule ?? false,
+                    Separation = sep?.Display ?? "-",
+                    SeparationShort = sep != null && !sep.MeetsCriterion,
                 });
             }
 
@@ -550,6 +553,15 @@ namespace HemoIQ.ViewModels
                 return;
             }
 
+            if (SeparationShortfallMessage(
+                    _analyzer.EvaluateFinalCall(SelectedSpecimen.AccessionNumber, antibodies)) is string shortfall &&
+                MessageBox.Show(shortfall + "\n\nConfirm this identification anyway?", "Multiple antibodies",
+                    MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            {
+                _main.SetStatus("Not confirmed: the multiple-antibody separation criterion is not met.");
+                return;
+            }
+
             try
             {
                 _db.SetSpecimenFinalCall(SelectedSpecimen.AccessionNumber, antibodies,
@@ -567,6 +579,16 @@ namespace HemoIQ.ViewModels
             _main.AnalyticsVM.Refresh();
             _main.WorklistVM.Refresh();
             _main.SetStatus($"Identification confirmed for {SelectedSpecimen.AccessionNumber}.");
+        }
+
+        /// <summary>Confirmation text when a called antibody falls short of the separation criterion; null when all meet it.</summary>
+        public static string? SeparationShortfallMessage(IEnumerable<SeparationEvaluation> evaluations)
+        {
+            var shortList = evaluations.Where(e => !e.MeetsCriterion).ToList();
+            if (shortList.Count == 0) return null;
+            return "Suggested multiple-antibody criterion not met:\n\n" +
+                   string.Join("\n", shortList.Select(e => "• " + e.Explanation)) +
+                   "\n\nPatient history or a rule on the Rules tab can exempt an antibody.";
         }
 
         private void ClearConfirmation()
@@ -864,6 +886,9 @@ namespace HemoIQ.ViewModels
         public string AgNegativeNonreactive { get; set; } = string.Empty;
         public string IdentificationRule { get; set; } = string.Empty;
         public bool MeetsIdentificationRule { get; set; }
+        /// <summary>Multiple-antibody separation: "2 / 1", "Exempt (history)", or "-" when not evaluated.</summary>
+        public string Separation { get; set; } = "-";
+        public bool SeparationShort { get; set; }
     }
 
     public class RuleoutRow

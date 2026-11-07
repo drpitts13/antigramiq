@@ -18,6 +18,8 @@
                 <RowDefinition Height="36"/>
                 <RowDefinition Height="36"/>
                 <RowDefinition Height="36"/>
+                <RowDefinition Height="36"/>
+                <RowDefinition Height="36"/>
             </Grid.RowDefinitions>
 
             <Label Content="Rule Name:" Grid.Row="0" VerticalAlignment="Center"/>
@@ -42,6 +44,17 @@
             <Label Content="Min Ruleout Count:" Grid.Row="5" VerticalAlignment="Center"/>
             <TextBox x:Name="MinCountBox" Grid.Row="5" Grid.Column="1"
                      VerticalAlignment="Center" Margin="0,2" Text="3"/>
+
+            <Label Content="Separation not required:" Grid.Row="6" VerticalAlignment="Center"
+                   ToolTip="When several antibodies are called together, each normally needs reactive cells that are negative for the other called antigens. Tick to exempt this antibody."/>
+            <CheckBox x:Name="SeparationExemptCheck" Grid.Row="6" Grid.Column="1"
+                      VerticalAlignment="Center" Margin="0,2"/>
+
+            <Label Content="Exempt from (antigens):" Grid.Row="7" VerticalAlignment="Center"
+                   ToolTip="Comma-separated partner antigens, for example e, c for anti-f. Leave blank to exempt from every partner."/>
+            <TextBox x:Name="SeparationFromBox" Grid.Row="7" Grid.Column="1"
+                     VerticalAlignment="Center" Margin="0,2"
+                     IsEnabled="{Binding IsChecked, ElementName=SeparationExemptCheck}"/>
         </Grid>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">

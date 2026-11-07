@@ -32,6 +32,7 @@
                     <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
                     <DataGridTextColumn Header="Antibody" Binding="{Binding Antibody}" Width="100"/>
                     <DataGridCheckBoxColumn Header="Het OK" Binding="{Binding HeterozygousOk}" Width="65"/>
+                    <DataGridCheckBoxColumn Header="Sep. exempt" Binding="{Binding SeparationExempt}" Width="80"/>
                 </DataGrid.Columns>
             </DataGrid>
         </DockPanel>
@@ -49,6 +50,7 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
@@ -77,8 +79,12 @@
                     <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedRule.MinRuleoutCount}"
                                VerticalAlignment="Center"/>
 
-                    <Label Content="Description:" Grid.Row="5" VerticalAlignment="Top" Margin="0,4,0,0"/>
-                    <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding SelectedRule.Description}"
+                    <Label Content="Separation exempt from:" Grid.Row="5" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding SelectedRule.SeparationExemptDisplay}"
+                               VerticalAlignment="Center" TextWrapping="Wrap"/>
+
+                    <Label Content="Description:" Grid.Row="6" VerticalAlignment="Top" Margin="0,4,0,0"/>
+                    <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SelectedRule.Description}"
                                TextWrapping="Wrap" VerticalAlignment="Top" Margin="0,4,0,0"/>
                 </Grid>
             </StackPanel>

@@ -27,6 +27,7 @@
                 <RowDefinition Height="36"/>
                 <RowDefinition Height="36"/>
                 <RowDefinition Height="36"/>
+                <RowDefinition Height="36"/>
                 <RowDefinition Height="32"/>
                 <RowDefinition Height="32"/>
                 <RowDefinition Height="32"/>
@@ -49,52 +50,56 @@
                    ToolTip="Minimum antigen-positive reactive cells and antigen-negative nonreactive cells required to identify an antibody (AABB 3 + 3 is the usual standard)."/>
             <ComboBox x:Name="IdRuleBox" Grid.Row="3" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
 
-            <Label Content="ACS rule-outs:" Grid.Row="4" VerticalAlignment="Center"
+            <Label Content="Multiple-Ab separation:" Grid.Row="4" VerticalAlignment="Center"
+                   ToolTip="Suggested criterion when two or more antibodies are called: reactive cells each antibody needs that are negative for the other called antigens (0–5, 0 = off). Patient history or a rule on the Rules tab can exempt an antibody. Warns only."/>
+            <TextBox x:Name="SeparationBox" Grid.Row="4" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
+
+            <Label Content="ACS rule-outs:" Grid.Row="5" VerticalAlignment="Center"
                    ToolTip="Minimum times each clinically significant antibody must be ruled out before suggesting All Clinically Significant Antibodies Ruled Out (1–5)."/>
-            <TextBox x:Name="AcsRuleoutBox" Grid.Row="4" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
+            <TextBox x:Name="AcsRuleoutBox" Grid.Row="5" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
 
-            <Label Content="Default rule-outs:" Grid.Row="5" VerticalAlignment="Center"
+            <Label Content="Default rule-outs:" Grid.Row="6" VerticalAlignment="Center"
                    ToolTip="Minimum qualifying antigen-positive nonreactive cells required to rule out an antibody when no per-antibody rule exists (1–5). A rule on the Rules tab overrides this for that antibody."/>
-            <TextBox x:Name="DefaultRuleoutBox" Grid.Row="5" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
+            <TextBox x:Name="DefaultRuleoutBox" Grid.Row="6" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
 
-            <Label Content="Default specimen type:" Grid.Row="6" VerticalAlignment="Center"/>
-            <ComboBox x:Name="DefaultTypeBox" Grid.Row="6" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
+            <Label Content="Default specimen type:" Grid.Row="7" VerticalAlignment="Center"/>
+            <ComboBox x:Name="DefaultTypeBox" Grid.Row="7" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
 
-            <Label Content="Specimen dating (days):" Grid.Row="7" VerticalAlignment="Center"
+            <Label Content="Specimen dating (days):" Grid.Row="8" VerticalAlignment="Center"
                    ToolTip="Pre-fill expiration when adding a specimen. 0 = leave blank. Typical antibody workup dating is 3 days."/>
-            <TextBox x:Name="DatingDaysBox" Grid.Row="7" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
+            <TextBox x:Name="DatingDaysBox" Grid.Row="8" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
 
-            <Label Content="Expiration warning (days):" Grid.Row="8" VerticalAlignment="Center"/>
-            <TextBox x:Name="ExpiryDaysBox" Grid.Row="8" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
+            <Label Content="Expiration warning (days):" Grid.Row="9" VerticalAlignment="Center"/>
+            <TextBox x:Name="ExpiryDaysBox" Grid.Row="9" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
 
-            <Label Content="Recent transfusion (days):" Grid.Row="9" VerticalAlignment="Center"
+            <Label Content="Recent transfusion (days):" Grid.Row="10" VerticalAlignment="Center"
                    ToolTip="A specimen recorded as Transfused with a last transfusion this many days or fewer before the specimen date has its serologic phenotype treated as uninterpretable (possible donor cells). Allowed range: 1–365."/>
-            <TextBox x:Name="TransfusionWindowBox" Grid.Row="9" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
+            <TextBox x:Name="TransfusionWindowBox" Grid.Row="10" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
 
-            <Label Content="Max database size (MB):" Grid.Row="10" VerticalAlignment="Center"
+            <Label Content="Max database size (MB):" Grid.Row="11" VerticalAlignment="Center"
                    ToolTip="Warn when the database file reaches 80% of this size. Allowed range: 50–10240 MB."/>
-            <TextBox x:Name="MaxDbSizeBox" Grid.Row="10" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
+            <TextBox x:Name="MaxDbSizeBox" Grid.Row="11" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
 
-            <Label Content="Default initials:" Grid.Row="11" VerticalAlignment="Center"
+            <Label Content="Default initials:" Grid.Row="12" VerticalAlignment="Center"
                    ToolTip="Pre-filled on Confirm ID. Updated automatically when you confirm an identification."/>
-            <TextBox x:Name="InitialsBox" Grid.Row="11" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"
+            <TextBox x:Name="InitialsBox" Grid.Row="12" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"
                      MaxLength="12"/>
 
-            <CheckBox x:Name="ShowInactiveCheck" Grid.Row="12" Grid.Column="0" Grid.ColumnSpan="2"
+            <CheckBox x:Name="ShowInactiveCheck" Grid.Row="13" Grid.Column="0" Grid.ColumnSpan="2"
                       Content="Show inactive specimens and panels by default"
                       VerticalAlignment="Center" Margin="4,0,0,0"/>
 
-            <CheckBox x:Name="HideRuledOutCheck" Grid.Row="13" Grid.Column="0" Grid.ColumnSpan="2"
+            <CheckBox x:Name="HideRuledOutCheck" Grid.Row="14" Grid.Column="0" Grid.ColumnSpan="2"
                       Content="Hide ruled-out antigen columns on the Reactions tab"
                       VerticalAlignment="Center" Margin="4,0,0,0"/>
 
-            <Label Content="Extra phases:" Grid.Row="14" VerticalAlignment="Center"
+            <Label Content="Extra phases:" Grid.Row="15" VerticalAlignment="Center"
                    ToolTip="Optional extra reaction columns. Leave blank for the classic IS / 37°C / AHG / CC grid. Gel, Solid, and PEG count as IAT-like evidence. Dil1–Dil128 are serial-dilution titer columns, not identification phases."/>
-            <TextBox x:Name="ExtraPhasesBox" Grid.Row="14" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"
+            <TextBox x:Name="ExtraPhasesBox" Grid.Row="15" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"
                      ToolTip="Suggested: RT, PEG, Gel, Solid, and optional Dil1–Dil128. Custom names are kept. Dilution columns are not IAT."
                      TextChanged="ExtraPhasesBox_TextChanged"/>
 
-            <StackPanel Grid.Row="15" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal"
+            <StackPanel Grid.Row="16" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal"
                         Margin="4,0,0,0">
                 <CheckBox x:Name="PhaseRtCheck" Content="RT" Margin="0,0,12,0"
                           VerticalAlignment="Center" Checked="SuggestedPhaseChanged" Unchecked="SuggestedPhaseChanged"/>
@@ -108,29 +113,29 @@
             </StackPanel>
 
             <CheckBox x:Name="PhaseTiterGridCheck"
-                      Grid.Row="16" Grid.Column="0" Grid.ColumnSpan="2"
+                      Grid.Row="17" Grid.Column="0" Grid.ColumnSpan="2"
                       Content="Titer grid (Dil1–Dil128)"
                       VerticalAlignment="Center" Margin="4,0,0,0"
                       ToolTip="Adds serial-dilution columns. Last reactive tube is the titer endpoint. These grades are not IAT and do not rule out or identify an antibody."
                       Checked="SuggestedPhaseChanged" Unchecked="SuggestedPhaseChanged"/>
 
             <CheckBox x:Name="RequireReviewCheck"
-                      Grid.Row="17" Grid.Column="0" Grid.ColumnSpan="2"
+                      Grid.Row="18" Grid.Column="0" Grid.ColumnSpan="2"
                       Content="Require supervisor review before an investigation is Completed"
                       VerticalAlignment="Center" Margin="4,0,0,0"
                       ToolTip="A second person, not the one who confirmed the identification, records a review on the Specimens tab. Until then the investigation shows Awaiting supervisor review and is listed on the Worklist."/>
 
-            <Label Content="Turnaround threshold (days):" Grid.Row="18" VerticalAlignment="Center"
+            <Label Content="Turnaround threshold (days):" Grid.Row="19" VerticalAlignment="Center"
                    ToolTip="Open investigations older than this are listed as overdue on Analytics (1–60)."/>
-            <TextBox x:Name="TurnaroundBox" Grid.Row="18" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
+            <TextBox x:Name="TurnaroundBox" Grid.Row="19" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
 
-            <Label Content="Dating look-back (days):" Grid.Row="19" VerticalAlignment="Center"
+            <Label Content="Dating look-back (days):" Grid.Row="20" VerticalAlignment="Center"
                    ToolTip="If the patient was transfused this many days or fewer before collection, specimen dating is checked against collection + Specimen dating days (1–365, default 90)."/>
-            <TextBox x:Name="DatingLookbackBox" Grid.Row="19" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
+            <TextBox x:Name="DatingLookbackBox" Grid.Row="20" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
 
-            <Label Content="RhIG passive window (days):" Grid.Row="20" VerticalAlignment="Center"
+            <Label Content="RhIG passive window (days):" Grid.Row="21" VerticalAlignment="Center"
                    ToolTip="Anti-D found within this many days after Rh immune globulin is flagged as possibly passive (1–365, default 84 = 12 weeks)."/>
-            <TextBox x:Name="RhigWindowBox" Grid.Row="20" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
+            <TextBox x:Name="RhigWindowBox" Grid.Row="21" Grid.Column="1" VerticalAlignment="Center" Margin="0,2"/>
         </Grid>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">

@@ -141,6 +141,19 @@
                             <DataGridTextColumn Header="Ag+ reactive" Binding="{Binding AgPositiveReactive}" Width="100"/>
                             <DataGridTextColumn Header="Ag- nonreactive" Binding="{Binding AgNegativeNonreactive}" Width="120"/>
                             <DataGridTextColumn Header="ID rule" Binding="{Binding IdentificationRule}" Width="110"/>
+                            <DataGridTextColumn Header="Separation" Binding="{Binding Separation}" Width="110">
+                                <DataGridTextColumn.CellStyle>
+                                    <Style TargetType="DataGridCell">
+                                        <Setter Property="ToolTip" Value="Reactive cells for this antigen that are negative for the other called antigens, out of the number required. Shown when two or more antibodies meet the ID rule."/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SeparationShort}" Value="True">
+                                                <Setter Property="Foreground" Value="#B26A00"/>
+                                                <Setter Property="FontWeight" Value="Bold"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGridTextColumn.CellStyle>
+                            </DataGridTextColumn>
                         </DataGrid.Columns>
                     </DataGrid>
                     <GridSplitter Grid.Row="1" Height="6" HorizontalAlignment="Stretch"/>
