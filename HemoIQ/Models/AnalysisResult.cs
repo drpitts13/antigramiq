@@ -346,6 +346,8 @@ namespace HemoIQ.Models
         public string Explanation { get; set; } = string.Empty;
         public string AntigenProfile { get; set; } = string.Empty;
         public List<string> Distinguishes { get; set; } = new();
+        /// <summary>True when the cell could add an isolated reactive cell for a separation shortfall.</summary>
+        public bool FillsSeparation { get; set; }
         public bool IsExpired { get; set; }
         public bool IsExpiringSoon { get; set; }
         public string? ExpirationDate { get; set; }

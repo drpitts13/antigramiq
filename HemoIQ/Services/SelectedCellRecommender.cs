@@ -24,7 +24,7 @@ namespace HemoIQ.Services
             IEnumerable<(Panel Panel, PanelCell Cell)> inventory)
         {
             var candidates = ResolveCandidates(result);
-            if (candidates.Count == 0 && !NeedsRareNegativeCell(result) &&
+            if (candidates.Count == 0 && !NeedsRareNegativeCell(result) && !HasSeparationShortfall(result) &&
                 !NeutralizationParser.FavorsSolubleSubstanceFollowUp(result))
                 return new();
 
@@ -136,6 +136,7 @@ namespace HemoIQ.Services
             }
 
             ApplyPatientCompatibility(cell, candidates, result, ref score, reasons);
+            var separation = ApplySeparationShortfalls(cell, result, ref score);
 
             if (LooksLikeSelectedCellVial(panel))
             {
@@ -166,6 +167,8 @@ namespace HemoIQ.Services
                 .ToList();
 
             var explanation = FormatExplanation(panel, cell, reasons, distinguishes);
+            if (separation.Count > 0)
+                explanation += " It " + string.Join("; it ", separation) + ".";
             return new SelectedCellRecommendation
             {
                 PanelId = panel.PanelId,
@@ -175,6 +178,7 @@ namespace HemoIQ.Services
                 Score = score,
                 AntigenProfile = profile,
                 Distinguishes = distinguishes,
+                FillsSeparation = separation.Count > 0,
                 Explanation = explanation,
                 IsExpired = panel.IsExpired,
                 IsExpiringSoon = !panel.IsExpired && panel.IsExpiringSoon,
@@ -237,6 +241,30 @@ namespace HemoIQ.Services
             }
             if (panel.IsExpiringSoon && !string.IsNullOrWhiteSpace(panel.ExpirationDate))
                 reasons.Add($"expires {panel.ExpirationDate} — confirm the vial is still in date");
+        }
+
+        public static bool HasSeparationShortfall(AnalysisResult result) =>
+            result.SeparationEvaluations.Any(e => !e.MeetsCriterion);
+
+        /// <summary>
+        /// A cell that carries a short antibody's antigen and is typed negative for every partner
+        /// it must be separated from could add an isolated reactive cell for the multiple-antibody
+        /// criterion. It only counts if the patient's serum reacts with it.
+        /// </summary>
+        private static List<string> ApplySeparationShortfalls(PanelCell cell, AnalysisResult result, ref int score)
+        {
+            var notes = new List<string>();
+            foreach (var e in result.SeparationEvaluations.Where(e => !e.MeetsCriterion))
+            {
+                if (!cell.HasTypedAntigen(e.Antigen) || cell.GetAntigen(e.Antigen) != "+") continue;
+                var partners = e.Partners.Except(e.RuleExemptPartners, StringComparer.Ordinal).ToList();
+                if (partners.Any(p => !cell.HasTypedAntigen(p) || cell.GetAntigen(p) != "-")) continue;
+                score += 6;
+                var phenotype = $"{e.Antigen}+ {string.Join(" ", partners.Select(p => p + "-"))}";
+                notes.Add($"is {phenotype} and, if reactive, would count toward the multiple-antibody separation " +
+                          $"criterion for {e.Antibody} ({e.IsolatedCount} of {e.Required} so far)");
+            }
+            return notes;
         }
 
         public static bool NeedsRareNegativeCell(AnalysisResult result) =>

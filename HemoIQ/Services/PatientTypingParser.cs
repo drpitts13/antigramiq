@@ -486,7 +486,8 @@ namespace HemoIQ.Services
         {
             if (string.IsNullOrWhiteSpace(previous)) yield break;
             var parts = previous.Split(new[] { ';', ',', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            // Tokens are normalized to "anti-" + antigen, so ordinal keeps anti-E and anti-e apart.
+            var seen = new HashSet<string>(StringComparer.Ordinal);
             foreach (var raw in parts)
             {
                 var token = raw.Trim();

@@ -101,7 +101,6 @@ namespace HemoIQ.Services
             result.ReactionPatterns = ClassifyReactionPatterns(specimenId, byRun, contexts);
             ApplyHtlaTitration(specimenId, result, reactions);
             ApplyNeutralization(specimenId, result, reactions, runs);
-            result.SelectedCellRecommendations = RecommendSelectedCells(reactions, result);
             var cellsByPanel = contexts.Values
                 .Select(c => c.Run.PanelId)
                 .Distinct()
@@ -109,6 +108,7 @@ namespace HemoIQ.Services
             result.SeparationEvaluations = EvaluateSeparation(
                 suspectedStats.Where(s => s.Value.MeetsIdentificationRule).Select(s => s.Key),
                 byRun, contexts, cellsByPanel, rules, specimenId, scoreExclusions);
+            result.SelectedCellRecommendations = RecommendSelectedCells(reactions, result);
             EnzymeTreatmentPatternClassifier.Apply(result, byRun, contexts, cellsByPanel);
             DttTreatmentPatternClassifier.Apply(result, byRun, contexts, cellsByPanel);
             AbsorptionPatternClassifier.Apply(result, byRun, contexts, cellsByPanel);
@@ -1265,6 +1265,13 @@ namespace HemoIQ.Services
                 if (sep.MeetsCriterion) informational.Add(sep.Explanation);
                 else important.Add(sep.Explanation);
             }
+            var separationCells = result.SelectedCellRecommendations
+                .Where(c => c.FillsSeparation && !c.IsExpired)
+                .Select(c => $"{c.PanelName} cell {c.CellNumber}")
+                .ToList();
+            if (separationCells.Count > 0)
+                important.Add($"Unused inventory cell(s) {string.Join(", ", separationCells)} have the phenotype needed " +
+                              "to meet the multiple-antibody separation criterion if the serum reacts with them.");
 
             if (result.Suspected.Count > 1)
             {
@@ -1393,7 +1400,7 @@ namespace HemoIQ.Services
                 result.TransfusionRequirementNotes.Insert(0, expired.Note);
             foreach (var prior in priorConfirmed)
             {
-                if (typing.HistoricalAntibodies.Contains(prior.Antibody, StringComparer.OrdinalIgnoreCase))
+                if (typing.HistoricalAntibodies.Any(h => PatientHistory.AntibodyKey(h) == prior.Antibody))
                     continue;
                 result.PatientTypingConsiderations.Add(new PatientTypingConsideration
                 {

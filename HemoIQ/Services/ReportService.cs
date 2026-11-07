@@ -334,6 +334,20 @@ namespace HemoIQ.Services
                 sb.AppendLine("Ruled out:");
                 sb.AppendLine("  " + string.Join(", ", analysis.RuledOut.Keys.OrderBy(x => x)));
             }
+            // A confirmed call is checked as confirmed; otherwise the antibodies meeting the ID rule.
+            var separation = s.HasFinalCall
+                ? analyzer.EvaluateFinalCall(specimenId, s.FinalAntibodies)
+                : analysis.SeparationEvaluations;
+            if (separation.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine(s.HasFinalCall
+                    ? "Multiple-antibody separation for the confirmed call (suggested criterion, not a rule-out):"
+                    : "Multiple-antibody separation (suggested criterion, not a rule-out):");
+                foreach (var sep in separation)
+                    sb.AppendLine($"  {RuleoutPolicy.DisplayAntibody(sep.Antibody)}: {sep.Display}" +
+                                  (sep.MeetsCriterion ? "" : " — SHORT") + $". {sep.Explanation}");
+            }
             if (analysis.AbsorptionConclusions.Count > 0)
             {
                 sb.AppendLine();
@@ -355,11 +369,14 @@ namespace HemoIQ.Services
                 foreach (var exp in analysis.CandidateExplanations.Take(8))
                     sb.AppendLine("  " + exp.Narrative);
             }
-            if (analysis.Suggestions.Count > 0)
+            // Separation lines already printed above are not repeated.
+            var printed = separation.Select(e => e.Explanation).ToHashSet(StringComparer.Ordinal);
+            var suggestions = analysis.Suggestions.Where(x => !printed.Contains(x)).ToList();
+            if (suggestions.Count > 0)
             {
                 sb.AppendLine();
                 sb.AppendLine("Suggestions:");
-                foreach (var sug in analysis.Suggestions)
+                foreach (var sug in suggestions)
                     sb.AppendLine($"  • {sug}");
             }
 

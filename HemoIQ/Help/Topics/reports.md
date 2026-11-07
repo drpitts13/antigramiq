@@ -11,7 +11,7 @@ The **Report** list has eight types:
 3. **Analysis Results** — the analysis text for one specimen. Requires a specimen.
 4. **All Specimens** — every specimen in the database.
 5. **All Panels** — every panel lot.
-6. **Clinical Identification** — the identification report for one specimen, including the confirmed ID when you have confirmed one. Requires a specimen.
+6. **Clinical Identification** — the identification report for one specimen, including the confirmed ID when you have confirmed one. Requires a specimen. When two or more antibodies are called, the interpretation includes a **Multiple-antibody separation** section. It shows each antibody's isolated reactive cells against the required number, marked **SHORT** when they fall short, or the exemption. After confirmation it checks the confirmed antibodies; before confirmation it checks the suspected antibodies that meet the ID rule.
 7. **Panel Antigram** — the bench antigram for one lot. Requires a panel.
 8. **Pending Work** — specimens and panels that still need attention. It does not ask for a specimen or a panel.
 

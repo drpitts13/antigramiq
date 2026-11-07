@@ -1653,9 +1653,31 @@ are in the analysis snapshot's rule trace.
 evaluations. Selected-cell recommendations do not yet rank cells by their
 ability to separate the called antibodies.
 
+## Iteration 83 (this change)
+
+**Deficiency:** Iteration 82 left three gaps:
+- The Clinical Identification report did not show separation results.
+- Selected-cell recommendations did not target a separation shortfall.
+- Patient history compared antibody names without regard to case, so a
+  prior anti-e could be treated as anti-E. This affected the history
+  exemption, the prior-antibody notes, and parsing of the specimen's
+  previous antibodies.
+
+**Bounded improvement:**
+- The report prints a "Multiple-antibody separation" section. It covers
+  the confirmed call once there is one, and otherwise the suspected
+  antibodies meeting the ID rule. Shortfalls are marked SHORT, and the
+  Suggestions list no longer repeats these lines.
+- Separation is now evaluated before selected cells are ranked. An unused
+  cell that carries a short antibody's antigen and is typed negative for
+  every non-exempt partner gets +6, and its explanation says it would count
+  toward the criterion if reactive. Suggestions name those cells.
+- `PatientHistory.AntibodyKey` keeps "Anti-E" and "anti-E" together but
+  anti-E and anti-e apart. `ConfirmedAntibodies` and
+  `PatientTypingParser` previous-antibody parsing dedupe on it with an
+  ordinal comparison.
+
 ## Likely next tick
 
-Recommend selected cells that would satisfy a separation shortfall (for
-example, a reactive-candidate K+ E- cell). After that, the Worklist
-integrity checks: an active panel with no typed antigens, and duplicate
-vendor lot numbers.
+The Worklist integrity checks: an active panel with no typed antigens, and
+duplicate vendor lot numbers.

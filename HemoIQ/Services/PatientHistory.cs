@@ -43,23 +43,36 @@ namespace HemoIQ.Services
         public static List<PriorConfirmedAntibody> ConfirmedAntibodies(IEnumerable<Specimen> others)
         {
             var list = new List<PriorConfirmedAntibody>();
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            // Antigen names are case-sensitive (anti-E and anti-e differ); only the prefix is not.
+            var seen = new HashSet<string>(StringComparer.Ordinal);
             // Oldest first so each antibody cites its earliest confirmation.
             foreach (var s in others.Where(o => o.HasFinalCall).OrderBy(o => o.CreatedDate, StringComparer.Ordinal))
             {
                 foreach (var ab in FinalAntibodyParser.Split(s.FinalAntibodies))
                 {
-                    if (!ab.StartsWith("anti-", StringComparison.OrdinalIgnoreCase)) continue;
-                    if (!seen.Add(ab)) continue;
+                    if (AntibodyKey(ab) is not string key) continue;
+                    if (!seen.Add(key)) continue;
                     list.Add(new PriorConfirmedAntibody
                     {
-                        Antibody = ab,
+                        Antibody = key,
                         Accession = s.AccessionNumber,
                         Date = string.IsNullOrEmpty(s.IdentifiedAt) ? s.CreatedDate : s.IdentifiedAt!.Split('T', ' ')[0],
                     });
                 }
             }
             return list;
+        }
+
+        /// <summary>
+        /// "anti-" plus the antigen with its case kept, or null for text that is not an antibody.
+        /// "Anti-E" and "anti-E" share a key; "anti-E" and "anti-e" do not.
+        /// </summary>
+        public static string? AntibodyKey(string? antibody)
+        {
+            var t = (antibody ?? string.Empty).Trim();
+            if (!t.StartsWith("anti-", StringComparison.OrdinalIgnoreCase)) return null;
+            var antigen = t[5..].Trim();
+            return antigen.Length == 0 ? null : "anti-" + antigen;
         }
 
         /// <summary>One line per other specimen, newest first, for the detail pane and reports.</summary>

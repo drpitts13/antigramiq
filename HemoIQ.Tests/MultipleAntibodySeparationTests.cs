@@ -208,6 +208,74 @@ public class MultipleAntibodySeparationTests
     }
 
     [Fact]
+    public void Shortfall_RanksUnusedIsolatingCellFirst_AndSuggestsIt()
+    {
+        using var iso = new IsolatedDatabase();
+        Seed(iso, "SEP-11", KAlwaysWithE);
+        var vial = iso.Db.AddPanel("Selected cells", "SEL-11", "V", 2, null, false);
+        var vialCells = iso.Db.GetPanelCells(vial);
+        iso.Db.UpdatePanelCellAntigen(vialCells[0].Id, "E", "+");
+        iso.Db.UpdatePanelCellAntigen(vialCells[0].Id, "K", "+");
+        iso.Db.UpdatePanelCellAntigen(vialCells[1].Id, "E", "-");
+        iso.Db.UpdatePanelCellAntigen(vialCells[1].Id, "K", "+");
+
+        var result = WithCount(1, () => iso.Analyzer.AnalyzeSpecimen("SEP-11", updateDb: false));
+        var top = result.SelectedCellRecommendations.First();
+        Assert.Equal((vial, "2"), (top.PanelId, top.CellNumber));
+        Assert.True(top.FillsSeparation);
+        Assert.Contains("is K+ E- and, if reactive, would count toward the multiple-antibody separation criterion for anti-K",
+            top.Explanation);
+        Assert.DoesNotContain(result.SelectedCellRecommendations, r => r.CellNumber == "1" && r.PanelId == vial && r.FillsSeparation);
+        Assert.Contains(result.Suggestions, s => s.Contains("Selected cells cell 2 have the phenotype needed"));
+    }
+
+    [Fact]
+    public void ClinicalReport_PrintsSeparation_ForSuspectedAndForConfirmedCall()
+    {
+        using var iso = new IsolatedDatabase();
+        Seed(iso, "SEP-12", KAlwaysWithE);
+        var open = WithCount(1, () => iso.Reports.GeneratePreviewText(ReportType.ClinicalIdentification, "SEP-12"));
+        Assert.Contains("Multiple-antibody separation (suggested criterion, not a rule-out):", open);
+        Assert.Contains("Anti-K: 0 / 1 — SHORT.", open);
+        Assert.Single(open.Split('\n'), l => l.Contains("Anti-K has 0 of 1"));
+
+        iso.Db.SetSpecimenFinalCall("SEP-12", "anti-E; anti-K", null, "TE");
+        var confirmed = WithCount(1, () => iso.Reports.GeneratePreviewText(ReportType.ClinicalIdentification, "SEP-12"));
+        Assert.Contains("Multiple-antibody separation for the confirmed call", confirmed);
+        Assert.Contains("Anti-E: 2 / 1.", confirmed);
+    }
+
+    [Fact]
+    public void History_KeepsAntiEAndAntiEApart()
+    {
+        var others = new[]
+        {
+            new Specimen { AccessionNumber = "H1", CreatedDate = "2026-01-01", FinalAntibodies = "Anti-E" },
+            new Specimen { AccessionNumber = "H2", CreatedDate = "2026-02-01", FinalAntibodies = "anti-e; anti-E" },
+        };
+        var list = PatientHistory.ConfirmedAntibodies(others);
+        Assert.Equal(new[] { "anti-E", "anti-e" }, list.Select(p => p.Antibody));
+        Assert.Equal("H1", list[0].Accession);
+
+        var typing = PatientTypingParser.Parse(null, "anti-E, anti-e", null, null, null);
+        Assert.Equal(new[] { "anti-E", "anti-e" }, typing.HistoricalAntibodies);
+    }
+
+    [Fact]
+    public void PriorAntiLowercaseE_DoesNotExemptAntiE()
+    {
+        using var iso = new IsolatedDatabase();
+        Seed(iso, "SEP-13", KAlwaysWithE, previousAntibodies: "anti-e", mrn: "MRN-SEP13");
+        iso.Db.AddSpecimen("SEP-13A", "serum", null);
+        iso.Db.UpdateSpecimenMrn("SEP-13A", "MRN-SEP13");
+        iso.Db.SetSpecimenFinalCall("SEP-13A", "anti-e", null, "TE");
+
+        var result = WithCount(3, () => iso.Analyzer.AnalyzeSpecimen("SEP-13", updateDb: false));
+        Assert.Null(For(result, "anti-E").ExemptReason);
+        Assert.False(For(result, "anti-E").MeetsCriterion);
+    }
+
+    [Fact]
     public void EvaluateFinalCall_ReportsShortfall_ForConfirmPrompt()
     {
         using var iso = new IsolatedDatabase();
