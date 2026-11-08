@@ -12,6 +12,7 @@ namespace HemoIQ.Services
         ClearIdentification,
         ReinstateInvestigation,
         ConfigurePreferences,
+        ConfigureRules,
         ManageUsers,
         PurgeData,
     }
@@ -33,6 +34,7 @@ namespace HemoIQ.Services
             [Permission.ClearIdentification] = new[] { UserRole.Supervisor, UserRole.Administrator },
             [Permission.ReinstateInvestigation] = new[] { UserRole.Supervisor, UserRole.Administrator },
             [Permission.ConfigurePreferences] = new[] { UserRole.Administrator },
+            [Permission.ConfigureRules] = new[] { UserRole.Supervisor, UserRole.Administrator },
             [Permission.ManageUsers] = new[] { UserRole.Administrator },
             [Permission.PurgeData] = new[] { UserRole.Administrator },
         };
@@ -43,6 +45,7 @@ namespace HemoIQ.Services
             Permission.ClearIdentification => "clear a confirmed identification",
             Permission.ReinstateInvestigation => "reinstate a cancelled investigation",
             Permission.ConfigurePreferences => "change Preferences",
+            Permission.ConfigureRules => "add, edit, or delete analysis rules",
             Permission.ManageUsers => "manage users and roles",
             Permission.PurgeData => "purge specimens from the database",
             _ => p.ToString(),

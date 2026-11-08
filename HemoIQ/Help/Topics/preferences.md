@@ -41,7 +41,7 @@ Changes apply to the next analysis and to new specimens. They do not rewrite ide
 | Role | Can also |
 |---|---|
 | Technologist | Everything not listed below: specimens, reactions, analysis, confirming an identification, cancelling, reports |
-| Supervisor | Record supervisor review, clear a confirmed identification, reinstate a cancelled investigation |
+| Supervisor | Record supervisor review, clear a confirmed identification, reinstate a cancelled investigation, add, edit or delete analysis rules |
 | Administrator | Everything a Supervisor can, plus change Preferences and manage users |
 
 While **no user is registered**, everyone may do everything, as in earlier versions. Once the first user is saved, the rules apply to every Windows login, and an unregistered login can do only Technologist work. To start, select **Use my login**, enter your initials, and save yourself as an **Administrator**. The first user must be an Administrator, the last active Administrator cannot be demoted or deactivated, and initials must be unique among active users.

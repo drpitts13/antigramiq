@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Input;
 using HemoIQ.Data;
 using HemoIQ.Models;
+using HemoIQ.Services;
 
 namespace HemoIQ.ViewModels
 {
@@ -45,37 +46,58 @@ namespace HemoIQ.ViewModels
             SelectedRule = Rules.FirstOrDefault(r => r.RuleId == sid) ?? Rules.FirstOrDefault();
         }
 
+        /// <summary>Rules change rule-outs, so they need the supervisor or administrator role once users are registered.</summary>
+        private bool CanConfigure()
+        {
+            try
+            {
+                AccessControl.Demand(_db, Permission.ConfigureRules);
+                return true;
+            }
+            catch (System.UnauthorizedAccessException ex)
+            {
+                MessageBox.Show(ex.Message, "Rules", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+        }
+
+        private const string StaleNote = " Open investigations analyzed before this change are listed on the Worklist as Stale analysis.";
+
         private void AddRule()
         {
+            if (!CanConfigure()) return;
             var dlg = new Views.Dialogs.RuleDialog();
             if (dlg.ShowDialog() != true) return;
             var id = _db.AddRule(dlg.RuleName, dlg.Description, dlg.Antibody,
                 dlg.ExceptionAntigen, dlg.HeterozygousOk, dlg.MinRuleoutCount,
                 dlg.SeparationExempt, dlg.SeparationExemptFrom);
-            _main.SetStatus($"Rule '{dlg.RuleName}' added.");
+            _main.SetStatus($"Rule '{dlg.RuleName}' added." + StaleNote);
+            _main.WorklistVM.Refresh();
             Refresh();
             SelectedRule = Rules.FirstOrDefault(r => r.RuleId == id);
         }
 
         private void EditRule()
         {
-            if (SelectedRule == null) return;
+            if (SelectedRule == null || !CanConfigure()) return;
             var dlg = new Views.Dialogs.RuleDialog(SelectedRule);
             if (dlg.ShowDialog() != true) return;
             _db.UpdateRule(SelectedRule.RuleId, dlg.RuleName, dlg.Description, dlg.Antibody,
                 dlg.ExceptionAntigen, dlg.HeterozygousOk, dlg.MinRuleoutCount,
                 dlg.SeparationExempt, dlg.SeparationExemptFrom);
-            _main.SetStatus($"Rule '{dlg.RuleName}' updated.");
+            _main.SetStatus($"Rule '{dlg.RuleName}' updated." + StaleNote);
+            _main.WorklistVM.Refresh();
             Refresh();
         }
 
         private void DeleteRule()
         {
-            if (SelectedRule == null) return;
+            if (SelectedRule == null || !CanConfigure()) return;
             if (MessageBox.Show($"Delete rule '{SelectedRule.Name}'?",
                 "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
             _db.DeleteRule(SelectedRule.RuleId);
-            _main.SetStatus("Rule deleted.");
+            _main.SetStatus("Rule deleted. Its settings are kept in the audit log." + StaleNote);
+            _main.WorklistVM.Refresh();
             Refresh();
         }
     }

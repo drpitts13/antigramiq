@@ -1731,10 +1731,50 @@ change.
   with − types the NT cells of a column as negative. Both stay unsaved
   until Save, which audits each change.
 
+## Product review (after iteration 85)
+
+I swept every destructive write in `DatabaseService` (DELETE and
+INSERT OR REPLACE).
+
+**Already well guarded:**
+- Specimen, panel and run deletion, and clearing reactions: refused after a
+  confirmed ID, a reason is required after analysis, and every deleted
+  grade is audited.
+- Purge: an archive is required when confirmed IDs would be lost.
+- Unlinking a panel: refused when the specimen is locked.
+- Panel edits: fixed in iteration 85.
+
+**Weakest area — analysis rules:**
+- No permission. Preferences need an Administrator, but anyone could add,
+  edit or delete a rule.
+- The audit stored only name and antibody, so an edit lost the old count and
+  heterozygous setting, and a delete lost the whole rule.
+- A rule change did not mark open analyses out of date.
+
+**Other observations, for the roadmap:**
+- Panel Summary does not report untyped cells or duplicate lots.
+- The Panels list does not show how completely each lot is typed.
+- The full test run takes about 2 minutes. One 3.5-minute run during
+  iteration 85 did not recur, so there is no regression.
+- Rule and Preference changes don't appear on specimen timelines.
+
+## Iteration 86 (this change)
+
+**Bounded improvement:**
+- New `Permission.ConfigureRules` (Supervisor, Administrator), demanded by
+  AddRule, UpdateRule and DeleteRule and checked by the Rules tab before a
+  dialog opens.
+- The rule audit now records every analysis-relevant field: before and after
+  on update (an unchanged save writes nothing), before on delete. Deleting a
+  missing rule writes nothing.
+- `LastAnalysisConfigurationChange()` is the latest add_rule, update_rule,
+  delete_rule or update_settings audit, in local time. A Worklist
+  **Stale analysis** item now also covers open investigations analyzed
+  before that time, and its detail says why. Confirmed investigations are
+  not listed.
+- No schema change.
+
 ## Likely next tick
 
-Product review (it has been several iterations), then the highest gap from
-it. Candidates:
-- show on the Panels list how much of each lot is typed;
-- report the untyped-cell and duplicate-lot findings on the Panel Summary
-  report.
+Report untyped cells and duplicate lots on the Panel Summary report, and
+show a typed-completeness column on the Panels list.

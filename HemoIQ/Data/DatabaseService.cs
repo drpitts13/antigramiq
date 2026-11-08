@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -2706,6 +2707,7 @@ namespace HemoIQ.Data
             var horizon = today.AddDays(expirationWarningDays).ToString("yyyy-MM-dd");
             var todayStr = today.ToString("yyyy-MM-dd");
 
+            var configChanged = LastAnalysisConfigurationChange();
             foreach (var s in GetAllSpecimens().Where(s => s.IsActive && !s.IsCancelled))
             {
                 var panels = GetSpecimenPanels(s.AccessionNumber);
@@ -2744,7 +2746,9 @@ namespace HemoIQ.Data
                         }
                     }
 
-                    if (s.IsAnalysisStale || (s.LastAnalyzedAt == null && panels.Count > 0))
+                    var configNewer = s.LastAnalyzedAt != null && configChanged != null &&
+                                      string.Compare(configChanged, s.LastAnalyzedAt, StringComparison.Ordinal) > 0;
+                    if (s.IsAnalysisStale || (s.LastAnalyzedAt == null && panels.Count > 0) || configNewer)
                     {
                         items.Add(new WorklistItem
                         {
@@ -2753,7 +2757,11 @@ namespace HemoIQ.Data
                             Title = s.AccessionNumber,
                             Detail = s.LastAnalyzedAt == null
                                 ? "Never analyzed."
-                                : "Reactions changed since last analysis.",
+                                : string.Join(" ", new[]
+                                {
+                                    s.IsAnalysisStale ? "Reactions changed since last analysis." : null,
+                                    configNewer ? $"Analysis rules or Preferences changed {configChanged!.Replace('T', ' ')}, after the last analysis." : null,
+                                }.Where(x => x != null)),
                             UrgencyLabel = "Re-analyze",
                             SortOrder = 2,
                             AccessionNumber = s.AccessionNumber,
@@ -2982,6 +2990,7 @@ namespace HemoIQ.Data
             string? exceptionAntigen, bool heterozygousOk, int minRuleoutCount,
             bool separationExempt = false, string? separationExemptFrom = null)
         {
+            Services.AccessControl.Demand(this, Services.Permission.ConfigureRules);
             separationExemptFrom = NormalizeSeparationList(separationExempt, separationExemptFrom);
             using var cmd = _conn.CreateCommand();
             cmd.CommandText = @"
@@ -2999,7 +3008,7 @@ namespace HemoIQ.Data
             cmd.Parameters.AddWithValue("$sepfrom", (object?)separationExemptFrom ?? DBNull.Value);
             var id = Convert.ToInt32(cmd.ExecuteScalar());
             AppendAudit("add_rule", "rule", id.ToString(), null,
-                afterJson: JsonSerializer.Serialize(new { name, antibody, separationExempt, separationExemptFrom }));
+                afterJson: RuleAuditJson(GetRule(id)));
             return id;
         }
 
@@ -3017,7 +3026,9 @@ namespace HemoIQ.Data
             string? exceptionAntigen, bool heterozygousOk, int minRuleoutCount,
             bool separationExempt = false, string? separationExemptFrom = null)
         {
+            Services.AccessControl.Demand(this, Services.Permission.ConfigureRules);
             separationExemptFrom = NormalizeSeparationList(separationExempt, separationExemptFrom);
+            var before = RuleAuditJson(GetRule(ruleId));
             using var cmd = _conn.CreateCommand();
             cmd.CommandText = @"
                 UPDATE rules SET name=$name, description=$desc, antibody=$ab,
@@ -3034,8 +3045,37 @@ namespace HemoIQ.Data
             cmd.Parameters.AddWithValue("$sepfrom", (object?)separationExemptFrom ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$id", ruleId);
             cmd.ExecuteNonQuery();
-            AppendAudit("update_rule", "rule", ruleId.ToString(), null,
-                afterJson: JsonSerializer.Serialize(new { name, antibody, separationExempt, separationExemptFrom }));
+            var after = RuleAuditJson(GetRule(ruleId));
+            if (before != after)
+                AppendAudit("update_rule", "rule", ruleId.ToString(), null, before, after);
+        }
+
+        public Rule? GetRule(int ruleId) => GetAllRules().FirstOrDefault(r => r.RuleId == ruleId);
+
+        /// <summary>Every field that affects analysis, so an edit or delete keeps the old values.</summary>
+        private static string? RuleAuditJson(Rule? r) => r == null ? null : JsonSerializer.Serialize(new
+        {
+            name = r.Name, description = r.Description, antibody = r.Antibody,
+            exceptionAntigen = r.ExceptionAntigen, heterozygousOk = r.HeterozygousOk,
+            minRuleoutCount = r.MinRuleoutCount, separationExempt = r.SeparationExempt,
+            separationExemptFrom = r.SeparationExemptFrom,
+        });
+
+        /// <summary>
+        /// Local time ("yyyy-MM-ddTHH:mm:ss", like last_analyzed_at) of the latest audited change
+        /// to analysis rules or clinical Preferences, or null when there has been none.
+        /// </summary>
+        public string? LastAnalysisConfigurationChange()
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT MAX(occurred_at_utc) FROM audit_events
+                WHERE action IN ('add_rule', 'update_rule', 'delete_rule', 'update_settings')";
+            var v = cmd.ExecuteScalar() as string;
+            if (string.IsNullOrEmpty(v) ||
+                !DateTime.TryParse(v, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var utc))
+                return null;
+            return utc.ToLocalTime().ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture);
         }
 
         private static string? NormalizeSeparationList(bool exempt, string? list)
@@ -3047,11 +3087,14 @@ namespace HemoIQ.Data
 
         public void DeleteRule(int ruleId)
         {
+            Services.AccessControl.Demand(this, Services.Permission.ConfigureRules);
+            var before = RuleAuditJson(GetRule(ruleId));
+            if (before == null) return;
             using var cmd = _conn.CreateCommand();
             cmd.CommandText = "DELETE FROM rules WHERE rule_id = $id";
             cmd.Parameters.AddWithValue("$id", ruleId);
             cmd.ExecuteNonQuery();
-            AppendAudit("delete_rule", "rule", ruleId.ToString(), null, null, null);
+            AppendAudit("delete_rule", "rule", ruleId.ToString(), null, before, null);
         }
 
         // ── Search ────────────────────────────────────────────────────────────

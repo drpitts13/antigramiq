@@ -7,7 +7,7 @@ The Worklist is the operational list for specimens that still need work and for 
 Four cards sit across the top:
 
 - **Incomplete** — reaction grids that are not finished, for specimens that do not yet have a confirmed antibody ID.
-- **Stale analysis** — grades were saved after the last analysis, so the evidence on the Analysis tab is out of date.
+- **Stale analysis** — grades were saved after the last analysis, or analysis rules or clinical Preferences changed after it, so the evidence on the Analysis tab is out of date. The detail says which. Only investigations without a confirmed identification are listed.
 - **Expiring** — specimens or panel lots inside the expiration warning window from Preferences.
 - **Expired** — specimens or panel lots past their expiration date.
 
