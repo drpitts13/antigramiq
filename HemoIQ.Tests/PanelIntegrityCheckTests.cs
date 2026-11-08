@@ -100,3 +100,73 @@ public class PanelIntegrityCheckTests
         Assert.Empty(PanelIntegrityCheck.DuplicatesOf(iso.Db.GetAllPanels(), "V", "  "));
     }
 }
+
+public class PanelTypingSummaryTests
+{
+    [Fact]
+    public void Summary_CountsFullyTyped_ListsPartialAndUntyped_IgnoresAc()
+    {
+        using var iso = new IsolatedDatabase();
+        var id = iso.Db.AddPanel("Sum", "SM-1", "V", 3, null, includeAc: true);
+        var cells = iso.Db.GetPanelCells(id);
+        foreach (var c in cells.Where(c => c.CellNumber is "1" or "2"))
+        {
+            iso.Db.UpdatePanelCellAntigen(c.Id, "k", "+");
+            iso.Db.UpdatePanelCellAntigen(c.Id, "K", "-");
+        }
+        iso.Db.UpdatePanelCellAntigen(cells[2].Id, "K", "-");
+        iso.Db.UpdatePanelCellAntigen(cells[0].Id, "Fya", "+");
+
+        var s = PanelIntegrityCheck.Summarize(iso.Db.GetPanelCells(id));
+        Assert.Equal(3, s.Cells);
+        Assert.Equal(1, s.FullyTyped);
+        Assert.Equal(new[] { "k", "Fya" }, s.Partial);
+        Assert.Equal(new[] { "3" }, s.Untyped);
+        Assert.True(s.HasIssues);
+        Assert.Equal("1 antigen · k, Fya partial · cell 3 untyped", s.Display);
+    }
+
+    [Fact]
+    public void Summary_FreshPanelIsNotTyped_CompletePanelHasNoIssues()
+    {
+        using var iso = new IsolatedDatabase();
+        var fresh = iso.Db.AddPanel("Fresh", "FR-1", "V", 2, null, false);
+        Assert.Equal("Not typed", PanelIntegrityCheck.Summarize(iso.Db.GetPanelCells(fresh)).Display);
+
+        var full = iso.Db.AddPanel("Full", "FU-1", "V", 2, null, false, startTypedNegative: true);
+        foreach (var c in iso.Db.GetPanelCells(full)) iso.Db.UpdatePanelCellAntigen(c.Id, "k", "+");
+        var s = PanelIntegrityCheck.Summarize(iso.Db.GetPanelCells(full));
+        Assert.False(s.HasIssues);
+        Assert.Equal($"{AntigenConstants.Antigens.Count} antigens", s.Display);
+    }
+
+    [Fact]
+    public void PanelSummaryReport_ShowsTypingAndDataQualityFindings_AllPanelsShowsTyping()
+    {
+        using var iso = new IsolatedDatabase();
+        var a = iso.Db.AddPanel("Lot A", "DUP-7", "V", 2, null, false);
+        iso.Db.AddPanel("Lot A copy", "dup-7", "V", 2, null, false, startTypedNegative: true);
+        iso.Db.UpdatePanelCellAntigen(iso.Db.GetPanelCells(a)[0].Id, "K", "+");
+
+        var report = iso.Reports.GeneratePreviewText(ReportType.PanelSummary, panelId: a);
+        Assert.Contains("Typing:     0 antigens · K partial · cell 2 untyped", report);
+        Assert.Contains("Data quality (review before use):", report);
+        Assert.Contains("cell(s) 2 have no antigen typed positive", report);
+        Assert.Contains("Typed on some cells but NT on others: K.", report);
+        Assert.Contains("Lot also stored as #", report);
+
+        var all = iso.Reports.GeneratePreviewText(ReportType.AllPanels);
+        Assert.Contains("0 antigens · K partial · cell 2 untyped", all);
+        Assert.Contains($"{AntigenConstants.Antigens.Count} antigens · cells 1, 2 untyped", all);
+    }
+
+    [Fact]
+    public void PanelSummaryReport_CleanPanel_HasNoDataQualitySection()
+    {
+        using var iso = new IsolatedDatabase();
+        var id = iso.Db.AddPanel("Clean", "CL-1", "V", 1, null, false, startTypedNegative: true);
+        iso.Db.UpdatePanelCellAntigen(iso.Db.GetPanelCells(id)[0].Id, "k", "+");
+        var report = iso.Reports.GeneratePreviewText(ReportType.PanelSummary, panelId: id);
+        Assert.DoesNotContain("Data quality", report);
+    }
+}

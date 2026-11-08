@@ -133,9 +133,30 @@ namespace HemoIQ.Services
             sb.AppendLine($"Vendor:     {p.Vendor ?? "N/A"}");
             sb.AppendLine($"Cells:      {p.NumCells}{(p.IncludeAc ? " + AC" : "")}");
             sb.AppendLine($"Expiration: {p.ExpirationDate ?? "N/A"}");
+            var cells = _db.GetPanelCells(panelId.Value);
+            AppendPanelDataQuality(sb, p, cells);
             sb.AppendLine();
-            AppendAntigenGrid(sb, panelId.Value, _db.GetPanelCells(panelId.Value));
+            AppendAntigenGrid(sb, panelId.Value, cells);
             return sb.ToString();
+        }
+
+        /// <summary>Typing completeness and lot findings, the same checks the Worklist uses.</summary>
+        private void AppendPanelDataQuality(StringBuilder sb, Panel p, List<PanelCell> cells)
+        {
+            var summary = PanelIntegrityCheck.Summarize(cells);
+            sb.AppendLine($"Typing:     {summary.Display}");
+            var findings = new List<string>();
+            if (summary.Untyped.Count > 0)
+                findings.Add(PanelIntegrityCheck.DescribeUntyped(p, summary.Untyped, summary.Cells));
+            if (summary.Partial.Count > 0)
+                findings.Add($"Typed on some cells but NT on others: {string.Join(", ", summary.Partial)}. " +
+                             "Check these columns against the vendor antigram.");
+            var dupes = PanelIntegrityCheck.DuplicatesOf(_db.GetAllPanels(), p.Vendor, p.LotNumber, p.PanelId);
+            if (dupes.Count > 0)
+                findings.Add($"Lot also stored as {PanelIntegrityCheck.DescribeDuplicates(dupes)}.");
+            if (findings.Count == 0) return;
+            sb.AppendLine("Data quality (review before use):");
+            foreach (var f in findings) sb.AppendLine($"  • {f}");
         }
 
         private string PanelAntigramText(int? panelId)
@@ -515,10 +536,11 @@ namespace HemoIQ.Services
             var sb = new StringBuilder();
             sb.AppendLine($"ALL PANELS ({panels.Count})");
             sb.AppendLine(new string('=', 60));
-            sb.AppendLine($"{"Name",-25} {"Lot",-15} {"Vendor",-15} {"Cells",-6} {"Expires",-12}");
-            sb.AppendLine(new string('-', 60));
+            sb.AppendLine($"{"Name",-25} {"Lot",-15} {"Vendor",-15} {"Cells",-6} {"Expires",-12} Typing");
+            sb.AppendLine(new string('-', 90));
             foreach (var p in panels)
-                sb.AppendLine($"{p.Name,-25} {p.LotNumber ?? "N/A",-15} {p.Vendor ?? "N/A",-15} {p.NumCells,-6} {p.ExpirationDate ?? "N/A",-12}");
+                sb.AppendLine($"{p.Name,-25} {p.LotNumber ?? "N/A",-15} {p.Vendor ?? "N/A",-15} {p.NumCells,-6} {p.ExpirationDate ?? "N/A",-12} " +
+                              PanelIntegrityCheck.Summarize(_db.GetPanelCells(p.PanelId)).Display);
             return sb.ToString();
         }
 

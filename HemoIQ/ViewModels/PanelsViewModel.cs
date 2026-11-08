@@ -128,6 +128,12 @@ namespace HemoIQ.ViewModels
         {
             var sid = SelectedPanel?.PanelId;
             _allPanels = _db.GetAllPanels();
+            foreach (var p in _allPanels)
+            {
+                var summary = PanelIntegrityCheck.Summarize(_db.GetPanelCells(p.PanelId));
+                p.TypingDisplay = summary.Display;
+                p.TypingHasIssues = summary.HasIssues;
+            }
             ApplyFilter(sid);
         }
 
@@ -606,6 +612,7 @@ namespace HemoIQ.ViewModels
             }
             _db.SetPanelAntigenOrder(SelectedPanel.PanelId, AntigenDisplayOrder.ToList());
             IsEditingAntigens = false;
+            NotifyPanelsChanged();
             _main.SetStatus(changes.Count == 0
                 ? $"Panel '{SelectedPanel.Name}': no typing changes."
                 : $"Panel '{SelectedPanel.Name}': {changes.Count} typing change(s) saved and audited.");

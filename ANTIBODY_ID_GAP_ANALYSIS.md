@@ -1774,7 +1774,29 @@ INSERT OR REPLACE).
   not listed.
 - No schema change.
 
+## Iteration 87 (this change)
+
+**Deficiency:**
+- The Panels list gave no sign of how completely a lot was typed, so
+  half-entered antigrams were visible only on the Worklist or in the grid.
+- The Panel Summary and All Panels reports printed no data-quality
+  findings, so a reviewer signing off a lot on paper could miss them.
+
+**Bounded improvement:**
+- `PanelIntegrityCheck.Summarize` counts, over non-AC cells:
+  - antigens typed on every cell;
+  - antigens typed on some cells but NT on others ("partial", a likely
+    entry gap);
+  - untyped cells.
+- It is shown in a new amber-on-issue **Typing** column on the Panels list,
+  which refreshes after a typing save.
+- **Panel Summary** prints a Typing line and a "Data quality (review before
+  use)" section: untyped cells, partial antigens, and the same lot stored
+  on another panel. **All Panels** gains a Typing column.
+- No schema change.
+
 ## Likely next tick
 
-Report untyped cells and duplicate lots on the Panel Summary report, and
-show a typed-completeness column on the Panels list.
+Show rule and Preferences changes on the timelines of investigations still
+open at the time. Then extend the Panel Compare to flag antigens newly
+partial between lots.

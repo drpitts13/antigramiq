@@ -29,6 +29,51 @@ namespace HemoIQ.Services
                 : $"Lot {panel.LotNumber ?? "N/A"}: cell(s) {string.Join(", ", cells)} have no antigen typed positive. " +
                   "Their typing has probably not been entered; analysis would read them as antigen-negative.";
 
+        public sealed record TypingSummary(int Cells, int FullyTyped, List<string> Partial, List<string> Untyped)
+        {
+            public bool HasIssues => Partial.Count > 0 || Untyped.Count > 0;
+
+            /// <summary>Short text for the Panels list, e.g. "24 antigens · Fya partial · cells 3, 7 untyped".</summary>
+            public string Display
+            {
+                get
+                {
+                    if (Cells == 0) return "No cells";
+                    if (FullyTyped == 0 && Partial.Count == 0) return "Not typed";
+                    var parts = new List<string> { $"{FullyTyped} antigen{(FullyTyped == 1 ? "" : "s")}" };
+                    if (Partial.Count > 0)
+                        parts.Add($"{string.Join(", ", Partial.Take(3))}{(Partial.Count > 3 ? $" +{Partial.Count - 3}" : "")} partial");
+                    if (Untyped.Count > 0)
+                        parts.Add($"cell{(Untyped.Count == 1 ? "" : "s")} {string.Join(", ", Untyped)} untyped");
+                    return string.Join(" · ", parts);
+                }
+            }
+        }
+
+        /// <summary>
+        /// How completely a panel is typed, over non-AC cells: antigens typed on every cell,
+        /// antigens typed on some cells but NT on others (likely an entry gap), and cells with
+        /// nothing typed positive. Antigens NT on every cell are simply not on the antigram.
+        /// </summary>
+        public static TypingSummary Summarize(IEnumerable<PanelCell> cells)
+        {
+            var list = cells.Where(c => !string.Equals(c.CellNumber, "AC", StringComparison.OrdinalIgnoreCase)).ToList();
+            var antigens = list.SelectMany(c => c.Antigens.Keys).Distinct(StringComparer.Ordinal).ToList();
+            int full = 0;
+            var partial = new List<string>();
+            foreach (var ag in antigens)
+            {
+                var typed = list.Count(c => c.HasTypedAntigen(ag));
+                if (typed == list.Count) full++;
+                else if (typed > 0) partial.Add(ag);
+            }
+            var ordered = partial
+                .OrderBy(a => AntigenConstants.Antigens.ToList().IndexOf(a) is var i && i < 0 ? int.MaxValue : i)
+                .ThenBy(a => a, StringComparer.Ordinal)
+                .ToList();
+            return new TypingSummary(list.Count, full, ordered, UntypedCells(list));
+        }
+
         /// <summary>Normalized lot key: trimmed, case-insensitive. Null when the lot is blank.</summary>
         public static string? LotKey(string? lot)
         {

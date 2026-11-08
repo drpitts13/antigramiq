@@ -106,6 +106,25 @@
                     <DataGridTextColumn Header="Cells" Binding="{Binding NumCells}" Width="40"/>
                     <DataGridTextColumn Header="Expires" Binding="{Binding ExpirationDate}" Width="72"/>
                     <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive}" IsReadOnly="True" Width="44"/>
+                    <DataGridTextColumn Header="Typing" Binding="{Binding TypingDisplay}" Width="Auto" MinWidth="80">
+                        <DataGridTextColumn.HeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="ToolTip" Value="Antigens typed on every cell. 'Partial' lists antigens typed on some cells but NT on others; 'untyped' lists cells with nothing typed positive. Both usually mean the antigram entry is incomplete."/>
+                            </Style>
+                        </DataGridTextColumn.HeaderStyle>
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="TextWrapping" Value="NoWrap"/>
+                                <Setter Property="Padding" Value="4,0"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding TypingHasIssues}" Value="True">
+                                        <Setter Property="Foreground" Value="#B26A00"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
                 </DataGrid.Columns>
             </DataGrid>
         </DockPanel>

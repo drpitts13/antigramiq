@@ -7,10 +7,10 @@ The Reports tab previews a text report and can copy, print, or export it. Every 
 The **Report** list has eight types:
 
 1. **Specimen Summary** — one accession, its clinical context, linked panels, and final ID. Requires a specimen.
-2. **Panel Summary** — one lot’s identity and antigen grid. Requires a panel.
+2. **Panel Summary** — one lot’s identity, typing completeness and antigen grid. Requires a panel. If the lot has untyped cells, partially typed antigens, or a lot number stored on another panel, a **Data quality (review before use)** section lists them. These are the same checks the Worklist uses.
 3. **Analysis Results** — the analysis text for one specimen. Requires a specimen.
 4. **All Specimens** — every specimen in the database.
-5. **All Panels** — every panel lot.
+5. **All Panels** — every panel lot, with its typing completeness.
 6. **Clinical Identification** — the identification report for one specimen, including the confirmed ID when you have confirmed one. Requires a specimen. When two or more antibodies are called, the interpretation includes a **Multiple-antibody separation** section. It shows each antibody's isolated reactive cells against the required number, marked **SHORT** when they fall short, or the exemption. After confirmation it checks the confirmed antibodies; before confirmation it checks the suspected antibodies that meet the ID rule.
 7. **Panel Antigram** — the bench antigram for one lot. Requires a panel.
 8. **Pending Work** — specimens and panels that still need attention. It does not ask for a specimen or a panel.

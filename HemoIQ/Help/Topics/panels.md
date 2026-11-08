@@ -4,6 +4,12 @@ The Panels tab stores panel lots and the antigen profile of each cell. Analysis 
 
 ## List
 
+- **Typing** shows how completely each lot is typed, counting the cells but not the autocontrol. For example, *24 antigens · Fya partial · cell 3 untyped*:
+  - the number is how many antigens are typed on every cell;
+  - **partial** antigens are typed on some cells but NT on others;
+  - **untyped** cells have nothing typed positive.
+
+  Partial and untyped usually mean the antigram entry is unfinished, and the column turns amber. Antigens that are NT on every cell are simply not on the antigram. A new lot shows **Not typed**. The column updates when you save typing.
 - **Find** filters by name, lot, vendor, or expiration date. Find is unavailable while you are editing antigens.
 - **Add** creates a lot. **Details** edits the name, lot, vendor, cell count, and expiration. **Copy** duplicates a lot so you can start a new lot from an existing antigram.
 - **Edit** turns on antigen editing for the selected panel. **Save** writes only the cells you changed and records each change (for example *Cell 3 Jka: + → -*) in the audit log. If the lot holds test history (recorded reactions or a confirmed identification), Save lists the changes and asks for a reason, such as the vendor's corrected antigram; without one nothing is saved. The edit then appears on the timeline of every specimen tested with the lot. **Delete** removes the lot after you confirm. A lot that holds test history cannot be deleted: if any reactions were recorded on it, or it is linked to a specimen with a confirmed identification, HemoIQ refuses and says why. Deactivate it instead so it is no longer offered for new testing. Deleting a lot that is only linked (no reactions, no confirmed identification) removes the links too, and the audit entry lists the specimens. Importing a lot that is already stored never replaces one that holds test history, and an import or copy that fails part-way leaves the stored panels exactly as they were.

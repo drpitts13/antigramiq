@@ -13,6 +13,9 @@ namespace HemoIQ.Models
         public string? ExpirationDate { get; set; }
         public bool IncludeAc { get; set; }
         public bool IsActive { get; set; } = true;
+        /// <summary>Typing completeness for the Panels list; filled by the view model, not stored.</summary>
+        public string TypingDisplay { get; set; } = string.Empty;
+        public bool TypingHasIssues { get; set; }
         public string? CatalogNumber { get; set; }
         public string? ProductLine { get; set; }
         public bool EnzymeTreated { get; set; }
