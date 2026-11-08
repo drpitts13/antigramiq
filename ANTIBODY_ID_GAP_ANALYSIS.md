@@ -1879,8 +1879,36 @@ expected donor differences.
 - Draft preservation across a crash: grades are only in memory until
   saved.
 
+## Iteration 92 (this change)
+
+**Deficiency:**
+- Grades could only be keyed one cell at a time. A lab that records gel or
+  solid-phase reads in a spreadsheet or instrument export had to re-key
+  every value.
+- `ReactionGrade.Normalize` passes unrecognized text through unchanged and
+  `IsPositive` treats it as reactive. So any bulk-entry path needs strict
+  validation, or a typo becomes a positive reaction.
+
+**Bounded improvement:**
+- `GradePaste.Parse` reads one value per line.
+  - It accepts only values that normalize to a canonical grade; a blank line
+    is NT.
+  - It refuses the whole paste on any unrecognized value (with line
+    numbers), on more values than cells below the selection, on
+    tab-separated multi-column clipboards, and on an empty clipboard.
+- `GradePaste.Overwrites` lists entered grades that would change, and the
+  user confirms before they are replaced.
+- Ctrl+V on a phase column applies the paste from the selected cell down,
+  through the same row setters as keyed entry. Grades are dirty-tracked and
+  unsaved until Save, and the status bar names the cells filled.
+- No schema change.
+
+**Still open:**
+- A multi-column paste spanning phases.
+- Draft preservation across a crash.
+
 ## Likely next tick
 
-Clipboard paste of a grade column (one value per cell) into the selected
-phase on Reactions, validated against the configured grades, unsaved until
-Save.
+Draft preservation: write unsaved grades for the open run to a local
+recovery file on each edit, and offer to restore them after an unclean
+exit. They stay unsaved and unaudited until the user saves.

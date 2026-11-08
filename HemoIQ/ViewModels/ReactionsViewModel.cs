@@ -32,6 +32,9 @@ namespace HemoIQ.ViewModels
             ? $"{SelectedSpecimen.AccessionNumber} ({SelectedRun?.PanelName ?? SelectedPanel?.Name ?? "panel"}, {SelectedRun?.DisplayLabel ?? "run"})"
             : null;
 
+        public void NotePaste(int count, string phase, string firstCell, string lastCell) =>
+            _main.SetStatus($"Pasted {count} {phase} grade(s) into cells {firstCell}–{lastCell}. Save to keep them.");
+
         /// <summary>Saves the unsaved grades with the usual checks (expired lot, reason). False if not saved.</summary>
         public bool SaveUnsavedGrades()
         {

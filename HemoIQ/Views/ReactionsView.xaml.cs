@@ -367,6 +367,13 @@ namespace HemoIQ.Views
                 && !extra.Any(p => string.Equals(p, header, StringComparison.OrdinalIgnoreCase)))
                 return;
 
+            if (e.Key == Key.V && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                PasteColumn(row, header!);
+                e.Handled = true;
+                return;
+            }
+
             string? grade = e.Key switch
             {
                 Key.D0 or Key.NumPad0 => "0",
@@ -395,6 +402,44 @@ namespace HemoIQ.Views
                 e.Handled = true;
             }
         }
+
+        /// <summary>
+        /// Ctrl+V on a phase cell: pastes a copied column of grades into that phase from the
+        /// selected cell down. All-or-nothing; unsaved until Save.
+        /// </summary>
+        private void PasteColumn(ReactionRow start, string header)
+        {
+            var rows = ReactionsGrid.Items.OfType<ReactionRow>().ToList();
+            var targets = rows.Skip(Math.Max(0, rows.IndexOf(start))).ToList();
+            var text = Clipboard.ContainsText() ? Clipboard.GetText() : string.Empty;
+            var result = GradePaste.Parse(text, targets.Count);
+            if (!result.Ok)
+            {
+                MessageBox.Show(GradePaste.ErrorMessage(result), "Paste grades", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            var current = targets.Take(result.Grades.Count).Select(r => GetPhase(r, header)).ToList();
+            var replaced = GradePaste.Overwrites(current, result.Grades);
+            if (replaced.Count > 0 && MessageBox.Show(
+                    $"{replaced.Count} cell(s) already have a different {header} grade: " +
+                    string.Join(", ", replaced.Take(10).Select(i => $"cell {targets[i].CellNumber} {current[i]} → {result.Grades[i]}")) +
+                    (replaced.Count > 10 ? ", …" : "") + ".\n\nReplace them?",
+                    "Paste grades", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+            for (int i = 0; i < result.Grades.Count; i++)
+                SetPhase(targets[i], header, result.Grades[i]);
+            if (DataContext is ReactionsViewModel vm)
+                vm.NotePaste(result.Grades.Count, header, targets[0].CellNumber, targets[result.Grades.Count - 1].CellNumber);
+        }
+
+        private static string GetPhase(ReactionRow row, string header) => header switch
+        {
+            "IS" => row.IS,
+            "37°C" => row.C37,
+            "AHG" => row.AHG,
+            "CC" => row.CC,
+            _ => row.Extra.TryGetValue(header, out var extra) ? extra.Value : ReactionGrade.NotTested,
+        };
 
         private static void SetPhase(ReactionRow row, string header, string grade)
         {

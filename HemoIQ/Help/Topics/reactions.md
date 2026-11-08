@@ -14,6 +14,12 @@ The Reactions tab is where you record IS, 37°C, AHG, and CC grades for each cel
 - **Hide ruled-out** hides antigen columns already ruled out for this specimen. The setting can also be turned on by default in Preferences.
 - **Show dosage** groups columns by blood-group system and marks homozygous ++, heterozygous +, or +/? when the antithetical antigen was not typed. This is display only. It does not change rule-out.
 - **Load Reactions** reloads grades from the database.
+- **Ctrl+V** on a phase cell (IS, 37°C, AHG, CC or an extra phase) pastes a column of grades copied from a spreadsheet, one value per line, into that phase from the selected cell down.
+  - Values are read like keyed grades: 0, w or w+, 1–4 or 1+–4+, MF, H, NT. A blank line is NT.
+  - Any other value cancels the whole paste and lists the lines to fix, because an unrecognized grade would otherwise count as reactive.
+  - The paste is also refused if it holds more values than there are cells below the selection, or several tab-separated columns.
+  - If any cell already has a different grade, HemoIQ lists the changes and asks before replacing them.
+  - Pasted grades are unsaved until **Save**, and the unsaved-grade warnings apply to them.
 - **Save** writes grades without running analysis. Ctrl+S does the same.
 - **Save & Analyze** writes grades, runs analysis, and shows a green or red banner with the result.
 - **Unsaved grades** are protected in three places:
