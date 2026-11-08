@@ -273,6 +273,18 @@ namespace HemoIQ.ViewModels
         private void RunAnalysis()
         {
             if (SelectedSpecimen == null) return;
+            var reactions = _main.ReactionsVM;
+            if (UnsavedWorkGuard.AnalysisWouldIgnoreUnsavedGrades(SelectedSpecimen.AccessionNumber, reactions.UnsavedAccession))
+            {
+                var answer = MessageBox.Show(UnsavedWorkGuard.AnalysisPrompt(reactions.UnsavedGradesDescription!),
+                    "Unsaved reaction grades", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
+                if (answer == MessageBoxResult.Cancel) return;
+                if (answer == MessageBoxResult.Yes && !reactions.SaveUnsavedGrades())
+                {
+                    _main.SetStatus("Analysis not run: the reaction grades were not saved.");
+                    return;
+                }
+            }
             _main.SetStatus("Running analysis...");
 
             try

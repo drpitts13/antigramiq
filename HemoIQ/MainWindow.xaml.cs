@@ -37,8 +37,14 @@ namespace HemoIQ
 
             Closing += (s, e) =>
             {
-                if (MessageBox.Show("Quit the application?", "Confirm",
-                    MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                var unsaved = UnsavedWorkGuard.QuitWarning(
+                    vm.ReactionsVM.UnsavedGradesDescription,
+                    vm.PanelsVM.IsEditingAntigens ? vm.PanelsVM.SelectedPanel?.Name ?? "(selected panel)" : null);
+                if (unsaved != null
+                        ? MessageBox.Show(unsaved, "Unsaved work", MessageBoxButton.YesNo, MessageBoxImage.Warning,
+                              MessageBoxResult.No) != MessageBoxResult.Yes
+                        : MessageBox.Show("Quit the application?", "Confirm",
+                              MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
                     e.Cancel = true;
                 else
                 {

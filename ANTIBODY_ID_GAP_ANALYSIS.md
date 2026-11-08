@@ -1850,7 +1850,37 @@ expected donor differences.
   adds the Typing line and the partly-typed antigens.
 - No schema change.
 
+## Iteration 91 (this change) — reaction-entry review
+
+**Review findings:**
+- Within Reactions, changing the specimen, panel or run already prompts
+  before discarding unsaved grades.
+- Fill negatives exists, and NT handling is explicit.
+- Two paths bypassed that protection:
+  1. **Quitting:** the generic "Quit the application?" said nothing about
+     unsaved grades or an open antigram edit, so a misclick lost the work.
+  2. **Run Analysis on the Analysis tab:** this analyzed saved grades only,
+     while unsaved grades for the same specimen sat on the Reactions tab.
+     The result looked current but left out what was just entered, an
+     analytical-safety gap.
+
+**Bounded improvement:**
+- New `UnsavedWorkGuard` holds the wording and decisions.
+- `ReactionsViewModel` exposes `UnsavedAccession`,
+  `UnsavedGradesDescription` and `SaveUnsavedGrades()`. The last one runs
+  the same expired-lot and change-reason checks as Save.
+- Run Analysis prompts Yes (save, then analyze), No (saved grades only) or
+  Cancel. If the save is declined or fails, analysis does not run.
+- Quit lists each kind of unsaved work, with No as the default.
+- No schema change.
+
+**Still open in reaction entry:**
+- Pasting a column of grades from a spreadsheet.
+- Draft preservation across a crash: grades are only in memory until
+  saved.
+
 ## Likely next tick
 
-Product review of reaction entry: paste/fill, NT handling on selected-cell
-runs, and draft preservation.
+Clipboard paste of a grade column (one value per cell) into the selected
+phase on Reactions, validated against the configured grades, unsaved until
+Save.

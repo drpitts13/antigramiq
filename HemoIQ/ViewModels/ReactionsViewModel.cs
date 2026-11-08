@@ -25,6 +25,23 @@ namespace HemoIQ.ViewModels
 
         private bool _gradesDirty;
         public bool HasUnsavedGrades => _gradesDirty;
+        /// <summary>Accession whose grades are entered but not saved, or null.</summary>
+        public string? UnsavedAccession => _gradesDirty ? SelectedSpecimen?.AccessionNumber : null;
+        /// <summary>"2026-002 (Panel A, Untreated)" while grades are unsaved, or null.</summary>
+        public string? UnsavedGradesDescription => _gradesDirty && SelectedSpecimen != null
+            ? $"{SelectedSpecimen.AccessionNumber} ({SelectedRun?.PanelName ?? SelectedPanel?.Name ?? "panel"}, {SelectedRun?.DisplayLabel ?? "run"})"
+            : null;
+
+        /// <summary>Saves the unsaved grades with the usual checks (expired lot, reason). False if not saved.</summary>
+        public bool SaveUnsavedGrades()
+        {
+            if (!_gradesDirty) return true;
+            if (!TrySaveGrades(out var entered)) return false;
+            var msg = $"Saved grades for {entered} of {Rows.Count} cells.";
+            SetSaveStatus(true, msg);
+            _main.WorklistVM.Refresh();
+            return true;
+        }
 
         private Specimen? _selectedSpecimen;
         public Specimen? SelectedSpecimen
