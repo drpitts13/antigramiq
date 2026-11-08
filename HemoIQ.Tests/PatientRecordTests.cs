@@ -105,6 +105,9 @@ public class PatientRecordTests
         iso.Db.UpdateSpecimenMrn(acc, mrn);
         var panelId = iso.Db.AddPanel("P", "L-" + acc, "V", 2, null, false);
         iso.Db.LinkSpecimenPanel(acc, panelId);
+        // Real cells always type positive for something; untyped cells raise their own review note.
+        foreach (var cell in iso.Db.GetPanelCells(panelId))
+            iso.Db.UpdatePanelCellAntigen(cell.Id, "k", "+");
         iso.Db.SaveReaction(acc, panelId, "1", "0", "0", "0", "2+");
         iso.Db.SaveReaction(acc, panelId, "2", "0", "0", "0", "2+");
     }

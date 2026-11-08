@@ -1398,6 +1398,16 @@ namespace HemoIQ.Services
                 result.TransfusionRequirementNotes.Insert(0, passive);
             foreach (var expired in ExpiredReagentCheck.Check(_db, specimen.AccessionNumber))
                 result.TransfusionRequirementNotes.Insert(0, expired.Note);
+            foreach (var panel in _db.GetSpecimenPanels(specimen.AccessionNumber))
+            {
+                var cells = _db.GetPanelCells(panel.PanelId);
+                var untyped = PanelIntegrityCheck.UntypedCells(cells);
+                if (untyped.Count == 0) continue;
+                var total = cells.Count(c => !string.Equals(c.CellNumber, "AC", StringComparison.OrdinalIgnoreCase));
+                result.TransfusionRequirementNotes.Insert(0,
+                    $"{panel.Name}: {PanelIntegrityCheck.DescribeUntyped(panel, untyped, total)} " +
+                    "Enter the typing from the vendor antigram on Panels, then re-analyze.");
+            }
             foreach (var prior in priorConfirmed)
             {
                 if (typing.HistoricalAntibodies.Any(h => PatientHistory.AntibodyKey(h) == prior.Antibody))

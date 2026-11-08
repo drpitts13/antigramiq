@@ -1677,7 +1677,35 @@ ability to separate the called antibodies.
   `PatientTypingParser` previous-antibody parsing dedupe on it with an
   ordinal comparison.
 
+## Iteration 84 (this change)
+
+**Deficiency:** Cells of a manually created panel start typed negative for
+every antigen, not NT. If the antigram was never entered, analysis read
+every cell as antigen-negative. That fed the ID rule's negative cells, the
+separation counts, and the conflicts, and nothing flagged it. Duplicate
+lot numbers were checked only on vendor import. Manual add, edit and copy
+could store the same lot twice, and the Worklist did not show existing
+duplicates.
+
+**Bounded improvement:**
+- `PanelIntegrityCheck.UntypedCells` finds non-AC cells with no antigen
+  typed positive. Every real cell carries c or C, e or E, and k or K.
+- **Untyped cells** Worklist items cover active panels, and analysis adds a
+  REVIEW note for any linked panel with untyped cells.
+- `DuplicateLotGroups` matches lots ignoring case and surrounding spaces.
+  Vendors match ignoring case, and a blank vendor matches any vendor.
+- **Duplicate lot** Worklist items cover groups with at least one active
+  panel.
+- Add, edit and copy on Panels ask Yes/No before saving a lot that is
+  already stored.
+- No data is changed automatically and there is no schema change.
+
+**Not in this tick:** New panel cells still default to "-" rather than NT.
+Changing that default touches every import path, so it is a separate
+change.
+
 ## Likely next tick
 
-The Worklist integrity checks: an active panel with no typed antigens, and
-duplicate vendor lot numbers.
+Start new standard-antigen cells as NT, with CSV, vendor and lab imports
+setting every column they read, so missing typing can never read as
+negative.

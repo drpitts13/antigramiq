@@ -2764,7 +2764,45 @@ namespace HemoIQ.Data
                     TargetTab = "Panels",
                 });
 
-            foreach (var p in GetAllPanels().Where(p => p.IsActive))
+            var allPanels = GetAllPanels();
+            foreach (var p in allPanels.Where(p => p.IsActive))
+            {
+                var cells = GetPanelCells(p.PanelId);
+                var untyped = Services.PanelIntegrityCheck.UntypedCells(cells);
+                if (untyped.Count == 0) continue;
+                var total = cells.Count(c => !string.Equals(c.CellNumber, "AC", StringComparison.OrdinalIgnoreCase));
+                items.Add(new WorklistItem
+                {
+                    Kind = WorklistKind.UntypedPanel,
+                    KindLabel = "Untyped cells",
+                    Title = p.Name,
+                    Detail = Services.PanelIntegrityCheck.DescribeUntyped(p, untyped, total) +
+                             " Edit the panel typing from the vendor antigram.",
+                    UrgencyLabel = "Enter typing",
+                    SortOrder = 1,
+                    PanelId = p.PanelId,
+                    TargetTab = "Panels",
+                });
+            }
+
+            foreach (var group in Services.PanelIntegrityCheck.DuplicateLotGroups(allPanels))
+            {
+                var first = group.FirstOrDefault(g => g.IsActive) ?? group[0];
+                items.Add(new WorklistItem
+                {
+                    Kind = WorklistKind.DuplicateLot,
+                    KindLabel = "Duplicate lot",
+                    Title = $"Lot {first.LotNumber!.Trim()}",
+                    Detail = $"{group.Count} panels share this lot: {Services.PanelIntegrityCheck.DescribeDuplicates(group)}. " +
+                             "Results may be recorded against the wrong copy. Keep one active, deactivate or correct the others.",
+                    UrgencyLabel = "Resolve",
+                    SortOrder = 2,
+                    PanelId = first.PanelId,
+                    TargetTab = "Panels",
+                });
+            }
+
+            foreach (var p in allPanels.Where(p => p.IsActive))
             {
                 AddExpirationWorklistItem(items, p.ExpirationDate, today, todayStr, horizon,
                     isPanel: true, title: p.Name, accession: null,

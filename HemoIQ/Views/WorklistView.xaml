@@ -155,6 +155,12 @@
                         <DataTrigger Binding="{Binding Kind}" Value="ExpiredPanel">
                             <Setter Property="Background" Value="#FFCDD2"/>
                         </DataTrigger>
+                        <DataTrigger Binding="{Binding Kind}" Value="UntypedPanel">
+                            <Setter Property="Background" Value="#FFCDD2"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Kind}" Value="DuplicateLot">
+                            <Setter Property="Background" Value="#FFE0B2"/>
+                        </DataTrigger>
                         <DataTrigger Binding="{Binding Kind}" Value="IncompleteReactions">
                             <Setter Property="Background" Value="#FFECB3"/>
                         </DataTrigger>

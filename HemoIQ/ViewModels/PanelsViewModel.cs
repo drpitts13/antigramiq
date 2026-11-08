@@ -216,6 +216,7 @@ namespace HemoIQ.ViewModels
         {
             var dlg = new Views.Dialogs.PanelDialog();
             if (dlg.ShowDialog() != true) return;
+            if (!ConfirmLotNotDuplicate(dlg.Vendor, dlg.LotNumber, null)) return;
             var id = _db.AddPanel(dlg.PanelName, dlg.LotNumber, dlg.Vendor,
                 dlg.NumCells, dlg.ExpirationDate, dlg.IncludeAc, dlg.StartCell, dlg.ItemIsActive,
                 dlg.CatalogNumber, dlg.ProductLine, dlg.EnzymeTreated);
@@ -224,11 +225,26 @@ namespace HemoIQ.ViewModels
             SelectedPanel = Panels.FirstOrDefault(p => p.PanelId == id);
         }
 
+        /// <summary>
+        /// Warns before saving a lot number another stored panel already uses. The user may
+        /// continue (for example, a deliberate re-entry); the Worklist keeps flagging it.
+        /// </summary>
+        private bool ConfirmLotNotDuplicate(string? vendor, string? lot, int? panelId)
+        {
+            var dupes = PanelIntegrityCheck.DuplicatesOf(_db.GetAllPanels(), vendor, lot, panelId);
+            if (dupes.Count == 0) return true;
+            return MessageBox.Show(
+                $"Lot {lot?.Trim()} is already stored: {PanelIntegrityCheck.DescribeDuplicates(dupes)}.\n\n" +
+                "Two panels with the same lot can lead to results being recorded against the wrong copy. Save anyway?",
+                "Duplicate lot", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
+        }
+
         private void EditPanel()
         {
             if (SelectedPanel == null) return;
             var dlg = new Views.Dialogs.PanelDialog(SelectedPanel);
             if (dlg.ShowDialog() != true) return;
+            if (!ConfirmLotNotDuplicate(dlg.Vendor, dlg.LotNumber, SelectedPanel.PanelId)) return;
             _db.UpdatePanel(SelectedPanel.PanelId, dlg.PanelName, dlg.LotNumber,
                 dlg.Vendor, dlg.NumCells, dlg.ExpirationDate, dlg.IncludeAc, dlg.StartCell, dlg.ItemIsActive,
                 dlg.CatalogNumber, dlg.ProductLine, dlg.EnzymeTreated);
@@ -326,6 +342,7 @@ namespace HemoIQ.ViewModels
             });
             dlg.Title = "Copy Panel — Edit Details";
             if (dlg.ShowDialog() != true) return;
+            if (!ConfirmLotNotDuplicate(dlg.Vendor, dlg.LotNumber, null)) return;
             // AddPanel creates placeholder cells; CopyPanelCells then replaces them with the real data.
             var sourceId = SelectedPanel.PanelId;
             var newId = _db.RunInTransaction(() =>
