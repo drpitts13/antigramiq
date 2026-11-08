@@ -50,14 +50,34 @@
                 BorderThickness="1" CornerRadius="3"
                 Visibility="{Binding HasSuggestions, Converter={x:Static local:BoolToVisibilityConverter.Instance}}">
             <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Text="Suggestions" FontWeight="Bold" Margin="0,0,0,4"/>
-                <ItemsControl ItemsSource="{Binding SuggestionItems}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding StringFormat='• {0}'}" TextWrapping="Wrap" Margin="0,0,0,2"/>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                    <Button DockPanel.Dock="Right" Command="{Binding ToggleSuggestionsCommand}"
+                            Content="{Binding SuggestionToggleText}"
+                            Visibility="{Binding CanToggleSuggestions, Converter={x:Static local:BoolToVisibilityConverter.Instance}}"
+                            Background="Transparent" BorderThickness="0" Padding="4,0" Cursor="Hand"
+                            Foreground="#1565C0"
+                            ToolTip="Warnings and review items are listed first. Show every suggestion, or collapse back to the first few."/>
+                    <TextBlock Text="Suggestions" FontWeight="Bold" VerticalAlignment="Center"/>
+                </DockPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ScrollViewer.Style>
+                        <Style TargetType="ScrollViewer">
+                            <Setter Property="MaxHeight" Value="96"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SuggestionsExpanded}" Value="True">
+                                    <Setter Property="MaxHeight" Value="260"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ScrollViewer.Style>
+                    <ItemsControl ItemsSource="{Binding VisibleSuggestionItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding StringFormat='• {0}'}" TextWrapping="Wrap" Margin="0,0,0,2"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
             </DockPanel>
         </Border>
 

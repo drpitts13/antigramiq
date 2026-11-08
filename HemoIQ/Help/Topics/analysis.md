@@ -12,7 +12,9 @@ Analysis computes rule-outs, scores, and pattern statistics from the grades and 
 - **Run Analysis** recalculates every inner tab.
 - **Help** opens help for the inner tab you are viewing, or this overview if no inner topic is available.
 
-When the engine has testing suggestions, they appear in the yellow **Suggestions** box under the toolbar. Read them as next steps, such as cells still worth testing.
+When the engine has testing suggestions, they appear in the yellow **Suggestions** box under the toolbar. Read them as next steps, such as cells still worth testing. The box is ordered by priority. Warnings and REVIEW items come first, then important next steps, then informational notes.
+
+The box shows the first three suggestions and stays short, so the tabs below remain visible. It scrolls if those three run long. **Show all N (+M more)** at its top right expands it to the full list, still in a scrolling box of limited height. **Show fewer** collapses it again. Each new analysis starts collapsed. The Analysis Results report and the clinical report print every suggestion.
 
 ## Inner tabs
 

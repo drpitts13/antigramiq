@@ -294,3 +294,16 @@ public class MultipleAntibodySeparationTests
                 .Where(e => e.Antibody == "anti-E")));
     }
 }
+
+public class SuggestionPaneTests
+{
+    [Fact]
+    public void CollapsedPane_ShowsFirstThreeInOrder_ExpandedShowsAll()
+    {
+        var all = new[] { "WARNING: a", "REVIEW: b", "c", "d", "e" };
+        Assert.Equal(new[] { "WARNING: a", "REVIEW: b", "c" },
+            HemoIQ.ViewModels.AnalysisViewModel.VisibleSuggestions(all, expanded: false));
+        Assert.Equal(all, HemoIQ.ViewModels.AnalysisViewModel.VisibleSuggestions(all, expanded: true));
+        Assert.Equal(new[] { "x" }, HemoIQ.ViewModels.AnalysisViewModel.VisibleSuggestions(new[] { "x" }, expanded: false));
+    }
+}

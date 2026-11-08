@@ -32,6 +32,34 @@ namespace HemoIQ.ViewModels
         public ObservableCollection<PatientTypingRow> PatientTypingRows { get; } = new();
         public ObservableCollection<CandidateExplanationRow> ExplanationRows { get; } = new();
         public ObservableCollection<string> SuggestionItems { get; } = new();
+        /// <summary>Suggestions shown in the pane: the first few (warnings come first) until expanded.</summary>
+        public ObservableCollection<string> VisibleSuggestionItems { get; } = new();
+        public const int CollapsedSuggestionCount = 3;
+        private bool _suggestionsExpanded;
+        public bool SuggestionsExpanded
+        {
+            get => _suggestionsExpanded;
+            set { if (SetField(ref _suggestionsExpanded, value)) RefreshVisibleSuggestions(); }
+        }
+        public bool CanToggleSuggestions => SuggestionItems.Count > CollapsedSuggestionCount;
+        public string SuggestionToggleText => SuggestionsExpanded
+            ? "Show fewer ▴"
+            : $"Show all {SuggestionItems.Count} (+{SuggestionItems.Count - CollapsedSuggestionCount} more) ▾";
+        public ICommand ToggleSuggestionsCommand { get; }
+
+        /// <summary>The suggestions the pane shows: all when expanded, otherwise the first few.</summary>
+        public static List<string> VisibleSuggestions(IReadOnlyList<string> all, bool expanded) =>
+            expanded ? all.ToList() : all.Take(CollapsedSuggestionCount).ToList();
+
+        private void RefreshVisibleSuggestions()
+        {
+            VisibleSuggestionItems.Clear();
+            foreach (var s in VisibleSuggestions(SuggestionItems.ToList(), _suggestionsExpanded))
+                VisibleSuggestionItems.Add(s);
+            OnPropertyChanged(nameof(HasSuggestions));
+            OnPropertyChanged(nameof(CanToggleSuggestions));
+            OnPropertyChanged(nameof(SuggestionToggleText));
+        }
 
         private AnalysisResult? _lastResult;
         private List<Specimen> _allSpecimens = new();
@@ -171,6 +199,7 @@ namespace HemoIQ.ViewModels
                 () => SelectedSpecimen != null && SelectedSuspected != null);
             OpenReactionsCommand = new RelayCommand(OpenReactions, () => SelectedSpecimen != null);
             OpenReportCommand = new RelayCommand(OpenReport, () => SelectedSpecimen != null);
+            ToggleSuggestionsCommand = new RelayCommand(() => SuggestionsExpanded = !SuggestionsExpanded);
             Refresh();
         }
 
@@ -282,7 +311,9 @@ namespace HemoIQ.ViewModels
             PatientTypingRows.Clear();
             ExplanationRows.Clear();
             SuggestionItems.Clear();
-            OnPropertyChanged(nameof(HasSuggestions));
+            _suggestionsExpanded = false;
+            OnPropertyChanged(nameof(SuggestionsExpanded));
+            RefreshVisibleSuggestions();
             SummaryText = string.Empty;
             _lastResult = null;
             _selectedSuspected = null;
@@ -442,7 +473,7 @@ namespace HemoIQ.ViewModels
 
             foreach (var s in result.Suggestions)
                 SuggestionItems.Add(s);
-            OnPropertyChanged(nameof(HasSuggestions));
+            RefreshVisibleSuggestions();
 
             SelectedSuspected = SuspectedRows.FirstOrDefault();
             SelectedRuleout = RuleoutRows.FirstOrDefault();
