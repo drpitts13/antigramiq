@@ -55,6 +55,46 @@ public class PanelImportReviewTests
     }
 
     [Fact]
+    public void Import_SecondLot_FlagsAntigenPartlyTypedComparedWithPriorLot()
+    {
+        using var iso = new IsolatedDatabase();
+        var first = ParseCsv("""
+            Cell,D,C,c,E,e,Fya,Kpa
+            1,+,-,-,-,+,+,-
+            2,-,+,+,+,-,-,-
+            3,+,+,-,-,+,+,-
+            """, "LOT-P1", "10-cell");
+        new VendorPanelImportService(iso.Db).Persist(first);
+
+        var second = ParseCsv("""
+            Cell,D,C,c,E,e,Fya
+            1,+,-,-,-,+,+
+            2,-,+,+,+,-,
+            3,+,+,-,-,+,
+            """, "LOT-P2", "10-cell");
+        var outcome = new VendorPanelImportService(iso.Db).Import(second);
+
+        Assert.Equal(new[] { "Fya (1 of 3 cells)" }, outcome.Review.CoverageGaps);
+        Assert.Contains("Typed on every cell of prior lot LOT-P1 but not of this lot: Fya (1 of 3 cells)", outcome.Review.Explanation);
+        Assert.Contains("Removed: Kpa", outcome.Review.Explanation);
+        Assert.Contains("Typing: 5 antigens · Fya partial", outcome.Review.Explanation);
+    }
+
+    [Fact]
+    public void Import_FirstLot_HasTypingSummaryButNoCoverageGaps()
+    {
+        using var iso = new IsolatedDatabase();
+        var parsed = ParseCsv("""
+            Cell,D,C,c,E,e
+            1,+,-,-,-,+
+            2,-,+,+,+,-
+            """, "LOT-ONLY", "10-cell");
+        var outcome = new VendorPanelImportService(iso.Db).Import(parsed);
+        Assert.Empty(outcome.Review.CoverageGaps);
+        Assert.Equal("5 antigens", outcome.Review.TypingSummary);
+    }
+
+    [Fact]
     public void Import_SecondLot_ExplainsAddedAndRemovedAntigens()
     {
         using var iso = new IsolatedDatabase();

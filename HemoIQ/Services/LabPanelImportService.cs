@@ -105,6 +105,8 @@ namespace HemoIQ.Services
                 StoredInactive = true,
                 TypingIssues = PanelTypingInspector.Inspect(storedCells, parsed.UnknownHeaders)
             };
+            PanelImportReviewer.ApplyCoverage(review, _db.GetPanelCells(id),
+                prior == null ? null : _db.GetPanelCells(prior.PanelId));
             review.Explanation = PanelImportReviewer.Explain(review, request.LotNumber, request.Vendor);
             return new PanelImportOutcome { PanelId = id, Review = review };
         }

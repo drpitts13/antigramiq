@@ -1831,8 +1831,26 @@ expected donor differences.
 - Antigens the selected lot does not fully type are not flagged.
 - No schema change.
 
+## Iteration 90 (this change)
+
+**Deficiency:**
+- The import review compared only the antigen column list with the prior
+  lot. A vendor sheet with blank cells in a column it normally types fully
+  passed review with no mention, even though the blanks become NT, so that
+  antigen could no longer be ruled out on those cells.
+- The review showed no overall typing summary for the new lot.
+
+**Bounded improvement:**
+- `PanelImportReview` gains `TypingSummary` and `CoverageGaps`.
+- `PanelImportReviewer.ApplyCoverage` reuses `PanelComparer` (iteration 89)
+  on the stored cells of the prior lot and the new lot. Antigens missing
+  from every new cell are left out, because they are already reported as
+  removed columns.
+- The vendor and lab import services both call it, and the explanation
+  adds the Typing line and the partly-typed antigens.
+- No schema change.
+
 ## Likely next tick
 
-Use the same coverage comparison in the import review against the prior lot
-of the same product. Then a product review of reaction entry: paste, fill,
-and NT handling for selected-cell runs.
+Product review of reaction entry: paste/fill, NT handling on selected-cell
+runs, and draft preservation.

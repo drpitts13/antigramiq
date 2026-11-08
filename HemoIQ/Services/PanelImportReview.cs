@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using HemoIQ.Models;
 
 namespace HemoIQ.Services
 {
@@ -28,6 +29,10 @@ namespace HemoIQ.Services
         public int? PriorPanelId { get; set; }
         public SchemaDiff Schema { get; set; } = new();
         public List<PanelTypingIssue> TypingIssues { get; set; } = new();
+        /// <summary>Typing completeness of the stored lot, e.g. "24 antigens · Fya partial".</summary>
+        public string? TypingSummary { get; set; }
+        /// <summary>Antigens the prior lot types on every cell but this lot does not, e.g. "Fya (9 of 11 cells)".</summary>
+        public List<string> CoverageGaps { get; set; } = new();
         public bool StoredInactive { get; set; } = true;
         public string Explanation { get; set; } = string.Empty;
     }
@@ -45,6 +50,21 @@ namespace HemoIQ.Services
             diff.Added.AddRange(next.Where(a => !prev.Contains(a)));
             diff.Removed.AddRange(prev.Where(a => !next.Contains(a)));
             return diff;
+        }
+
+        /// <summary>
+        /// Fills the typing summary and, when a prior lot exists, the antigens the prior lot typed
+        /// on every cell that the new lot types only partly. Uses the stored cells of both lots.
+        /// </summary>
+        public static void ApplyCoverage(PanelImportReview review, IReadOnlyList<PanelCell> storedCells,
+            IReadOnlyList<PanelCell>? priorCells)
+        {
+            review.TypingSummary = PanelIntegrityCheck.Summarize(storedCells).Display;
+            if (priorCells == null || priorCells.Count == 0) return;
+            var compare = PanelComparer.Compare("prior", priorCells, Array.Empty<string>(),
+                "imported", storedCells, Array.Empty<string>());
+            // An antigen absent from every new cell is already reported as a removed column.
+            review.CoverageGaps = compare.CoverageGaps.Where(g => !g.Contains("(0 of ", StringComparison.Ordinal)).ToList();
         }
 
         public static string Explain(PanelImportReview review, string? lotNumber, string? vendor)
@@ -76,6 +96,12 @@ namespace HemoIQ.Services
                 if (review.Schema.Removed.Count > 0)
                     sb.Append(" Removed: ").Append(string.Join(", ", review.Schema.Removed)).Append('.');
             }
+            if (!string.IsNullOrWhiteSpace(review.TypingSummary))
+                sb.Append(" Typing: ").Append(review.TypingSummary).Append('.');
+            if (review.CoverageGaps.Count > 0)
+                sb.Append(" Typed on every cell of prior lot ").Append(review.PriorLotNumber)
+                    .Append(" but not of this lot: ").Append(string.Join(", ", review.CoverageGaps))
+                    .Append(". Check the vendor sheet for these columns before activating; untyped cells stay NT.");
             AppendTypingIssues(sb, review.TypingIssues);
             sb.Append(" Activate only after a qualified user reviews the antigram. This is not a diagnosis.");
             return sb.ToString();

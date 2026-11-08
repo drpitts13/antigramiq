@@ -108,6 +108,8 @@ namespace HemoIQ.Services.Vendors
                 StoredInactive = true,
                 TypingIssues = PanelTypingInspector.Inspect(parsed.Cells, parsed.UnknownAntigens)
             };
+            PanelImportReviewer.ApplyCoverage(review, _db.GetPanelCells(id),
+                prior == null ? null : _db.GetPanelCells(prior.PanelId));
             review.Explanation = PanelImportReviewer.Explain(review, parsed.LotNumber, parsed.Vendor);
             return new PanelImportOutcome { PanelId = id, Review = review };
         }
