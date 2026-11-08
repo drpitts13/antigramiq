@@ -25,6 +25,8 @@ namespace HemoIQ.ViewModels
 
         private bool _gradesDirty;
         public bool HasUnsavedGrades => _gradesDirty;
+        /// <summary>Recovery file for unsaved grades; written on each edit, removed on save or discard.</summary>
+        public ReactionDraftStore Drafts { get; } = new();
         /// <summary>Accession whose grades are entered but not saved, or null.</summary>
         public string? UnsavedAccession => _gradesDirty ? SelectedSpecimen?.AccessionNumber : null;
         /// <summary>"2026-002 (Panel A, Untreated)" while grades are unsaved, or null.</summary>
@@ -364,10 +366,113 @@ namespace HemoIQ.ViewModels
             if (FilterSort == AntigramRowFilter.SortReactiveFirst
                 || FilterSort == AntigramRowFilter.SortAntigenFirst)
                 ApplyVisibleRows();
+            if (!_restoringDraft) WriteDraft();
             if (_gradesDirty) return;
             _gradesDirty = true;
             OnPropertyChanged(nameof(HasUnsavedGrades));
         }
+
+        private bool _restoringDraft;
+
+        private void WriteDraft()
+        {
+            if (SelectedSpecimen == null || SelectedRun == null) return;
+            Drafts.Save(new ReactionDraft
+            {
+                SpecimenId = SelectedSpecimen.AccessionNumber,
+                RunId = SelectedRun.RunId,
+                PanelId = SelectedRun.PanelId,
+                RunDescription = UnsavedGradesDescriptionFor(SelectedSpecimen.AccessionNumber),
+                SavedAtUtc = DateTime.UtcNow.ToString("o"),
+                Operator = AnalysisRuleTrace.ResolveOperator(AppSettings.Current),
+                Rows = Rows.Select(r => new ReactionDraftRow
+                {
+                    Cell = r.CellNumber, IS = r.IS, C37 = r.C37, AHG = r.AHG, CC = r.CC,
+                    Extra = r.ExtraPhaseValues.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase),
+                }).ToList(),
+            });
+        }
+
+        private string UnsavedGradesDescriptionFor(string accession) =>
+            $"{accession} ({SelectedRun?.PanelName ?? SelectedPanel?.Name ?? "panel"}, {SelectedRun?.DisplayLabel ?? "run"})";
+
+        /// <summary>Removes the recovery file: the grades were saved or the user chose to discard them.</summary>
+        public void DiscardDraft() => Drafts.Delete();
+
+        /// <summary>
+        /// Startup: a recovery file means the application did not close normally. Offers to put
+        /// the recovered grades back on the grid, still unsaved, for review and Save.
+        /// </summary>
+        public void OfferDraftRecovery()
+        {
+            var draft = Drafts.Load();
+            if (draft == null) { Drafts.Delete(); return; }
+            var run = _db.GetPanelRun(draft.RunId);
+            var specimen = _db.GetSpecimen(draft.SpecimenId);
+            var changed = run == null ? new List<ReactionDraftRow>()
+                : ReactionDraftStore.ChangedRows(draft, _db.GetReactions(draft.RunId));
+            if (run == null || specimen == null || changed.Count == 0)
+            {
+                Drafts.Delete();
+                return;
+            }
+            var when = DateTime.TryParse(draft.SavedAtUtc, null, System.Globalization.DateTimeStyles.RoundtripKind, out var at)
+                ? at.ToLocalTime().ToString("yyyy-MM-dd HH:mm") : draft.SavedAtUtc;
+            if (specimen.HasFinalCall)
+            {
+                MessageBox.Show(
+                    $"HemoIQ did not close normally. Unsaved grades for {draft.RunDescription} (last edited {when}) were found, " +
+                    "but the identification has since been confirmed, so they cannot be restored:\n\n" +
+                    string.Join("\n", changed.Take(10).Select(DescribeDraftRow)) +
+                    "\n\nClear the identification first if these grades must be recorded.",
+                    "Recovered grades", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Drafts.Delete();
+                return;
+            }
+            var answer = MessageBox.Show(
+                $"HemoIQ did not close normally. Unsaved grades for {changed.Count} cell(s) of {draft.RunDescription}, " +
+                $"last edited {when}{(string.IsNullOrWhiteSpace(draft.Operator) ? "" : $" by {draft.Operator}")}, were recovered.\n\n" +
+                "Yes — put them back on the Reactions tab. They stay unsaved until you review them and Save.\n" +
+                "No — discard them.",
+                "Recovered grades", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (answer != MessageBoxResult.Yes)
+            {
+                Drafts.Delete();
+                return;
+            }
+
+            _main.OpenSpecimenReactions(draft.SpecimenId);
+            SelectedPanel = Panels.FirstOrDefault(p => p.PanelId == run.PanelId) ?? SelectedPanel;
+            SelectedRun = Runs.FirstOrDefault(r => r.RunId == run.RunId) ?? SelectedRun;
+            if (SelectedRun?.RunId != run.RunId)
+            {
+                MessageBox.Show($"The run for {draft.RunDescription} could not be opened, so the grades were not restored. " +
+                                $"The recovery file is kept at {Drafts.FilePath}.",
+                    "Recovered grades", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            _restoringDraft = true;
+            try
+            {
+                foreach (var d in changed)
+                {
+                    var row = Rows.FirstOrDefault(r => string.Equals(r.CellNumber, d.Cell, StringComparison.OrdinalIgnoreCase));
+                    if (row == null) continue;
+                    row.IS = d.IS; row.C37 = d.C37; row.AHG = d.AHG; row.CC = d.CC;
+                    foreach (var (phase, value) in d.Extra)
+                        if (row.Extra.TryGetValue(phase, out var g)) g.Value = value;
+                }
+            }
+            finally { _restoringDraft = false; }
+            WriteDraft();
+            var msg = $"Restored unsaved grades for {changed.Count} cell(s). Review them, then Save.";
+            _main.SetStatus(msg);
+            SetSaveStatus(false, msg);
+        }
+
+        private static string DescribeDraftRow(ReactionDraftRow r) =>
+            $"Cell {r.Cell}: IS {r.IS}, 37°C {r.C37}, AHG {r.AHG}, CC {r.CC}" +
+            string.Concat(r.Extra.Select(kv => $", {kv.Key} {kv.Value}"));
 
         private void MarkGradesClean()
         {
@@ -387,6 +492,7 @@ namespace HemoIQ.ViewModels
                 "Unsaved grades", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (discard != MessageBoxResult.Yes) return false;
             MarkGradesClean();
+            Drafts.Delete();
             return true;
         }
 
@@ -789,6 +895,7 @@ namespace HemoIQ.ViewModels
                 _db.SaveReactions(SelectedRun.RunId, inputs, reason);
                 entered = Rows.Count(r => r.HasEnteredGrade);
                 MarkGradesClean();
+                Drafts.Delete();
                 return true;
             }
             catch (Exception ex)

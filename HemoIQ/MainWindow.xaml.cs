@@ -48,6 +48,8 @@ namespace HemoIQ
                     e.Cancel = true;
                 else
                 {
+                    // A deliberate quit discards unsaved grades; only an unclean exit leaves a draft.
+                    vm.ReactionsVM.DiscardDraft();
                     HelpService.Close();
                     vm.Dispose();
                 }
@@ -57,6 +59,7 @@ namespace HemoIQ
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             AcknowledgeIntendedUseIfNeeded();
+            ViewModel.ReactionsVM.OfferDraftRecovery();
             ViewModel.NotifyCapacityIfNeeded();
             if (!ViewModel.IsDatabaseNearCapacity) return;
 

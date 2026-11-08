@@ -26,6 +26,12 @@ The Reactions tab is where you record IS, 37°C, AHG, and CC grades for each cel
   - Changing the specimen, panel or run asks whether to discard them.
   - **Run Analysis** on the Analysis tab, for the same specimen, explains that analysis uses saved grades only. **Yes** saves them first, with the usual expired-lot and change-reason checks. **No** analyzes without them. **Cancel** does nothing.
   - Quitting HemoIQ lists the unsaved grades, and an unfinished antigram edit on Panels, and asks before quitting. **No** is the default.
+- **Recovery after a crash:** while grades are unsaved, HemoIQ keeps a recovery copy on this computer, in `%LocalAppData%\HemoIQ\drafts`.
+  - **Save**, discarding the grades, or quitting normally removes it.
+  - If HemoIQ closed unexpectedly (a crash, power loss, or the process ended), the next start says which specimen, panel and run, how many cells, and when they were last edited.
+  - **Yes** puts the grades back on the Reactions tab, still unsaved, for you to review and **Save**. **No** discards them.
+  - Recovered values are checked as grades, so an unrecognized value is not restored. Cells matching what is already saved are left out.
+  - If the identification was confirmed in the meantime, the grades are listed but not restored.
 - Saving graded results on a panel lot that has expired asks for confirmation first. If you record them anyway, analysis shows a REVIEW note and the Worklist lists the investigation as **Expired reagent**.
 - The grid is saved as one unit: if any cell cannot be saved, none is. Cells you did not change are not rewritten and add nothing to the audit log.
 - After the specimen has been analyzed, changing a recorded result (anything other than NT) asks for a reason. The prompt lists each change, for example *Cell 3 AHG: 2+ → 0*. Without a reason nothing is saved. The reason and the original value go into the audit log, and the timeline shows the reason on that entry. Entering a result in an empty or NT cell never needs a reason.

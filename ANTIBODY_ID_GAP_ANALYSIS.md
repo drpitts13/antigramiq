@@ -1907,8 +1907,36 @@ expected donor differences.
 - A multi-column paste spanning phases.
 - Draft preservation across a crash.
 
+## Iteration 93 (this change)
+
+**Deficiency:** Unsaved grades lived only in memory. A crash, power loss or
+killed process lost a whole run of entry. This is the last open item from
+the iteration 91 reaction-entry review.
+
+**Bounded improvement:**
+- `ReactionDraftStore` keeps one recovery file in
+  `%LocalAppData%\HemoIQ\drafts`.
+  - It holds the specimen, run, panel, description, operator, time and
+    every row's grades, including extra phases.
+  - It is written on every grade edit, through an atomic write via a temp
+    file, best effort.
+  - It is deleted on save, on a deliberate discard, and on a normal quit,
+    so a file present at startup means an unclean exit.
+- At startup, `OfferDraftRecovery`:
+  - discards the draft silently when the run or specimen no longer exists,
+    or when nothing differs from the saved grades;
+  - lists the grades without restoring them when the identification has
+    since been confirmed;
+  - otherwise asks, then reopens the run and refills only the changed
+    cells. The values pass through `GradePaste.Strict`, so an unrecognized
+    grade becomes NT and can never read as reactive. The grades stay
+    unsaved and unaudited until Save.
+- Drafts never write to the database. No schema change.
+
 ## Likely next tick
 
-Draft preservation: write unsaved grades for the open run to a local
-recovery file on each edit, and offer to restore them after an unclean
-exit. They stay unsaved and unaudited until the user saves.
+Product review. Candidates:
+- multi-phase paste;
+- whether the Worklist should list investigations with recovered but
+  unsaved grades;
+- the remaining roadmap items for the Analytics dashboard drill-downs.
