@@ -31,6 +31,7 @@ namespace HemoIQ.Views.Dialogs
             if (OtherPanelBox.SelectedItem is not Models.Panel other)
             {
                 ExplanationBox.Text = "Select another panel to compare.";
+                TypingBox.Text = string.Empty;
                 DiffGrid.ItemsSource = null;
                 return;
             }
@@ -43,6 +44,7 @@ namespace HemoIQ.Views.Dialogs
                 _db.GetPanelCells(other.PanelId),
                 _db.GetPanelDisplayAntigens(other.PanelId));
             ExplanationBox.Text = result.Explanation;
+            TypingBox.Text = $"Typing — selected: {result.LeftTyping?.Display}; comparison: {result.RightTyping?.Display}";
             DiffGrid.ItemsSource = result.TypingDiffs;
         }
     }

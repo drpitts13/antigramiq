@@ -4,8 +4,9 @@
 
 1. The dialog titles the lot you started from.
 2. Choose the other lot under **Compare with**.
-3. The explanation summarizes how the two antigrams differ.
-4. The grid lists each cell and antigen that does not match. **Selected** is the lot you started from. **Other** is the lot you picked. **Note** describes the difference.
+3. **Typing** shows how completely each lot is typed, as in the Panels list Typing column: antigens typed on every cell, partially typed antigens, and untyped cells.
+4. The explanation summarizes how the two antigrams differ. It names any antigen typed on every cell of the selected lot but not of the other, for example *Fya (9 of 11 cells)*. It also names cells on the other lot with nothing typed positive. Different donors explain different + and − values, but an antigen the earlier lot typed fully and the new lot types only partly usually means the new antigram entry is unfinished.
+5. The grid lists each cell and antigen that does not match. **Selected** is the lot you started from. **Other** is the lot you picked. **Note** describes the difference.
 
 Untyped antigens stay NT. An NT cell is not treated as negative, so a difference between NT and + is called out rather than hidden.
 

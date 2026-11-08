@@ -67,6 +67,39 @@ public class PanelCompareTests
         Assert.NotEqual("-", diff.Right);
     }
 
+    [Fact]
+    public void CoverageGaps_ListAntigensFullyTypedOnSelectedButNotOnComparison()
+    {
+        var left = new[]
+        {
+            Cell("1", ("Fya", "+"), ("Jka", "+"), ("k", "+")),
+            Cell("2", ("Fya", "-"), ("Jka", "-"), ("k", "+")),
+            Cell("AC"),
+        };
+        var right = new[]
+        {
+            Cell("1", ("Fya", "+"), ("k", "+")),
+            Cell("2", ("Jka", "+"), ("k", "+")),
+            Cell("3", ("Fya", "-")),
+        };
+        var result = PanelComparer.Compare("Old", left, new[] { "Fya", "Jka", "k" }, "New", right, new[] { "Fya", "Jka", "k" });
+
+        Assert.Equal(new[] { "Fya (2 of 3 cells)", "Jka (1 of 3 cells)", "k (2 of 3 cells)" }, result.CoverageGaps);
+        Assert.Contains("Typed on every cell of the selected panel but not of the comparison panel: Fya (2 of 3 cells)", result.Explanation);
+        Assert.Contains("Comparison panel cell(s) with nothing typed positive: 3", result.Explanation);
+        Assert.Equal("3 antigens", result.LeftTyping!.Display);
+        Assert.Contains("partial", result.RightTyping!.Display);
+    }
+
+    [Fact]
+    public void CoverageGaps_IgnoreAntigensTheSelectedPanelDoesNotFullyType()
+    {
+        var left = new[] { Cell("1", ("Lua", "+")), Cell("2", ("k", "+")) };
+        var right = new[] { Cell("1", ("k", "+")), Cell("2", ("k", "+")) };
+        var result = PanelComparer.Compare("A", left, new[] { "Lua", "k" }, "B", right, new[] { "Lua", "k" });
+        Assert.Empty(result.CoverageGaps);
+    }
+
     private static PanelCell Cell(string number, params (string Ag, string Val)[] antigens)
     {
         var cell = new PanelCell { CellNumber = number };

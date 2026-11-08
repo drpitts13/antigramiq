@@ -1814,7 +1814,25 @@ criteria. The worksheet printed the same incomplete timeline.
   helper with `GetAuditEventsForEntity`.
 - No schema change.
 
+## Iteration 89 (this change)
+
+**Deficiency:** Panel Compare listed every per-cell typing difference. A new
+lot always differs from the old one, because the donors are different, so an
+unfinished antigram entry (Fya left NT on two cells) was lost among the
+expected donor differences.
+
+**Bounded improvement:**
+- `PanelCompareResult` gains `LeftTyping` / `RightTyping` (the iteration 87
+  typing summary) and `CoverageGaps`. These are antigens typed on every
+  non-AC cell of the selected lot but not of the comparison lot, with
+  counts.
+- The explanation names the gaps and the comparison lot's untyped cells.
+- The dialog shows both typing summaries above the explanation.
+- Antigens the selected lot does not fully type are not flagged.
+- No schema change.
+
 ## Likely next tick
 
-Extend Panel Compare to flag antigens that became partially typed or untyped
-between two lots. Then review report output for the Panel Summary PDF.
+Use the same coverage comparison in the import review against the prior lot
+of the same product. Then a product review of reaction entry: paste, fill,
+and NT handling for selected-cell runs.

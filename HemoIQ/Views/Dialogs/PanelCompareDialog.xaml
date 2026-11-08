@@ -19,6 +19,8 @@
                       DisplayMemberPath="ListDisplay"
                       SelectionChanged="OtherPanelChanged"/>
         </Grid>
+        <TextBlock x:Name="TypingBox" DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,6"
+                   ToolTip="Antigens typed on every cell, antigens typed on only some cells (partial), and cells with nothing typed positive (untyped)."/>
         <TextBox x:Name="ExplanationBox" DockPanel.Dock="Top" IsReadOnly="True" TextWrapping="Wrap"
                  Margin="0,0,0,8" MinHeight="64" FontSize="13"/>
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">

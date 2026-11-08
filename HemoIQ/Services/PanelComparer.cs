@@ -23,9 +23,17 @@ namespace HemoIQ.Services
         public List<string> OnlyLeftCells { get; } = new();
         public List<string> OnlyRightCells { get; } = new();
         public List<PanelCellTypingDiff> TypingDiffs { get; } = new();
+        public PanelIntegrityCheck.TypingSummary? LeftTyping { get; set; }
+        public PanelIntegrityCheck.TypingSummary? RightTyping { get; set; }
+        /// <summary>
+        /// Antigens typed on every cell of the selected panel but not on every cell of the
+        /// comparison panel, as "Fya (9 of 11 cells)". Usually an unfinished antigram entry.
+        /// </summary>
+        public List<string> CoverageGaps { get; } = new();
         public string Explanation { get; set; } = "";
         public bool HasDifferences =>
-            Schema.Changed || OnlyLeftCells.Count > 0 || OnlyRightCells.Count > 0 || TypingDiffs.Count > 0;
+            Schema.Changed || OnlyLeftCells.Count > 0 || OnlyRightCells.Count > 0 || TypingDiffs.Count > 0 ||
+            CoverageGaps.Count > 0;
     }
 
     /// <summary>
@@ -82,6 +90,25 @@ namespace HemoIQ.Services
                 }
             }
 
+            result.LeftTyping = PanelIntegrityCheck.Summarize(left.Values);
+            result.RightTyping = PanelIntegrityCheck.Summarize(right.Values);
+            var rightTyped = right.Values
+                .Where(c => !string.Equals(c.CellNumber, "AC", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            var leftTyped = left.Values
+                .Where(c => !string.Equals(c.CellNumber, "AC", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (leftTyped.Count > 0 && rightTyped.Count > 0)
+            {
+                foreach (var ag in antigens)
+                {
+                    if (!leftTyped.All(c => c.HasTypedAntigen(ag))) continue;
+                    var count = rightTyped.Count(c => c.HasTypedAntigen(ag));
+                    if (count < rightTyped.Count)
+                        result.CoverageGaps.Add($"{ag} ({count} of {rightTyped.Count} cells)");
+                }
+            }
+
             result.Explanation = Explain(result);
             return result;
         }
@@ -114,6 +141,13 @@ namespace HemoIQ.Services
             {
                 sb.Append(" Antigen schema matches.");
             }
+            if (result.CoverageGaps.Count > 0)
+                sb.Append(" Typed on every cell of the selected panel but not of the comparison panel: ")
+                    .Append(string.Join(", ", result.CoverageGaps))
+                    .Append(". Check whether the comparison antigram entry is finished.");
+            if (result.RightTyping is { Untyped.Count: > 0 } rt)
+                sb.Append(" Comparison panel cell(s) with nothing typed positive: ")
+                    .Append(string.Join(", ", rt.Untyped)).Append('.');
             if (result.OnlyRightCells.Count > 0)
                 sb.Append(" Cells only on the comparison panel: ").Append(string.Join(", ", result.OnlyRightCells)).Append('.');
             if (result.OnlyLeftCells.Count > 0)
