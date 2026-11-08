@@ -4002,17 +4002,27 @@ namespace HemoIQ.Data
         }
 
         /// <summary>Audit events for one entity, oldest first.</summary>
-        public List<AuditEvent> GetAuditEventsForEntity(string entityType, string entityId)
+        /// <summary>Rule and clinical Preferences changes, oldest first.</summary>
+        public List<AuditEvent> GetAnalysisConfigurationEvents() =>
+            QueryAuditEvents("action IN ('add_rule', 'update_rule', 'delete_rule', 'update_settings')", _ => { });
+
+        public List<AuditEvent> GetAuditEventsForEntity(string entityType, string entityId) =>
+            QueryAuditEvents("entity_type = $type AND entity_id = $id", cmd =>
+            {
+                cmd.Parameters.AddWithValue("$type", entityType);
+                cmd.Parameters.AddWithValue("$id", entityId);
+            });
+
+        private List<AuditEvent> QueryAuditEvents(string where, Action<SqliteCommand> bind)
         {
             var list = new List<AuditEvent>();
             using var cmd = _conn.CreateCommand();
-            cmd.CommandText = @"
+            cmd.CommandText = $@"
                 SELECT id, occurred_at_utc, operator, action, entity_type, entity_id, reason, before_json, after_json
                 FROM audit_events
-                WHERE entity_type = $type AND entity_id = $id
+                WHERE {where}
                 ORDER BY id";
-            cmd.Parameters.AddWithValue("$type", entityType);
-            cmd.Parameters.AddWithValue("$id", entityId);
+            bind(cmd);
             using var r = cmd.ExecuteReader();
             while (r.Read())
                 list.Add(new AuditEvent

@@ -91,6 +91,15 @@ namespace HemoIQ.Services
             foreach (var a in audit.Where(a => a.Action != "save_reaction"))
                 if (Describe(a) is TimelineEvent e) events.Add(e);
 
+            if (TryDate(s.CreatedDate, out var openedOn))
+            {
+                var open = OpenPeriods(openedOn, audit);
+                foreach (var a in db.GetAnalysisConfigurationEvents())
+                    if (TryUtc(a.OccurredAtUtc, out var at) && open.Any(p => at >= p.From && at < p.To) &&
+                        DescribeConfiguration(a) is string what)
+                        events.Add(new TimelineEvent { When = at, What = what, Who = a.Operator });
+            }
+
             if (!string.IsNullOrWhiteSpace(s.Mrn))
                 foreach (var a in db.GetAuditEventsForEntity("patient", s.Mrn))
                     if (TryUtc(a.OccurredAtUtc, out var at))
@@ -110,6 +119,99 @@ namespace HemoIQ.Services
                 .ThenBy(x => x.i)
                 .Select(x => x.e)
                 .ToList();
+        }
+
+        /// <summary>
+        /// When the investigation was open: from receipt until an identification was confirmed or
+        /// the investigation cancelled, and again after it was cleared or reinstated.
+        /// </summary>
+        public static List<(DateTime From, DateTime To)> OpenPeriods(DateTime received, IEnumerable<AuditEvent> audit)
+        {
+            var periods = new List<(DateTime, DateTime)>();
+            DateTime? openSince = received.Date;
+            foreach (var a in audit.OrderBy(a => a.Id))
+            {
+                if (!TryUtc(a.OccurredAtUtc, out var at)) continue;
+                if ((a.Action is "confirm_final_call" or "cancel_investigation") && openSince is DateTime from)
+                {
+                    periods.Add((from, at));
+                    openSince = null;
+                }
+                else if ((a.Action is "clear_final_call" or "reinstate_investigation") && openSince == null)
+                {
+                    openSince = at;
+                }
+            }
+            if (openSince is DateTime still) periods.Add((still, DateTime.MaxValue));
+            return periods;
+        }
+
+        private static readonly Dictionary<string, string> RuleFieldLabels = new()
+        {
+            ["name"] = "name", ["antibody"] = "antibody", ["exceptionAntigen"] = "exception antigen",
+            ["heterozygousOk"] = "heterozygous cells allowed", ["minRuleoutCount"] = "minimum rule-out cells",
+            ["separationExempt"] = "separation not required", ["separationExemptFrom"] = "separation exempt from",
+        };
+
+        /// <summary>Rule or Preferences change, with what changed, for an investigation open at the time.</summary>
+        public static string? DescribeConfiguration(AuditEvent a)
+        {
+            const string note = " (lab configuration; analyses run before this used the previous setting)";
+            switch (a.Action)
+            {
+                case "add_rule":
+                    return $"Analysis rule added: {Prop(a.AfterJson, "name") ?? "rule"} ({Prop(a.AfterJson, "antibody") ?? "?"})" + note;
+                case "delete_rule":
+                    return $"Analysis rule deleted: {Prop(a.BeforeJson, "name") ?? "rule"} ({Prop(a.BeforeJson, "antibody") ?? "?"})" + note;
+                case "update_rule":
+                    var diff = Diff(a.BeforeJson, a.AfterJson, RuleFieldLabels, skip: "description");
+                    return $"Analysis rule changed: {Prop(a.AfterJson, "name") ?? "rule"}" +
+                           (diff.Length > 0 ? $"; {diff}" : "") + note;
+                case "update_settings":
+                    var changed = Diff(a.BeforeJson, a.AfterJson, null, skip: null);
+                    return "Preferences changed" + (changed.Length > 0 ? $": {changed}" : "") + note;
+                default:
+                    return null;
+            }
+        }
+
+        private static Dictionary<string, string> ReadFlat(string? json)
+        {
+            var map = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (string.IsNullOrEmpty(json)) return map;
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.ValueKind != JsonValueKind.Object) return map;
+                foreach (var p in doc.RootElement.EnumerateObject())
+                    map[p.Name] = p.Value.ValueKind switch
+                    {
+                        JsonValueKind.String => p.Value.GetString() ?? "",
+                        JsonValueKind.Null => "",
+                        JsonValueKind.True => "yes",
+                        JsonValueKind.False => "no",
+                        _ => p.Value.ToString(),
+                    };
+            }
+            catch (JsonException) { }
+            return map;
+        }
+
+        private static string Diff(string? beforeJson, string? afterJson, Dictionary<string, string>? labels, string? skip)
+        {
+            var before = ReadFlat(beforeJson);
+            var after = ReadFlat(afterJson);
+            var parts = new List<string>();
+            foreach (var key in before.Keys.Union(after.Keys))
+            {
+                if (key == skip) continue;
+                before.TryGetValue(key, out var b);
+                after.TryGetValue(key, out var v);
+                if (b == v) continue;
+                var label = labels != null && labels.TryGetValue(key, out var l) ? l : key;
+                parts.Add($"{label} {(string.IsNullOrEmpty(b) ? "(blank)" : b)} → {(string.IsNullOrEmpty(v) ? "(blank)" : v)}");
+            }
+            return string.Join(", ", parts.Take(6)) + (parts.Count > 6 ? $", +{parts.Count - 6} more" : "");
         }
 
         private static IEnumerable<TimelineEvent> GroupReactionSaves(

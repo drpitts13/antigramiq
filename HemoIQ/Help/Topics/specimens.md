@@ -90,6 +90,7 @@ Expand **Timeline** to see the investigation in time order, with who did each st
 - Each analysis run, with the rule-engine version.
 - Identification confirmed, cleared (with the reason), and supervisor review.
 - Changes to MRN, transfusion record, DAT, and the patient record.
+- Lab configuration changes made while the investigation was open: analysis rules added, changed or deleted, and changed clinical Preferences. Each entry names what changed, for example *Analysis rule changed: Jka dosage; minimum rule-out cells 3 → 2*. "Open" means after receipt, before an identification is confirmed or the investigation is cancelled, and again after one is cleared or reinstated. An analysis run before such an entry used the previous setting. The Worklist lists the investigation as **Stale analysis** until it is analyzed again.
 
 Receipt and run starts record only a date, so they show first on their day. The identification worksheet prints the same timeline. Panels attached before this version were not audited, so only their run start dates appear.
 

@@ -1795,8 +1795,26 @@ INSERT OR REPLACE).
   on another panel. **All Panels** gains a Typing column.
 - No schema change.
 
+## Iteration 88 (this change)
+
+**Deficiency:** The investigation timeline did not show lab configuration
+changes. When a rule or Preference changed mid-investigation, the timeline
+gave no sign that analyses before and after it were run under different
+criteria. The worksheet printed the same incomplete timeline.
+
+**Bounded improvement:**
+- `InvestigationTimeline.OpenPeriods` builds the investigation's open
+  periods from its own audit trail. They run from receipt until a confirm
+  or cancel, and resume after a clear or reinstate.
+- Rule add, change and delete, and Preferences changes that fall inside an
+  open period now appear on the timeline (and so on the Clinical
+  Identification worksheet), with a field-by-field diff from the audit
+  JSON. Each entry notes that earlier analyses used the previous setting.
+- `DatabaseService.GetAnalysisConfigurationEvents` shares one audit query
+  helper with `GetAuditEventsForEntity`.
+- No schema change.
+
 ## Likely next tick
 
-Show rule and Preferences changes on the timelines of investigations still
-open at the time. Then extend the Panel Compare to flag antigens newly
-partial between lots.
+Extend Panel Compare to flag antigens that became partially typed or untyped
+between two lots. Then review report output for the Panel Summary PDF.
