@@ -160,10 +160,44 @@ namespace HemoIQ.Views
 
         private void AntigenGrid_PreviewKeyDown(object sender, KeyEventArgs e)
         {
+            var direct = e.Key switch
+            {
+                Key.OemPlus or Key.Add => "+",
+                Key.OemMinus or Key.Subtract => "-",
+                Key.N => AntigenConstants.AntigenNotTested,
+                _ => null
+            };
+            if (direct != null)
+            {
+                if (SetCurrentCell(direct)) e.Handled = true;
+                return;
+            }
             if (e.Key is not (Key.Enter or Key.Return or Key.Space))
                 return;
             if (ToggleCurrentCell())
                 e.Handled = true;
+        }
+
+        private bool SetCurrentCell(string value)
+        {
+            var current = AntigenGrid.CurrentCell;
+            if (current.Item is not PanelCellRow row) return false;
+            if (current.Column?.Header is not string antigen || !IsAntigenColumn(antigen)) return false;
+            if (DataContext is not PanelsViewModel vm || !vm.IsEditingAntigens) return false;
+            row.SetAntigen(antigen, value);
+            return true;
+        }
+
+        private void FillColumnNegative_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is not PanelsViewModel vm || !vm.IsEditingAntigens) return;
+            if (AntigenGrid.CurrentCell.Column?.Header is not string antigen || !IsAntigenColumn(antigen))
+            {
+                MessageBox.Show("Select a cell in the antigen column to fill first.", "Fill NT with −",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            vm.FillColumnNegative(antigen);
         }
 
         private bool ToggleCurrentCell()

@@ -22,7 +22,9 @@ The Panels tab stores panel lots and the antigen profile of each cell. Analysis 
 
 The grid on the right is the antigram. Press **Edit** before changing it.
 
-- Click a cell to cycle **NT → + → ++ → −**. Antigens without an antithetical pair skip ++.
+- Click a cell, or press Space or Enter, to cycle **NT → + → ++ → −**. Antigens without an antithetical pair skip ++.
+- Press **+**, **−** or **N** to set the current cell to +, − or NT directly.
+- **Fill NT with −** types every NT cell in the selected antigen column as negative, skipping the autocontrol. For a new lot, enter the positives from the vendor antigram, then fill each column the antigram lists. Leave antigens the antigram does not list as NT. Nothing is stored until **Save**, which audits each change.
 - Green is + or ++. Light gray is −. NT means the antigen was not typed.
 - Drag column headers to reorder while editing.
 - **Save** writes the grid (Ctrl+S does the same on this tab). **Cancel** leaves edit mode without saving.

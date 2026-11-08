@@ -1704,8 +1704,37 @@ duplicates.
 Changing that default touches every import path, so it is a separate
 change.
 
+## Iteration 85 (this change)
+
+**Deficiency (data loss, found while tracing cell creation):**
+- `UpdatePanel` deleted and recreated every cell on each details edit
+  (name, lot or expiry). That erased all antigen typing, even when the cell
+  count did not change and on lots with test history.
+- The Edit dialog also passed no special notes, so each edit cleared the
+  vendor's special notes.
+- Separately, new cells started typed "-" for every standard antigen, so a
+  missing antigram read as antigen-negative. Iteration 84 only flagged this.
+
+**Bounded improvement:**
+- `UpdatePanel` keeps cells in range with their ids and typing. It adds
+  only new cells, as NT, and removes only cells outside the new range.
+- It refuses to remove a cell with a real grade, so all-NT rows don't
+  count. The check runs before anything changes, and the update runs in a
+  savepoint. The audit records `cellsAdded` and `cellsRemoved`.
+- Panels → Edit passes the stored special notes through.
+- New cells start NT. `AddPanel(startTypedNegative: true)` exists only for
+  synthetic data: the demo seeder, and test fixtures that type only the
+  antigens under test.
+- Imports already wrote NT for antigens they did not read, so they are
+  unchanged. Existing stored cells are not altered.
+- Entry stays quick: the + / − / N keys set a value directly, and Fill NT
+  with − types the NT cells of a column as negative. Both stay unsaved
+  until Save, which audits each change.
+
 ## Likely next tick
 
-Start new standard-antigen cells as NT, with CSV, vendor and lab imports
-setting every column they read, so missing typing can never read as
-negative.
+Product review (it has been several iterations), then the highest gap from
+it. Candidates:
+- show on the Panels list how much of each lot is typed;
+- report the untyped-cell and duplicate-lot findings on the Panel Summary
+  report.

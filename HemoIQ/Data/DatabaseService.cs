@@ -1386,7 +1386,8 @@ namespace HemoIQ.Data
             int numCells, string? expirationDate, bool includeAc, int startCell = 1, bool? isActive = null,
             string? catalogNumber = null, string? productLine = null, bool enzymeTreated = false,
             string? sourceUrl = null, string? sourceFormat = null, string? importedAt = null,
-            string? specialNotes = null, string? sourceSha256 = null, string? sourceArtifactPath = null)
+            string? specialNotes = null, string? sourceSha256 = null, string? sourceArtifactPath = null,
+            bool startTypedNegative = false)
         {
             var today = DateTime.Now.ToString("yyyy-MM-dd");
             bool active = isActive ?? (expirationDate == null || string.Compare(expirationDate, today) >= 0);
@@ -1417,10 +1418,11 @@ namespace HemoIQ.Data
             cmd.Parameters.AddWithValue("$art", (object?)sourceArtifactPath ?? DBNull.Value);
             var panelId = Convert.ToInt32(cmd.ExecuteScalar());
 
+            // Cells start NT. Only synthetic demo data asks for negative, then types its positives.
             for (int i = startCell; i < startCell + numCells; i++)
-                AddPanelCell(panelId, i.ToString());
+                AddPanelCell(panelId, i.ToString(), startTypedNegative);
             if (includeAc)
-                AddPanelCell(panelId, "AC");
+                AddPanelCell(panelId, "AC", startTypedNegative);
 
             AppendAudit("add_panel", "panel", panelId.ToString(), null,
                 afterJson: JsonSerializer.Serialize(new { name, lotNumber, vendor }));
@@ -1461,6 +1463,50 @@ namespace HemoIQ.Data
             string? catalogNumber = null, string? productLine = null, bool enzymeTreated = false,
             string? specialNotes = null)
         {
+            // Keep the cells that stay in range, with their typing; add only new cells and
+            // remove only cells that fall out of range. Removing a cell with recorded
+            // reactions is refused so test history keeps its antigram.
+            var wanted = Enumerable.Range(startCell, numCells).Select(i => i.ToString()).ToList();
+            if (includeAc) wanted.Add("AC");
+            var existing = GetPanelCells(panelId);
+            var removed = existing
+                .Where(c => !wanted.Contains(c.CellNumber, StringComparer.OrdinalIgnoreCase))
+                .Select(c => c.CellNumber)
+                .ToList();
+            var added = wanted
+                .Where(w => !existing.Any(c => string.Equals(c.CellNumber, w, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+            var tested = CellsWithReactions(panelId);
+            var blocked = removed.Where(tested.Contains).ToList();
+            if (blocked.Count > 0)
+                throw new InvalidOperationException(
+                    $"Cell(s) {string.Join(", ", blocked)} have recorded reactions and cannot be removed from this panel. " +
+                    "Keep the cell range, or copy the panel to a new lot.");
+
+            RunInTransaction(() => UpdatePanelCore(panelId, name, lotNumber, vendor, numCells, expirationDate,
+                includeAc, startCell, isActive, catalogNumber, productLine, enzymeTreated, specialNotes, removed, added));
+        }
+
+        private HashSet<string> CellsWithReactions(int panelId)
+        {
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT DISTINCT r.cell_number FROM reactions r JOIN panel_runs pr ON pr.run_id = r.run_id
+                WHERE pr.panel_id = $id
+                  AND (COALESCE(r.""IS"", 'NT') NOT IN ('NT', '') OR COALESCE(r.C37, 'NT') NOT IN ('NT', '')
+                       OR COALESCE(r.AHG, 'NT') NOT IN ('NT', '') OR COALESCE(r.CC, 'NT') NOT IN ('NT', ''))";
+            cmd.Parameters.AddWithValue("$id", panelId);
+            using var r = cmd.ExecuteReader();
+            while (r.Read()) set.Add(r.GetString(0));
+            return set;
+        }
+
+        private void UpdatePanelCore(int panelId, string name, string? lotNumber, string? vendor,
+            int numCells, string? expirationDate, bool includeAc, int startCell, bool isActive,
+            string? catalogNumber, string? productLine, bool enzymeTreated, string? specialNotes,
+            List<string> removed, List<string> added)
+        {
             using var cmd = _conn.CreateCommand();
             cmd.CommandText = @"
                 UPDATE panels SET name=$name, lot_number=$lot, vendor=$vendor,
@@ -1482,13 +1528,18 @@ namespace HemoIQ.Data
             cmd.Parameters.AddWithValue("$id", panelId);
             cmd.ExecuteNonQuery();
 
-            DeletePanelCells(panelId);
-            for (int i = startCell; i < startCell + numCells; i++)
-                AddPanelCell(panelId, i.ToString());
-            if (includeAc)
-                AddPanelCell(panelId, "AC");
+            foreach (var cellNumber in removed)
+            {
+                using var del = _conn.CreateCommand();
+                del.CommandText = "DELETE FROM panel_cells WHERE panel_id = $id AND cell_number = $cn";
+                del.Parameters.AddWithValue("$id", panelId);
+                del.Parameters.AddWithValue("$cn", cellNumber);
+                del.ExecuteNonQuery();
+            }
+            foreach (var cellNumber in added)
+                AddPanelCell(panelId, cellNumber);
             AppendAudit("update_panel", "panel", panelId.ToString(), null,
-                afterJson: JsonSerializer.Serialize(new { name, lotNumber, vendor }));
+                afterJson: JsonSerializer.Serialize(new { name, lotNumber, vendor, cellsAdded = added, cellsRemoved = removed }));
         }
 
         public Panel? FindPanelByVendorLot(string? vendor, string? lotNumber)
@@ -1622,10 +1673,12 @@ namespace HemoIQ.Data
 
         // ── Panel Cells ───────────────────────────────────────────────────────
 
-        public void AddPanelCell(int panelId, string cellNumber)
+        public void AddPanelCell(int panelId, string cellNumber, bool typedNegative = false)
         {
             var cols = string.Join(", ", AntigenMapper.AllColumns);
-            var vals = string.Join(", ", GetAllAntigenColumns(_ => "'-'"));
+            // New cells start untested: a missing antigram must never read as antigen-negative.
+            var initial = typedNegative ? "'-'" : "'NT'";
+            var vals = string.Join(", ", GetAllAntigenColumns(_ => initial));
             using (var cmd = _conn.CreateCommand())
             {
                 cmd.CommandText = $@"

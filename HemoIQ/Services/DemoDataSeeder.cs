@@ -53,8 +53,8 @@ namespace HemoIQ.Services
 
         private static int CreatePanel(DatabaseService db, string name, int numCells)
         {
-            var id = db.AddPanel(name, "DEMO-LOT", "DemoLab", numCells, null, false, 1);
-            return id;
+            // Demo profiles list only the positive antigens; everything else is typed negative.
+            return db.AddPanel(name, "DEMO-LOT", "DemoLab", numCells, null, false, 1, startTypedNegative: true);
         }
 
         private static string CreateSpecimen(DatabaseService db, string accession, string type = "serum")

@@ -1,6 +1,8 @@
 # Panel details
 
-This dialog creates a lot, edits its details, or copies an existing lot. Antigen reactions for each cell are edited on the Panels grid after you save the details.
+This dialog creates a lot, edits its details, or copies an existing lot. Antigen typing for each cell is entered on the Panels grid after you save the details. The cells of a new lot start as NT (not tested), never as negative, so a lot whose antigram has not been entered cannot be read as antigen-negative. The Worklist lists it as **Untyped cells** until the typing is in.
+
+Editing the details keeps every cell's typing. Changing **Number of Cells**, **Starting Cell #** or **Include AC** adds the new cells as NT and removes only the cells that fall outside the new range. Removing a cell with recorded grades is refused, because its typing is the evidence behind those results. Keep the range, or copy the panel to a new lot. A lot number that another stored panel already uses asks for confirmation before saving.
 
 ## Fields
 

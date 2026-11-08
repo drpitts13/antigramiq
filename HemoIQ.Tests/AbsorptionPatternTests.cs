@@ -200,7 +200,7 @@ public class AbsorptionPatternTests
     {
         using var iso = new IsolatedDatabase();
         iso.Db.AddSpecimen("ABS-C", "serum", null);
-        var panelId = iso.Db.AddPanel("P", "L", "V", 4, null, false);
+        var panelId = iso.Db.AddPanel("P", "L", "V", 4, null, false, startTypedNegative: true);
         iso.Db.LinkSpecimenPanel("ABS-C", panelId);
         var cells = iso.Db.GetPanelCells(panelId);
         iso.Db.UpdatePanelCellAntigen(cells[0].Id, "c", "++");
@@ -240,7 +240,7 @@ public class AbsorptionPatternTests
     {
         using var iso = new IsolatedDatabase();
         iso.Db.AddSpecimen("ABS-SCORE", "serum", null);
-        var panelId = iso.Db.AddPanel("P", "L", "V", 4, null, false);
+        var panelId = iso.Db.AddPanel("P", "L", "V", 4, null, false, startTypedNegative: true);
         iso.Db.LinkSpecimenPanel("ABS-SCORE", panelId);
         var cells = iso.Db.GetPanelCells(panelId);
         iso.Db.UpdatePanelCellAntigen(cells[0].Id, "c", "++");
@@ -300,7 +300,7 @@ public class AbsorptionPatternTests
     {
         using var iso = new IsolatedDatabase();
         iso.Db.AddSpecimen("ABS-MIX", "serum", null);
-        var panelId = iso.Db.AddPanel("P", "L", "V", 4, null, false);
+        var panelId = iso.Db.AddPanel("P", "L", "V", 4, null, false, startTypedNegative: true);
         iso.Db.LinkSpecimenPanel("ABS-MIX", panelId);
         var cells = iso.Db.GetPanelCells(panelId);
         iso.Db.UpdatePanelCellAntigen(cells[0].Id, "c", "+");
@@ -344,7 +344,7 @@ public class AbsorptionPatternTests
     {
         using var iso = new IsolatedDatabase();
         iso.Db.AddSpecimen("ABS-K", "serum", null);
-        var panelId = iso.Db.AddPanel("P", "L", "V", 4, null, false);
+        var panelId = iso.Db.AddPanel("P", "L", "V", 4, null, false, startTypedNegative: true);
         iso.Db.LinkSpecimenPanel("ABS-K", panelId);
         var cells = iso.Db.GetPanelCells(panelId);
         iso.Db.UpdatePanelCellAntigen(cells[0].Id, "c", "++");
@@ -385,7 +385,7 @@ public class AbsorptionPatternTests
     {
         using var iso = new IsolatedDatabase();
         iso.Db.AddSpecimen("ABS-AUTO", "serum", null);
-        var panelId = iso.Db.AddPanel("P", "L", "V", 4, null, false);
+        var panelId = iso.Db.AddPanel("P", "L", "V", 4, null, false, startTypedNegative: true);
         iso.Db.LinkSpecimenPanel("ABS-AUTO", panelId);
         var cells = iso.Db.GetPanelCells(panelId);
         iso.Db.UpdatePanelCellAntigen(cells[0].Id, "c", "+");
@@ -434,7 +434,7 @@ public class AbsorptionPatternTests
     {
         using var iso = new IsolatedDatabase();
         iso.Db.AddSpecimen("ABS-AUTO-3", "serum", null);
-        var panelId = iso.Db.AddPanel("P", "L", "V", 4, null, false);
+        var panelId = iso.Db.AddPanel("P", "L", "V", 4, null, false, startTypedNegative: true);
         iso.Db.LinkSpecimenPanel("ABS-AUTO-3", panelId);
         var cells = iso.Db.GetPanelCells(panelId);
         iso.Db.UpdatePanelCellAntigen(cells[0].Id, "c", "+");
@@ -468,7 +468,7 @@ public class AbsorptionPatternTests
     {
         using var iso = new IsolatedDatabase();
         iso.Db.AddSpecimen("ABS-AUTO-BOTH", "serum", null);
-        var panelId = iso.Db.AddPanel("P", "L", "V", 4, null, false);
+        var panelId = iso.Db.AddPanel("P", "L", "V", 4, null, false, startTypedNegative: true);
         iso.Db.LinkSpecimenPanel("ABS-AUTO-BOTH", panelId);
         var cells = iso.Db.GetPanelCells(panelId);
         iso.Db.UpdatePanelCellAntigen(cells[0].Id, "c", "+");
@@ -502,7 +502,7 @@ public class AbsorptionPatternTests
     {
         using var iso = new IsolatedDatabase();
         iso.Db.AddSpecimen("ABS-RR-PAN", "serum", null);
-        var panelId = iso.Db.AddPanel("P", "L", "V", 4, null, false);
+        var panelId = iso.Db.AddPanel("P", "L", "V", 4, null, false, startTypedNegative: true);
         iso.Db.LinkSpecimenPanel("ABS-RR-PAN", panelId);
         var cells = iso.Db.GetPanelCells(panelId);
         iso.Db.UpdatePanelCellAntigen(cells[0].Id, "c", "++");
@@ -548,7 +548,7 @@ public class AbsorptionPatternTests
     {
         using var iso = new IsolatedDatabase();
         iso.Db.AddSpecimen("ABS-RR-3", "serum", null);
-        var panelId = iso.Db.AddPanel("P", "L", "V", 4, null, false);
+        var panelId = iso.Db.AddPanel("P", "L", "V", 4, null, false, startTypedNegative: true);
         iso.Db.LinkSpecimenPanel("ABS-RR-3", panelId);
         var cells = iso.Db.GetPanelCells(panelId);
         iso.Db.UpdatePanelCellAntigen(cells[0].Id, "c", "+");
@@ -581,7 +581,7 @@ public class AbsorptionPatternTests
     {
         using var iso = new IsolatedDatabase();
         iso.Db.AddSpecimen("ABS-RR-SURV", "serum", null);
-        var panelId = iso.Db.AddPanel("P", "L", "V", 4, null, false);
+        var panelId = iso.Db.AddPanel("P", "L", "V", 4, null, false, startTypedNegative: true);
         iso.Db.LinkSpecimenPanel("ABS-RR-SURV", panelId);
         var cells = iso.Db.GetPanelCells(panelId);
         iso.Db.UpdatePanelCellAntigen(cells[0].Id, "c", "+");

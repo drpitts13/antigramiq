@@ -121,7 +121,7 @@
                 </TextBlock>
             </DockPanel>
             <TextBlock DockPanel.Dock="Top" Margin="0,0,0,6" Foreground="#546E7A" FontSize="13"
-                       Text="Press Edit to change antigens (click cycles NT → + → ++ → −; antigens without an antithetical pair skip ++). Green = +/++, light gray = −, NT = not typed. Drag headers to reorder. Save or Cancel to leave edit mode."/>
+                       Text="Press Edit to change antigens (click or Space cycles NT → + → ++ → −; antigens without an antithetical pair skip ++; keys + − N set a value directly). New cells start NT. Enter the positives, then Fill NT with − for each column the antigram lists. Green = +/++, light gray = −, NT = not typed. Drag headers to reorder. Save or Cancel to leave edit mode."/>
 
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                 <DataGrid x:Name="AntigenGrid"
@@ -149,6 +149,9 @@
 
         <StackPanel Grid.Row="1" Grid.ColumnSpan="3" Orientation="Horizontal"
                     HorizontalAlignment="Right" Margin="6,0,6,6">
+            <Button Content="Fill NT with −" Click="FillColumnNegative_Click" Padding="12,4" Margin="0,0,16,0"
+                    ToolTip="Type every NT cell in the selected antigen column as negative (the autocontrol row is skipped). Use after entering the positives from the vendor antigram. Nothing is stored until Save."
+                    Visibility="{Binding IsEditingAntigens, Converter={x:Static views:BoolToVisibilityConverter.Instance}}"/>
             <Button Content="Save" Command="{Binding SaveCellsCommand}" Padding="12,4" Margin="0,0,8,0" MinWidth="80"
                     Visibility="{Binding IsEditingAntigens, Converter={x:Static views:BoolToVisibilityConverter.Instance}}"/>
             <Button Content="Cancel" Command="{Binding CancelEditCommand}" Padding="12,4" MinWidth="80"

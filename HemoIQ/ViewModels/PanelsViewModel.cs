@@ -245,9 +245,17 @@ namespace HemoIQ.ViewModels
             var dlg = new Views.Dialogs.PanelDialog(SelectedPanel);
             if (dlg.ShowDialog() != true) return;
             if (!ConfirmLotNotDuplicate(dlg.Vendor, dlg.LotNumber, SelectedPanel.PanelId)) return;
-            _db.UpdatePanel(SelectedPanel.PanelId, dlg.PanelName, dlg.LotNumber,
-                dlg.Vendor, dlg.NumCells, dlg.ExpirationDate, dlg.IncludeAc, dlg.StartCell, dlg.ItemIsActive,
-                dlg.CatalogNumber, dlg.ProductLine, dlg.EnzymeTreated);
+            try
+            {
+                _db.UpdatePanel(SelectedPanel.PanelId, dlg.PanelName, dlg.LotNumber,
+                    dlg.Vendor, dlg.NumCells, dlg.ExpirationDate, dlg.IncludeAc, dlg.StartCell, dlg.ItemIsActive,
+                    dlg.CatalogNumber, dlg.ProductLine, dlg.EnzymeTreated, SelectedPanel.SpecialNotes);
+            }
+            catch (System.InvalidOperationException ex)
+            {
+                MessageBox.Show(ex.Message, "Edit panel", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
             _main.SetStatus($"Panel '{dlg.PanelName}' updated.");
             NotifyPanelsChanged();
         }
@@ -603,6 +611,20 @@ namespace HemoIQ.ViewModels
                 : $"Panel '{SelectedPanel.Name}': {changes.Count} typing change(s) saved and audited.");
         }
 
+        /// <summary>
+        /// Edit mode: types every NT cell of one antigen column as negative, skipping the
+        /// autocontrol. Nothing is stored until Save, which audits each change.
+        /// </summary>
+        public int FillColumnNegative(string antigen)
+        {
+            if (!IsEditingAntigens) return 0;
+            var filled = PanelCellRow.FillNotTestedNegative(CellRows, antigen);
+            _main.SetStatus(filled == 0
+                ? $"{antigen}: no NT cells to fill."
+                : $"{antigen}: {filled} NT cell(s) set to negative. Save to keep them.");
+            return filled;
+        }
+
         private void CancelEdit()
         {
             IsEditingAntigens = false;
@@ -633,6 +655,20 @@ namespace HemoIQ.ViewModels
             Cell.SetAntigen(ag, val);
             OnPropertyChanged(ag);
             OnPropertyChanged($"AntigenValues[{ag}]");
+        }
+
+        /// <summary>Sets NT cells of one antigen to negative, skipping the autocontrol. Returns the count.</summary>
+        public static int FillNotTestedNegative(IEnumerable<PanelCellRow> rows, string antigen)
+        {
+            var filled = 0;
+            foreach (var row in rows)
+            {
+                if (string.Equals(row.CellNumber, "AC", System.StringComparison.OrdinalIgnoreCase)) continue;
+                if (row.GetEditorValue(antigen) != AntigenConstants.AntigenNotTested) continue;
+                row.SetAntigen(antigen, "-");
+                filled++;
+            }
+            return filled;
         }
 
         public void ToggleAntigen(string ag) =>
