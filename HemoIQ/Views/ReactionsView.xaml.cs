@@ -411,25 +411,51 @@ namespace HemoIQ.Views
         {
             var rows = ReactionsGrid.Items.OfType<ReactionRow>().ToList();
             var targets = rows.Skip(Math.Max(0, rows.IndexOf(start))).ToList();
+            var phases = PhasesFrom(header);
             var text = Clipboard.ContainsText() ? Clipboard.GetText() : string.Empty;
-            var result = GradePaste.Parse(text, targets.Count);
+            var result = GradePaste.ParseBlock(text, targets.Count, phases.Count);
             if (!result.Ok)
             {
                 MessageBox.Show(GradePaste.ErrorMessage(result), "Paste grades", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            var current = targets.Take(result.Grades.Count).Select(r => GetPhase(r, header)).ToList();
-            var replaced = GradePaste.Overwrites(current, result.Grades);
-            if (replaced.Count > 0 && MessageBox.Show(
-                    $"{replaced.Count} cell(s) already have a different {header} grade: " +
-                    string.Join(", ", replaced.Take(10).Select(i => $"cell {targets[i].CellNumber} {current[i]} → {result.Grades[i]}")) +
-                    (replaced.Count > 10 ? ", …" : "") + ".\n\nReplace them?",
+
+            var changes = new List<string>();
+            for (int c = 0; c < result.Columns; c++)
+            {
+                var pasted = result.Rows.Select(r => r[c]).ToList();
+                var current = targets.Take(pasted.Count).Select(r => GetPhase(r, phases[c])).ToList();
+                changes.AddRange(GradePaste.Overwrites(current, pasted)
+                    .Select(i => $"cell {targets[i].CellNumber} {phases[c]} {current[i]} → {pasted[i]}"));
+            }
+            if (changes.Count > 0 && MessageBox.Show(
+                    $"{changes.Count} cell(s) already have a different grade: " +
+                    string.Join(", ", changes.Take(10)) + (changes.Count > 10 ? ", …" : "") + ".\n\nReplace them?",
                     "Paste grades", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
                 return;
-            for (int i = 0; i < result.Grades.Count; i++)
-                SetPhase(targets[i], header, result.Grades[i]);
+
+            for (int i = 0; i < result.Rows.Count; i++)
+                for (int c = 0; c < result.Columns; c++)
+                    SetPhase(targets[i], phases[c], result.Rows[i][c]);
             if (DataContext is ReactionsViewModel vm)
-                vm.NotePaste(result.Grades.Count, header, targets[0].CellNumber, targets[result.Grades.Count - 1].CellNumber);
+                vm.NotePaste(result.Rows.Count * result.Columns, string.Join(", ", phases.Take(result.Columns)),
+                    targets[0].CellNumber, targets[result.Rows.Count - 1].CellNumber);
+        }
+
+        /// <summary>Phase columns as shown on screen (columns can be reordered), from <paramref name="header"/> rightward.</summary>
+        private List<string> PhasesFrom(string header)
+        {
+            var extras = ExtraPhaseParser.Parse(AppSettings.Current.ExtraPhases);
+            var shown = ReactionsGrid.Columns
+                .Where(c => c.Visibility == Visibility.Visible)
+                .OrderBy(c => c.DisplayIndex)
+                .Select(c => c.Header as string)
+                .Where(h => h is "IS" or "37°C" or "AHG" or "CC" ||
+                            extras.Any(p => string.Equals(p, h, StringComparison.OrdinalIgnoreCase)))
+                .Select(h => h!)
+                .ToList();
+            var at = shown.IndexOf(header);
+            return at < 0 ? new List<string> { header } : shown.Skip(at).ToList();
         }
 
         private static string GetPhase(ReactionRow row, string header) => header switch

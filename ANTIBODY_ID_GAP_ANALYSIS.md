@@ -1981,7 +1981,30 @@ surfaced it, and analytics counted it silently.
   work in that state.
 - No schema change.
 
+## Iteration 96 (this change)
+
+**Deficiency:** Paste took one phase at a time, so gel or tube results
+exported as IS / 37 / AHG columns needed three separate pastes.
+
+**Bounded improvement:**
+- `GradePaste.ParseBlock` reads tab-separated blocks.
+  - Each line is one cell, and each column one phase. Short lines are
+    padded with NT.
+  - Every value must be a recognized grade, and errors are reported by line
+    and column.
+  - It refuses more rows than cells below the selection, or more columns
+    than phases to the right.
+- The Reactions grid maps the columns onto the phases as they appear on
+  screen (reordered columns respected, hidden ones skipped), starting at
+  the selected phase.
+- Replaced grades are listed with their phase and confirmed, and the grades
+  stay unsaved until Save.
+- The old single-column `Parse` was removed, because a one-column block
+  does the same job. Its tests now run against `ParseBlock`.
+- No schema change.
+
 ## Likely next tick
 
-Multi-phase paste on Reactions: a tab-separated block starting at the
-selected phase, with the same strict all-or-nothing validation.
+A product review covering the specimen and patient record after many recent
+reaction and panel changes. Is the clinical context complete enough for the
+analysis notes it drives, and are any fields captured but never used?

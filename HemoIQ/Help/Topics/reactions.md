@@ -14,10 +14,12 @@ The Reactions tab is where you record IS, 37°C, AHG, and CC grades for each cel
 - **Hide ruled-out** hides antigen columns already ruled out for this specimen. The setting can also be turned on by default in Preferences.
 - **Show dosage** groups columns by blood-group system and marks homozygous ++, heterozygous +, or +/? when the antithetical antigen was not typed. This is display only. It does not change rule-out.
 - **Load Reactions** reloads grades from the database.
-- **Ctrl+V** on a phase cell (IS, 37°C, AHG, CC or an extra phase) pastes a column of grades copied from a spreadsheet, one value per line, into that phase from the selected cell down.
-  - Values are read like keyed grades: 0, w or w+, 1–4 or 1+–4+, MF, H, NT. A blank line is NT.
-  - Any other value cancels the whole paste and lists the lines to fix, because an unrecognized grade would otherwise count as reactive.
-  - The paste is also refused if it holds more values than there are cells below the selection, or several tab-separated columns.
+- **Ctrl+V** on a phase cell (IS, 37°C, AHG, CC or an extra phase) pastes grades copied from a spreadsheet, starting at the selected cell.
+  - One line fills one cell, going down.
+  - A single column fills the selected phase. Several columns fill the selected phase and the phases to its right, in the order they appear on screen. For example, IS, 37°C and AHG copied together, with the IS cell selected.
+  - Values are read like keyed grades: 0, w or w+, 1–4 or 1+–4+, MF, H, NT. A blank value is NT, and a line with fewer columns is padded with NT.
+  - Any other value cancels the whole paste and lists the line and column to fix, because an unrecognized grade would otherwise count as reactive.
+  - The paste is also refused if it has more lines than there are cells below the selection, or more columns than phases to the right.
   - If any cell already has a different grade, HemoIQ lists the changes and asks before replacing them.
   - Pasted grades are unsaved until **Save**, and the unsaved-grade warnings apply to them.
 - **Save** writes grades without running analysis. Ctrl+S does the same.
