@@ -19,6 +19,10 @@ namespace HemoIQ.Models
         /// e.g. "E, K, Fya". See <see cref="Services.AntigenNegativeRequirement"/>.
         /// </summary>
         public string? AntigenNegative { get; set; }
+        /// <summary>HPC (stem-cell or marrow) transplant: none, autologous or allogeneic. See <see cref="Services.HpcTransplant"/>.</summary>
+        public string HpcTransplant { get; set; } = Services.HpcTransplant.None;
+        /// <summary>yyyy-MM-dd; optional.</summary>
+        public string? HpcTransplantDate { get; set; }
         public string? UpdatedAt { get; set; }
 
         public string Display =>

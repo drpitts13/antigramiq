@@ -241,6 +241,7 @@ namespace HemoIQ.ViewModels
             var lines = new System.Collections.Generic.List<string> { p.Display };
             lines.Add($"Antigen-negative units: {Services.AntigenNegativeRequirement.Display(p.AntigenNegative)}");
             lines.Add($"Transfusion requirements: {p.TransfusionRequirements ?? "None recorded"}");
+            lines.Add($"HPC transplant: {Services.TransplantDisplay.Text(p)}");
             if (!string.IsNullOrWhiteSpace(p.BloodBankComments))
                 lines.Add($"Blood bank comments: {p.BloodBankComments}");
             return string.Join(System.Environment.NewLine, lines);

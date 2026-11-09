@@ -13,12 +13,31 @@ namespace HemoIQ.Views.Dialogs
             InitializeComponent();
             MrnBox.Text = mrn;
             DobPicker.DisplayDateEnd = DateTime.Today;
+            TransplantDatePicker.DisplayDateEnd = DateTime.Today;
+            SelectTransplant(existing?.HpcTransplant);
             if (existing == null) return;
+            if (DateTime.TryParse(existing.HpcTransplantDate, out var td)) TransplantDatePicker.SelectedDate = td;
             NameBox.Text = existing.Name ?? "";
             if (DateTime.TryParse(existing.DateOfBirth, out var dob)) DobPicker.SelectedDate = dob;
             RequirementsBox.Text = existing.TransfusionRequirements ?? "";
             AntigenNegativeBox.Text = existing.AntigenNegative ?? "";
             CommentsBox.Text = existing.BloodBankComments ?? "";
+        }
+
+        private void SelectTransplant(string? value)
+        {
+            var code = Services.HpcTransplant.Normalize(value);
+            foreach (System.Windows.Controls.ComboBoxItem item in TransplantBox.Items)
+                if ((string)item.Tag == code) TransplantBox.SelectedItem = item;
+        }
+
+        private string SelectedTransplant =>
+            (TransplantBox.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Tag as string ?? Services.HpcTransplant.None;
+
+        private void TransplantChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (TransplantDatePicker == null) return;
+            TransplantDatePicker.IsEnabled = SelectedTransplant != Services.HpcTransplant.None;
         }
 
         private static string? Clean(string text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
@@ -30,6 +49,13 @@ namespace HemoIQ.Views.Dialogs
                 MessageBox.Show("Date of birth cannot be in the future.", "Validation",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 DobPicker.Focus();
+                return;
+            }
+            if (TransplantDatePicker.SelectedDate?.Date > DateTime.Today)
+            {
+                MessageBox.Show("Transplant date cannot be in the future.", "Validation",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                TransplantDatePicker.Focus();
                 return;
             }
             var negative = Services.AntigenNegativeRequirement.Parse(AntigenNegativeBox.Text);
@@ -50,6 +76,9 @@ namespace HemoIQ.Views.Dialogs
                 TransfusionRequirements = Clean(RequirementsBox.Text),
                 AntigenNegative = negative.Canonical,
                 BloodBankComments = Clean(CommentsBox.Text),
+                HpcTransplant = SelectedTransplant,
+                HpcTransplantDate = SelectedTransplant == Services.HpcTransplant.None
+                    ? null : TransplantDatePicker.SelectedDate?.ToString("yyyy-MM-dd"),
             };
             DialogResult = true;
         }

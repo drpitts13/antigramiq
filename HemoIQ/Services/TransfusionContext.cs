@@ -8,6 +8,8 @@ namespace HemoIQ.Services
     public sealed class TransfusionAssessment
     {
         public bool PhenotypeUnreliable { get; init; }
+        /// <summary>True after an allogeneic HPC transplant: a recorded genotype may be the donor's.</summary>
+        public bool GenotypeMayBeDonor { get; init; }
         /// <summary>Sentence explaining which recorded value decided reliability and why.</summary>
         public string Explanation { get; init; } = string.Empty;
         /// <summary>"structured", "notes", or "none".</summary>

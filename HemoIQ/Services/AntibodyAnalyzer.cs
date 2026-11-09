@@ -1375,9 +1375,10 @@ namespace HemoIQ.Services
         {
             var specimen = _db.GetSpecimen(specimenId);
             if (specimen == null) return null;
-            var transfusion = TransfusionContext.Assess(
+            var transfusion = TransplantContext.Apply(TransfusionContext.Assess(
                 specimen.TransfusionStatus, specimen.LastTransfusionDate, specimen.CreatedDate,
-                AppSettings.Current.RecentTransfusionWindowDays, specimen.Phenotype, specimen.Notes);
+                AppSettings.Current.RecentTransfusionWindowDays, specimen.Phenotype, specimen.Notes),
+                _db.GetPatient(specimen.Mrn), specimen.CollectedAt ?? specimen.CreatedDate);
             var typing = PatientTypingParser.Parse(
                 specimen.Phenotype, specimen.PreviousAntibodies, specimen.Notes, specimen.Genotype, transfusion);
             result.PatientPhenotypeUnreliable = typing.PhenotypeUnreliable;

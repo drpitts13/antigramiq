@@ -2003,8 +2003,59 @@ exported as IS / 37 / AHG columns needed three separate pastes.
   does the same job. Its tests now run against `ParseBlock`.
 - No schema change.
 
+## Iteration 97 (this change) — specimen and patient record review
+
+**Review findings:**
+Checked against the prompt's patient, specimen and transfusion-context
+lists.
+
+**Covered:**
+- MRN, name, date of birth, permanent comments, transfusion requirements
+  and antigen-negative units;
+- history across specimens;
+- collection, receipt and origin fields;
+- type, expiry and status;
+- transfusion status and date;
+- pregnancy and RhIG;
+- DAT IgG/C3;
+- phenotype and genotype;
+- eluate links.
+
+**Missing, highest analytical impact:** stem-cell or marrow transplant.
+After an allogeneic HPC transplant, the patient's serologic phenotype is
+donor or mixed cells, and a genotype from blood or marrow is the donor's.
+HemoIQ used both for antigen-negative inferences (Supporting, Against,
+Predicted) with no warning. Only transfusion triggered "phenotype
+unreliable".
+
+**Still not modelled:**
+- visual hemolysis on the specimen;
+- testing methodology per specimen (it is recorded per run);
+- products and units transfused;
+- encounter or account identifiers.
+
+These are candidates, lower in analytical effect.
+
+**Bounded improvement:**
+- The patient record gains `HpcTransplant` (none, autologous or
+  allogeneic) and `HpcTransplantDate`.
+  - Migration: `patients.hpc_transplant` (default none) and
+    `hpc_transplant_date`.
+  - The type is normalized and the date validated (not in the future). The
+    audit records before and after values, and an unchanged save writes
+    nothing.
+- `TransplantContext.Apply` folds an allogeneic transplant into the typing
+  assessment for specimens collected (or, failing that, received) on or
+  after the transplant date, or always when the date is unknown. It marks
+  the phenotype unreliable and the genotype as possibly the donor's.
+  `PatientTypingParser.Evaluate` then reports predicted antigens as
+  Uninterpretable, saying when a genotype would still apply.
+- An autologous transplant has no effect.
+- The Patient dialog gains a type and date. The patient box and the
+  Clinical Identification report print it.
+
 ## Likely next tick
 
-A product review covering the specimen and patient record after many recent
-reaction and panel changes. Is the clinical context complete enough for the
-analysis notes it drives, and are any fields captured but never used?
+Visual hemolysis on the specimen, which affects how H (hemolysis) grades and
+DAT are read, as a structured field with a REVIEW note when it is grossly
+hemolyzed.

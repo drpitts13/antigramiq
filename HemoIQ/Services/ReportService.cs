@@ -64,6 +64,7 @@ namespace HemoIQ.Services
             sb.AppendLine($"Patient: {p.Display}");
             sb.AppendLine($"Antigen-negative units: {AntigenNegativeRequirement.Display(p.AntigenNegative)}");
             sb.AppendLine($"Transfusion requirements: {p.TransfusionRequirements ?? "None recorded"}");
+            sb.AppendLine($"HPC transplant: {TransplantDisplay.Text(p)}");
             if (!string.IsNullOrWhiteSpace(p.BloodBankComments))
                 sb.AppendLine($"Blood bank comments: {p.BloodBankComments}");
         }

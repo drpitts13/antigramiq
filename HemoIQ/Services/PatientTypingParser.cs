@@ -13,6 +13,8 @@ namespace HemoIQ.Services
         public List<string> HistoricalAntibodies { get; } = new();
         public List<AlleleVariantNote> VariantNotes { get; } = new();
         public bool PhenotypeUnreliable { get; set; }
+        /// <summary>Allogeneic HPC transplant: the genotype may be the donor's unless taken pre-transplant.</summary>
+        public bool GenotypeMayBeDonor { get; set; }
         public string UnreliableReason { get; set; } = string.Empty;
     }
 
@@ -69,6 +71,7 @@ namespace HemoIQ.Services
             if (transfusion != null)
             {
                 typing.PhenotypeUnreliable = transfusion.PhenotypeUnreliable;
+                typing.GenotypeMayBeDonor = transfusion.GenotypeMayBeDonor;
                 if (transfusion.PhenotypeUnreliable)
                     typing.UnreliableReason = transfusion.Explanation;
             }
@@ -142,6 +145,20 @@ namespace HemoIQ.Services
                 var antibody = $"anti-{ag}";
                 var conflict = serology != null && serology != val;
                 string explanation;
+                if (typing.GenotypeMayBeDonor)
+                {
+                    list.Add(new PatientTypingConsideration
+                    {
+                        Antibody = antibody,
+                        Antigen = ag,
+                        Kind = PatientTypingKind.Uninterpretable,
+                        PatientValue = val,
+                        Explanation =
+                            $"The recorded genotype predicts {ag}{val}, but after an allogeneic HPC transplant a genotype from blood or marrow " +
+                            $"is the donor's. Use it for allo{antibody} only if it was performed before the transplant or on a non-hematopoietic sample (for example buccal).",
+                    });
+                    continue;
+                }
                 if (conflict && typing.PhenotypeUnreliable)
                 {
                     explanation =

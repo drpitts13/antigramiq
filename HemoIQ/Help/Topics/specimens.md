@@ -51,6 +51,12 @@ Enter antigen-negative requirements in **Antigen-negative units** as antigen cod
 
 When an antibody is known for the MRN (Previous antibodies, a confirmed call on this specimen, or a confirmed call on another specimen with the same MRN) and its antigen is not in **Antigen-negative units**, analysis lists a **REVIEW** suggestion at the top. If the requirement is written only in the free-text **Transfusion requirements** (for example from before this field existed), the suggestion asks you to add it to **Antigen-negative units** so it is explicit. HemoIQ never copies it for you. It is a prompt to check the record, not a transfusion order.
 
+**HPC transplant** records a stem-cell or marrow transplant (None, Autologous, or Allogeneic) and its date.
+- **Allogeneic:** for specimens collected on or after the transplant date, analysis treats this patient's serologic phenotype as unreliable, as it does after a recent transfusion. Red cells may come from the donor or be mixed. The genotype is also listed as possibly the donor's: DNA from blood or marrow after an allogeneic transplant is the donor's, so the genotype counts for the patient only if it was done before the transplant or on a non-hematopoietic sample such as a buccal swab. If no date is recorded, every specimen is treated this way.
+- **Autologous:** typing is unaffected, because the cells are the patient's own.
+- **Where it appears:** the patient box, the Clinical Identification report, and the patient-typing notes on Analysis.
+- **What it never does:** add or remove an antibody.
+
 ## Investigation status
 
 The grey strip at the top of the detail pane shows where the investigation stands. It is worked out from what has been recorded, so it cannot fall out of date:

@@ -275,8 +275,13 @@ namespace HemoIQ.Data
                     transfusion_requirements TEXT,
                     updated_at TEXT
                 )");
-            if (!GetColumnNames("patients").Contains("antigen_negative"))
+            var patientCols = GetColumnNames("patients");
+            if (!patientCols.Contains("antigen_negative"))
                 ExecNonQuery("ALTER TABLE patients ADD COLUMN antigen_negative TEXT");
+            if (!patientCols.Contains("hpc_transplant"))
+                ExecNonQuery("ALTER TABLE patients ADD COLUMN hpc_transplant TEXT NOT NULL DEFAULT 'none'");
+            if (!patientCols.Contains("hpc_transplant_date"))
+                ExecNonQuery("ALTER TABLE patients ADD COLUMN hpc_transplant_date TEXT");
             var ruleCols = GetColumnNames("rules");
             if (!ruleCols.Contains("separation_exempt"))
                 ExecNonQuery("ALTER TABLE rules ADD COLUMN separation_exempt INTEGER NOT NULL DEFAULT 0");
@@ -777,6 +782,8 @@ namespace HemoIQ.Data
                 BloodBankComments = SafeGetString(r, "blood_bank_comments"),
                 TransfusionRequirements = SafeGetString(r, "transfusion_requirements"),
                 AntigenNegative = SafeGetString(r, "antigen_negative"),
+                HpcTransplant = Services.HpcTransplant.Normalize(SafeGetString(r, "hpc_transplant")),
+                HpcTransplantDate = SafeGetString(r, "hpc_transplant_date"),
                 UpdatedAt = SafeGetString(r, "updated_at"),
             };
         }
@@ -806,9 +813,21 @@ namespace HemoIQ.Data
                 throw new ArgumentException(
                     $"Antigen-negative requirement: {string.Join(", ", antigenNegative.Unrecognized)} is not a recognized antigen. " +
                     "Enter antigen codes such as E, K, Fya; write other requirements under Transfusion requirements.");
+            var transplant = Services.HpcTransplant.Normalize(patient.HpcTransplant);
+            string? transplantDate = null;
+            if (transplant != Services.HpcTransplant.None && !string.IsNullOrWhiteSpace(patient.HpcTransplantDate))
+            {
+                if (!DateTime.TryParse(patient.HpcTransplantDate.Trim(), System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.None, out var t))
+                    throw new ArgumentException($"Transplant date '{patient.HpcTransplantDate}' is not a valid date.");
+                if (t.Date > DateTime.Today) throw new ArgumentException("Transplant date cannot be in the future.");
+                transplantDate = t.ToString("yyyy-MM-dd");
+            }
             var after = new Patient
             {
                 Mrn = key,
+                HpcTransplant = transplant,
+                HpcTransplantDate = transplantDate,
                 Name = Clean(patient.Name),
                 DateOfBirth = dob,
                 BloodBankComments = Clean(patient.BloodBankComments),
@@ -819,21 +838,26 @@ namespace HemoIQ.Data
             if (before != null && before.Name == after.Name && before.DateOfBirth == after.DateOfBirth &&
                 before.BloodBankComments == after.BloodBankComments &&
                 before.TransfusionRequirements == after.TransfusionRequirements &&
-                before.AntigenNegative == after.AntigenNegative)
+                before.AntigenNegative == after.AntigenNegative &&
+                before.HpcTransplant == after.HpcTransplant && before.HpcTransplantDate == after.HpcTransplantDate)
                 return;
 
             using var cmd = _conn.CreateCommand();
             cmd.CommandText = @"
-                INSERT INTO patients (mrn, name, date_of_birth, blood_bank_comments, transfusion_requirements, antigen_negative, updated_at)
-                VALUES ($mrn, $name, $dob, $comments, $req, $neg, $at)
+                INSERT INTO patients (mrn, name, date_of_birth, blood_bank_comments, transfusion_requirements, antigen_negative,
+                                      hpc_transplant, hpc_transplant_date, updated_at)
+                VALUES ($mrn, $name, $dob, $comments, $req, $neg, $hpc, $hpcdate, $at)
                 ON CONFLICT(mrn) DO UPDATE SET name = $name, date_of_birth = $dob,
-                    blood_bank_comments = $comments, transfusion_requirements = $req, antigen_negative = $neg, updated_at = $at";
+                    blood_bank_comments = $comments, transfusion_requirements = $req, antigen_negative = $neg,
+                    hpc_transplant = $hpc, hpc_transplant_date = $hpcdate, updated_at = $at";
             cmd.Parameters.AddWithValue("$mrn", key);
             cmd.Parameters.AddWithValue("$name", (object?)after.Name ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$dob", (object?)after.DateOfBirth ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$comments", (object?)after.BloodBankComments ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$req", (object?)after.TransfusionRequirements ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$neg", (object?)after.AntigenNegative ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$hpc", after.HpcTransplant);
+            cmd.Parameters.AddWithValue("$hpcdate", (object?)after.HpcTransplantDate ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$at", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
             cmd.ExecuteNonQuery();
             object? Snap(Patient? p) => p == null ? null : new
@@ -841,6 +865,7 @@ namespace HemoIQ.Data
                 name = p.Name, dateOfBirth = p.DateOfBirth,
                 bloodBankComments = p.BloodBankComments, transfusionRequirements = p.TransfusionRequirements,
                 antigenNegative = p.AntigenNegative,
+                hpcTransplant = p.HpcTransplant, hpcTransplantDate = p.HpcTransplantDate,
             };
             AppendAudit(before == null ? "add_patient" : "update_patient", "patient", key, null,
                 before == null ? null : JsonSerializer.Serialize(Snap(before)),
