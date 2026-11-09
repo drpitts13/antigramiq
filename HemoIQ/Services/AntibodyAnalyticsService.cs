@@ -20,10 +20,34 @@ namespace HemoIQ.Services
             "yyyy-MM-ddTHH:mm"
         };
 
-        public static AntibodyAnalyticsResult Compute(
-            IEnumerable<Specimen> specimens,
-            DateTime? from,
-            DateTime? to)
+        /// <summary>
+        /// Grouping key for a specificity. Antigen names are case-sensitive (anti-E and anti-e are
+        /// different antibodies); only the "anti-" prefix ignores case. Other text such as
+        /// "warm autoantibody" is grouped ignoring case.
+        /// </summary>
+        public static string SpecificityKey(string part) =>
+            PatientHistory.AntibodyKey(part) ?? part.Trim().ToUpperInvariant();
+
+        /// <summary>The confirmed investigations behind one row of the frequency table, newest first.</summary>
+        public static List<AnalyticsCase> CasesForAntibody(
+            IEnumerable<Specimen> specimens, DateTime? from, DateTime? to, string antibody)
+        {
+            var key = SpecificityKey(antibody);
+            return ConfirmedInRange(specimens, from, to)
+                .Where(c => FinalAntibodyParser.Split(c.Specimen.FinalAntibodies).Any(p => SpecificityKey(p) == key))
+                .OrderByDescending(c => c.IdentifiedAt ?? DateTime.MinValue)
+                .Select(c => new AnalyticsCase
+                {
+                    Accession = c.Specimen.AccessionNumber,
+                    Date = c.IdentifiedAt?.ToString("yyyy-MM-dd") ?? c.Specimen.IdentifiedAt ?? string.Empty,
+                    FinalAntibodies = c.Specimen.FinalAntibodies ?? string.Empty,
+                    Detail = $"Confirmed by {c.Specimen.IdentifiedBy ?? "—"}",
+                })
+                .ToList();
+        }
+
+        private static List<(Specimen Specimen, DateTime? IdentifiedAt)> ConfirmedInRange(
+            IEnumerable<Specimen> specimens, DateTime? from, DateTime? to)
         {
             var confirmed = new List<(Specimen Specimen, DateTime? IdentifiedAt)>();
             var hasRange = from.HasValue || to.HasValue;
@@ -44,22 +68,31 @@ namespace HemoIQ.Services
                     confirmed.Add((specimen, parsed ? at : null));
                 }
             }
+            return confirmed;
+        }
 
+        public static AntibodyAnalyticsResult Compute(
+            IEnumerable<Specimen> specimens,
+            DateTime? from,
+            DateTime? to)
+        {
+            var confirmed = ConfirmedInRange(specimens, from, to);
             if (confirmed.Count == 0)
                 return AntibodyAnalyticsResult.Empty;
 
-            var groups = new Dictionary<string, SpecificityAccumulator>(StringComparer.OrdinalIgnoreCase);
+            var groups = new Dictionary<string, SpecificityAccumulator>(StringComparer.Ordinal);
             foreach (var (specimen, _) in confirmed)
             {
                 var parts = FinalAntibodyParser.Split(specimen.FinalAntibodies)
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .GroupBy(SpecificityKey, StringComparer.Ordinal)
+                    .Select(g => (Key: g.Key, Part: g.First()))
                     .ToList();
-                foreach (var part in parts)
+                foreach (var (key, part) in parts)
                 {
-                    if (!groups.TryGetValue(part, out var acc))
+                    if (!groups.TryGetValue(key, out var acc))
                     {
                         acc = new SpecificityAccumulator();
-                        groups[part] = acc;
+                        groups[key] = acc;
                     }
                     acc.Count++;
                     acc.NoteCasing(part);

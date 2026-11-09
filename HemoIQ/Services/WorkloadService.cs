@@ -127,6 +127,52 @@ namespace HemoIQ.Services
                 .ToList();
         }
 
+        /// <summary>Confirmations and supervisor reviews behind one technologist row, newest first.</summary>
+        public static List<AnalyticsCase> CasesForTechnologist(IEnumerable<Specimen> specimens, DateTime? from, DateTime? to,
+            string initials)
+        {
+            var who = LabSettings.NormalizeInitials(initials);
+            var cases = new List<(DateTime When, AnalyticsCase Case)>();
+            foreach (var s in specimens.Where(s => !s.IsCancelled && s.HasFinalCall))
+            {
+                if (string.Equals(LabSettings.NormalizeInitials(s.IdentifiedBy), who, StringComparison.OrdinalIgnoreCase) &&
+                    InRange(s.IdentifiedAt, from, to) && TryDate(s.IdentifiedAt, out var c))
+                    cases.Add((c, new AnalyticsCase
+                    {
+                        Accession = s.AccessionNumber, Date = c.ToString("yyyy-MM-dd"),
+                        FinalAntibodies = s.FinalAntibodies ?? string.Empty, Detail = "Confirmed",
+                    }));
+                if (string.Equals(LabSettings.NormalizeInitials(s.ReviewedBy), who, StringComparison.OrdinalIgnoreCase) &&
+                    InRange(s.ReviewedAt, from, to) && TryDate(s.ReviewedAt, out var r))
+                    cases.Add((r, new AnalyticsCase
+                    {
+                        Accession = s.AccessionNumber, Date = r.ToString("yyyy-MM-dd"),
+                        FinalAntibodies = s.FinalAntibodies ?? string.Empty, Detail = "Supervisor review",
+                    }));
+            }
+            return cases.OrderByDescending(x => x.When).Select(x => x.Case).ToList();
+        }
+
+        /// <summary>Investigations received in the range for one ordering location, newest first.</summary>
+        public static List<AnalyticsCase> CasesForLocation(IEnumerable<Specimen> specimens, DateTime? from, DateTime? to,
+            string location)
+        {
+            return specimens
+                .Where(s => !s.IsCancelled && InRange(s.CreatedDate, from, to))
+                .Where(s => string.Equals(
+                    string.IsNullOrWhiteSpace(s.OrderingLocation) ? NoLocation : s.OrderingLocation.Trim(),
+                    location, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(s => s.CreatedDate, StringComparer.Ordinal)
+                .Select(s => new AnalyticsCase
+                {
+                    Accession = s.AccessionNumber,
+                    Date = s.CreatedDate,
+                    FinalAntibodies = s.FinalAntibodies ?? string.Empty,
+                    Detail = s.HasFinalCall ? "Confirmed" : s.IsActive ? "Open" : "Inactive",
+                })
+                .ToList();
+        }
+
         public static int AntibodyCount(string? finalAntibodies) => FinalAntibodyParser.Split(finalAntibodies).Count;
 
         private static bool InRange(string? text, DateTime? from, DateTime? to) =>

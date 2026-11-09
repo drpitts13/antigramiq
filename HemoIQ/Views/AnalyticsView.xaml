@@ -126,7 +126,7 @@
             <TabControl Grid.Column="1">
                 <TabItem Header="Workload by technologist"
                          ToolTip="Confirmed identifications counted by confirmed date (Identified by) and supervisor reviews by review date (Reviewed by), within the range. Cancelled investigations are excluded. Names come from Users and roles.">
-                <DataGrid ItemsSource="{Binding Workload}" AutoGenerateColumns="False" IsReadOnly="True"
+                <DataGrid ItemsSource="{Binding Workload}" SelectedItem="{Binding SelectedWorkload}" AutoGenerateColumns="False" IsReadOnly="True"
                           HeadersVisibility="Column">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Technologist" Binding="{Binding Display}" Width="*"/>
@@ -139,7 +139,7 @@
                 </TabItem>
                 <TabItem Header="By ordering location"
                          ToolTip="Investigations received in the range, grouped by the ordering location recorded on the specimen. Cancelled investigations are excluded.">
-                <DataGrid ItemsSource="{Binding LocationWorkload}" AutoGenerateColumns="False" IsReadOnly="True"
+                <DataGrid ItemsSource="{Binding LocationWorkload}" SelectedItem="{Binding SelectedLocation}" AutoGenerateColumns="False" IsReadOnly="True"
                           HeadersVisibility="Column">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Ordering location" Binding="{Binding Location}" Width="*"/>
@@ -181,16 +181,43 @@
             </Border>
         </Grid>
 
-        <DataGrid ItemsSource="{Binding Rows}"
-                  AutoGenerateColumns="False" IsReadOnly="True"
-                  SelectionMode="Single" GridLinesVisibility="Horizontal"
-                  HeadersVisibility="Column">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Antibody" Binding="{Binding Antibody}" Width="*"/>
-                <DataGridTextColumn Header="Count" Binding="{Binding Count}" Width="100"/>
-                <DataGridTextColumn Header="% of IDs" Binding="{Binding PercentDisplay}" Width="100"/>
-                <DataGridTextColumn Header="Specimens" Binding="{Binding Specimens}" Width="110"/>
-            </DataGrid.Columns>
-        </DataGrid>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <DataGrid ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedAntibody}"
+                      AutoGenerateColumns="False" IsReadOnly="True"
+                      SelectionMode="Single" GridLinesVisibility="Horizontal"
+                      HeadersVisibility="Column" Margin="0,0,8,0"
+                      ToolTip="Select an antibody to list the confirmed investigations behind its count.">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Antibody" Binding="{Binding Antibody}" Width="*"/>
+                    <DataGridTextColumn Header="Count" Binding="{Binding Count}" Width="80"/>
+                    <DataGridTextColumn Header="% of IDs" Binding="{Binding PercentDisplay}" Width="80"/>
+                    <DataGridTextColumn Header="Specimens" Binding="{Binding Specimens}" Width="80"/>
+                </DataGrid.Columns>
+            </DataGrid>
+            <GroupBox Grid.Column="1">
+                <GroupBox.Header>
+                    <TextBlock Text="{Binding DrillTitle}" TextTrimming="CharacterEllipsis"/>
+                </GroupBox.Header>
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="Open" VerticalAlignment="Top" Padding="10,2" Margin="6,0,0,0"
+                            Command="{Binding OpenDrillCaseCommand}"
+                            ToolTip="Open the selected investigation on the Specimens tab. Select a row in the antibody table or the technologist and location tabs to fill this list."/>
+                    <DataGrid ItemsSource="{Binding DrillCases}" SelectedItem="{Binding SelectedDrillCase}"
+                              AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
+                              MouseDoubleClick="DrillCases_MouseDoubleClick">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Accession" Binding="{Binding Accession}" Width="110"/>
+                            <DataGridTextColumn Header="Date" Binding="{Binding Date}" Width="90"/>
+                            <DataGridTextColumn Header="Final ID" Binding="{Binding FinalAntibodies}" Width="*"/>
+                            <DataGridTextColumn Header="Detail" Binding="{Binding Detail}" Width="120"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </GroupBox>
+        </Grid>
     </DockPanel>
 </UserControl>

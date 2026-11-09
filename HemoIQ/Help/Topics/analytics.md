@@ -18,10 +18,19 @@ The line under the toolbar names the range that is actually in use.
 
 - **Confirmed specimens** is how many specimens had a confirmation in the range.
 - **Distinct IDs** is how many different specificities appear.
-- **Total occurrences** counts each specificity once per specimen. A call of anti-E; anti-K adds one to anti-E and one to anti-K.
+- **Total occurrences** counts each specificity once per specimen. A call of anti-E; anti-K adds one to anti-E and one to anti-K. Antigen names are case-sensitive, so anti-E and anti-e are counted separately; only the "anti-" prefix ignores capitals.
 - **Most common** is the specificity with the highest occurrence count.
 
 The two charts show counts by specificity and the trend over time. The grid under the charts lists the same breakdown. Use the grid when you need the exact counts behind a bar.
+
+## Drill-down
+
+Select a row to list the investigations behind its count in the panel beside the antibody grid. Then choose **Open**, or double-click, to go to the investigation on the Specimens tab. You can select a row in:
+- the antibody grid: the confirmed investigations with that specificity in the range, newest first, with who confirmed each;
+- **Workload by technologist**: that person's confirmations and supervisor reviews in the range;
+- **By ordering location**: the investigations received from that location in the range, marked Confirmed, Open, or Inactive.
+
+Each list uses the same rules as the count it came from, so the number of rows matches the count. Changing the date range or choosing **Refresh** clears the list, because the old list may no longer match the new counts.
 
 Analytics describes work this laboratory confirmed in the application. It is not a population frequency and it does not change any specimen.
 

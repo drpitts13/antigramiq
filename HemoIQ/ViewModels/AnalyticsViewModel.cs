@@ -33,6 +33,74 @@ namespace HemoIQ.ViewModels
         public ObservableCollection<LocationWorkload> LocationWorkload { get; } = new();
         public ObservableCollection<UserActivity> UserActivity { get; } = new();
 
+        /// <summary>Investigations behind the selected antibody, technologist, or location row.</summary>
+        public ObservableCollection<AnalyticsCase> DrillCases { get; } = new();
+        public ICommand OpenDrillCaseCommand { get; }
+
+        private string _drillTitle = "Select a row to see its investigations";
+        public string DrillTitle
+        {
+            get => _drillTitle;
+            private set => SetField(ref _drillTitle, value);
+        }
+
+        private AnalyticsCase? _selectedDrillCase;
+        public AnalyticsCase? SelectedDrillCase
+        {
+            get => _selectedDrillCase;
+            set => SetField(ref _selectedDrillCase, value);
+        }
+
+        private AntibodyCountRow? _selectedAntibody;
+        public AntibodyCountRow? SelectedAntibody
+        {
+            get => _selectedAntibody;
+            set
+            {
+                if (!SetField(ref _selectedAntibody, value) || value == null) return;
+                ShowDrill($"{value.Antibody}: confirmed investigations ({RangeLabel})",
+                    AntibodyAnalyticsService.CasesForAntibody(_db.GetAllSpecimens(), FromDate, ToDate, value.Antibody));
+            }
+        }
+
+        private TechnologistWorkload? _selectedWorkload;
+        public TechnologistWorkload? SelectedWorkload
+        {
+            get => _selectedWorkload;
+            set
+            {
+                if (!SetField(ref _selectedWorkload, value) || value == null) return;
+                ShowDrill($"{value.Display}: confirmations and reviews ({RangeLabel})",
+                    WorkloadService.CasesForTechnologist(_db.GetAllSpecimens(), FromDate, ToDate, value.Initials));
+            }
+        }
+
+        private LocationWorkload? _selectedLocation;
+        public LocationWorkload? SelectedLocation
+        {
+            get => _selectedLocation;
+            set
+            {
+                if (!SetField(ref _selectedLocation, value) || value == null) return;
+                ShowDrill($"{value.Location}: investigations received ({RangeLabel})",
+                    WorkloadService.CasesForLocation(_db.GetAllSpecimens(), FromDate, ToDate, value.Location));
+            }
+        }
+
+        private void ShowDrill(string title, IEnumerable<AnalyticsCase> cases)
+        {
+            DrillCases.Clear();
+            foreach (var c in cases) DrillCases.Add(c);
+            DrillTitle = $"{title} — {DrillCases.Count}";
+            SelectedDrillCase = DrillCases.FirstOrDefault();
+        }
+
+        private void OpenDrillCase()
+        {
+            if (SelectedDrillCase == null || _main == null) return;
+            _main.NavigateToWorklistItem(new WorklistItem { AccessionNumber = SelectedDrillCase.Accession, TargetTab = "Specimens" });
+        }
+
         private OverdueInvestigation? _selectedOverdue;
         public OverdueInvestigation? SelectedOverdue
         {
@@ -123,6 +191,7 @@ namespace HemoIQ.ViewModels
             RefreshCommand = new RelayCommand(Refresh);
             ExportCsvCommand = new RelayCommand(ExportCsv);
             OpenOverdueCommand = new RelayCommand(OpenOverdue, () => SelectedOverdue != null);
+            OpenDrillCaseCommand = new RelayCommand(OpenDrillCase, () => SelectedDrillCase != null);
             _fromDate = DateTime.Today.AddYears(-1);
             _toDate = DateTime.Today;
             Recompute();
@@ -172,6 +241,13 @@ namespace HemoIQ.ViewModels
 
             OnPropertyChanged(nameof(IsAllTime));
             OnPropertyChanged(nameof(RangeLabel));
+            // The range or data changed, so the old drill-down list no longer matches the counts.
+            _selectedAntibody = null; _selectedWorkload = null; _selectedLocation = null;
+            OnPropertyChanged(nameof(SelectedAntibody));
+            OnPropertyChanged(nameof(SelectedWorkload));
+            OnPropertyChanged(nameof(SelectedLocation));
+            DrillCases.Clear();
+            DrillTitle = "Select a row to see its investigations";
             ChartDataChanged?.Invoke(this, EventArgs.Empty);
         }
 

@@ -1933,10 +1933,35 @@ the iteration 91 reaction-entry review.
     unsaved and unaudited until Save.
 - Drafts never write to the database. No schema change.
 
+## Iteration 94 (this change) — dashboard review
+
+**Review findings:**
+- **Antibody frequency table:** it grouped specificities ignoring case, so
+  anti-E and anti-e were counted as one. This is the same defect iteration
+  83 fixed in patient history, and it is a reporting-correctness problem.
+- **No drill-down:** only the overdue list opened the cases behind a
+  number. The antibody, technologist and location counts did not, though
+  the prompt asks for drill-down from metrics to cases.
+- **Cancelled investigations** with a final call still count in antibody
+  frequency, but not in workload or turnaround. The drill-down agrees with
+  its count, but the two rules differ. Noted, not changed this tick.
+
+**Bounded improvement:**
+- `AntibodyAnalyticsService.SpecificityKey` keeps the antigen
+  case-sensitive and ignores case only in the "anti-" prefix (via
+  `PatientHistory.AntibodyKey`). Other text is grouped ignoring case.
+- `ConfirmedInRange` is shared by `Compute` and the new `CasesForAntibody`,
+  so a drill-down list always matches its count.
+- `WorkloadService.CasesForTechnologist` (confirmations and reviews) and
+  `CasesForLocation` apply the same filters as their counts.
+- The Analytics tab gets a drill-down panel beside the antibody grid, filled
+  by selecting an antibody, technologist or location row. Open or
+  double-click goes to Specimens. A range change or Refresh clears the
+  panel.
+- No schema change.
+
 ## Likely next tick
 
-Product review. Candidates:
-- multi-phase paste;
-- whether the Worklist should list investigations with recovered but
-  unsaved grades;
-- the remaining roadmap items for the Analytics dashboard drill-downs.
+Decide one rule for cancelled investigations across all analytics (exclude
+them everywhere) and apply it with tests. Then multi-phase paste on
+Reactions.

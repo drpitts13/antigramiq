@@ -38,6 +38,12 @@ namespace HemoIQ.Views
 
         private void OnChartDataChanged(object? sender, EventArgs e) => RefreshPlots();
 
+        private void DrillCases_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (DataContext is ViewModels.AnalyticsViewModel vm && vm.OpenDrillCaseCommand.CanExecute(null))
+                vm.OpenDrillCaseCommand.Execute(null);
+        }
+
         private void RefreshPlots()
         {
             if (BarPlot == null || TrendPlot == null) return;

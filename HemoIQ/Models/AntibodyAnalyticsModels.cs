@@ -12,6 +12,15 @@ namespace HemoIQ.Models
         public int Specimens { get; init; }
     }
 
+    /// <summary>One investigation behind a dashboard count, for drill-down.</summary>
+    public sealed class AnalyticsCase
+    {
+        public string Accession { get; init; } = string.Empty;
+        public string Date { get; init; } = string.Empty;
+        public string FinalAntibodies { get; init; } = string.Empty;
+        public string Detail { get; init; } = string.Empty;
+    }
+
     public sealed class AntibodyTrendPoint
     {
         public DateTime Month { get; init; }
