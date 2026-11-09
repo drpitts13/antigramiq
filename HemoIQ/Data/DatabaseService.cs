@@ -2708,6 +2708,21 @@ namespace HemoIQ.Data
             var todayStr = today.ToString("yyyy-MM-dd");
 
             var configChanged = LastAnalysisConfigurationChange();
+            // The application refuses both orders (cancel with an ID, confirm when cancelled), so this
+            // state only comes from older or imported data. Analytics leaves these records out.
+            foreach (var s in GetAllSpecimens().Where(s => s.IsCancelled && s.HasFinalCall))
+                items.Add(new WorklistItem
+                {
+                    Kind = WorklistKind.InconsistentStatus,
+                    KindLabel = "Inconsistent status",
+                    Title = s.AccessionNumber,
+                    Detail = $"Cancelled {s.CancelledAt} but still holds confirmed identification {s.FinalAntibodies}. " +
+                             "Analytics does not count it. Reinstate and keep the identification, or clear it with a reason.",
+                    UrgencyLabel = "Resolve",
+                    SortOrder = 1,
+                    AccessionNumber = s.AccessionNumber,
+                    TargetTab = "Specimens",
+                });
             foreach (var s in GetAllSpecimens().Where(s => s.IsActive && !s.IsCancelled))
             {
                 var panels = GetSpecimenPanels(s.AccessionNumber);

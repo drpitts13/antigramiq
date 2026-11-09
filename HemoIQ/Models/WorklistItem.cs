@@ -12,7 +12,8 @@ namespace HemoIQ.Models
         ExtraAntigenReview,
         ExpiredReagentUse,
         UntypedPanel,
-        DuplicateLot
+        DuplicateLot,
+        InconsistentStatus
     }
 
     public class WorklistItem

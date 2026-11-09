@@ -1960,8 +1960,28 @@ the iteration 91 reaction-entry review.
   panel.
 - No schema change.
 
+## Iteration 95 (this change)
+
+**Deficiency:** Antibody frequency counted cancelled investigations that
+held a final ID; workload and turnaround did not.
+
+**Finding:** the application already blocks this state in both directions.
+`CancelInvestigation` requires the ID cleared first, and
+`SetSpecimenFinalCall` refuses a cancelled specimen. So such a record can
+only come from older or imported data, or direct database edits. Nothing
+surfaced it, and analytics counted it silently.
+
+**Bounded improvement:**
+- `AntibodyAnalyticsService.ConfirmedInRange` skips cancelled
+  investigations, which gives one rule across all analytics. The
+  frequency table, cards, trend and drill-down all inherit it.
+- **Inconsistent status** Worklist items list cancelled investigations
+  holding a confirmed ID. The item tells the user to reinstate (keeping
+  the ID) or clear the ID with a reason, and both paths were verified to
+  work in that state.
+- No schema change.
+
 ## Likely next tick
 
-Decide one rule for cancelled investigations across all analytics (exclude
-them everywhere) and apply it with tests. Then multi-phase paste on
-Reactions.
+Multi-phase paste on Reactions: a tab-separated block starting at the
+selected phase, with the same strict all-or-nothing validation.

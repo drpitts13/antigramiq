@@ -1,6 +1,6 @@
 # Analytics
 
-Analytics counts confirmed antibody identifications over a date range. It uses only identifications a user confirmed with **Confirm ID**. Suspected rows that were never confirmed are not included.
+Analytics counts confirmed antibody identifications over a date range. It uses only identifications a user confirmed with **Confirm ID**. Suspected rows that were never confirmed are not included. Cancelled investigations are left out of every figure on this tab: antibody counts, turnaround and workload.
 
 ## Date range
 

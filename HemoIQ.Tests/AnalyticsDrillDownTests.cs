@@ -30,8 +30,9 @@ public class AnalyticsDrillDownTests
     public void FrequencyTable_KeepsAntiEAndAntiESeparate_PrefixCaseStillMerges()
     {
         var result = AntibodyAnalyticsService.Compute(Data, From, To);
-        var e = Assert.Single(result.Rows, r => r.Antibody == "anti-E");
-        Assert.Equal(3, e.Count);
+        // A6 is cancelled and is not counted.
+        var e = Assert.Single(result.Rows, r => AntibodyAnalyticsService.SpecificityKey(r.Antibody) == "anti-E");
+        Assert.Equal(2, e.Count);
         Assert.Equal(1, Assert.Single(result.Rows, r => r.Antibody == "anti-e").Count);
         Assert.Equal(1, Assert.Single(result.Rows, r => r.Antibody == "anti-K").Count);
     }
@@ -39,12 +40,13 @@ public class AnalyticsDrillDownTests
     [Fact]
     public void AntibodyDrillDown_ListsExactlyTheCountedInvestigations_NewestFirst()
     {
-        var count = AntibodyAnalyticsService.Compute(Data, From, To).Rows.Single(r => r.Antibody == "anti-E").Count;
+        var count = AntibodyAnalyticsService.Compute(Data, From, To).Rows
+            .Single(r => AntibodyAnalyticsService.SpecificityKey(r.Antibody) == "anti-E").Count;
         var cases = AntibodyAnalyticsService.CasesForAntibody(Data, From, To, "anti-E");
         Assert.Equal(count, cases.Count);
-        Assert.Equal(new[] { "A6", "A2", "A1" }, cases.Select(c => c.Accession));
-        Assert.Equal("2026-10-07", cases[1].Date);
-        Assert.Equal("Confirmed by SU", cases[1].Detail);
+        Assert.Equal(new[] { "A2", "A1" }, cases.Select(c => c.Accession));
+        Assert.Equal("2026-10-07", cases[0].Date);
+        Assert.Equal("Confirmed by SU", cases[0].Detail);
         Assert.Equal(new[] { "A3" }, AntibodyAnalyticsService.CasesForAntibody(Data, From, To, "anti-e").Select(c => c.Accession));
         Assert.Contains(AntibodyAnalyticsService.CasesForAntibody(Data, null, null, "anti-E"), c => c.Accession == "A4");
     }

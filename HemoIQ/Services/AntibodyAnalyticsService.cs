@@ -54,7 +54,8 @@ namespace HemoIQ.Services
 
             foreach (var specimen in specimens)
             {
-                if (!specimen.HasFinalCall) continue;
+                // Same rule as workload and turnaround: cancelled investigations are not counted.
+                if (!specimen.HasFinalCall || specimen.IsCancelled) continue;
                 var parsed = TryParseIdentifiedAt(specimen.IdentifiedAt, out var at);
                 if (hasRange)
                 {

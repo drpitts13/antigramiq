@@ -158,6 +158,9 @@
                         <DataTrigger Binding="{Binding Kind}" Value="UntypedPanel">
                             <Setter Property="Background" Value="#FFCDD2"/>
                         </DataTrigger>
+                        <DataTrigger Binding="{Binding Kind}" Value="InconsistentStatus">
+                            <Setter Property="Background" Value="#FFCDD2"/>
+                        </DataTrigger>
                         <DataTrigger Binding="{Binding Kind}" Value="DuplicateLot">
                             <Setter Property="Background" Value="#FFE0B2"/>
                         </DataTrigger>
